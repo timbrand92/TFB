@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TFB – The Football Blueprint</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="tfb-responsive.jsx"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--lime:#B6FF2B;--green:#0F3D2E;--green-dark:#0A2E20;--bg:#0A0D11;--s1:#15191F;--s2:#1F252D;--border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.16);--txt:#F0F2F4;--txt2:rgba(240,242,244,0.55);--txt3:rgba(240,242,244,0.32);--goal:#2ED47A;--amber:#FFB020;--red:#E5533D;--sky:#3FA9F5;--purple:#9B7FE8;--font-d:'Barlow Condensed',sans-serif;--font-b:'Barlow',sans-serif}
+html,body{margin:0}
+body{font-family:var(--font-b);background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+button,input{font-family:var(--font-b);color:inherit;cursor:pointer}
+a{color:inherit;text-decoration:none}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:6px}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.float{animation:float 6s ease-in-out infinite}
+@keyframes pulse-grid{0%,100%{opacity:.18}50%{opacity:.32}}
+.pulse-grid{animation:pulse-grid 4s ease-in-out infinite}
+.hero-bg{
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 10%,rgba(15,61,46,0.55),transparent 70%),
+    radial-gradient(ellipse 60% 50% at 80% 80%,rgba(182,255,43,0.08),transparent 60%),
+    radial-gradient(ellipse 50% 40% at 20% 90%,rgba(99,91,255,0.06),transparent 60%),
+    var(--bg);
+}
+.grid-bg{
+  background-image:
+    linear-gradient(rgba(182,255,43,0.04) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(182,255,43,0.04) 1px,transparent 1px);
+  background-size: 60px 60px;
+}
+.text-gradient{background:linear-gradient(135deg,#fff 0%,var(--lime) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.glow-lime{box-shadow:0 0 60px rgba(182,255,43,0.25),0 8px 32px rgba(0,0,0,0.4)}
+.tilt-card{transition:transform .25s ease,border-color .25s ease}
+.tilt-card:hover{transform:translateY(-4px)}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect} = React;
+const C={lime:'#B6FF2B',green:'#0F3D2E',greenDark:'#0A2E20',bg:'#0A0D11',s1:'#15191F',s2:'#1F252D',border:'rgba(255,255,255,0.08)',border2:'rgba(255,255,255,0.16)',txt:'#F0F2F4',txt2:'rgba(240,242,244,0.55)',txt3:'rgba(240,242,244,0.32)',goal:'#2ED47A',amber:'#FFB020',red:'#E5533D',sky:'#3FA9F5',purple:'#9B7FE8'};
+
+const Logo=({size=40})=>(<div style={{width:size,height:size,borderRadius:size*0.22,background:`linear-gradient(135deg,${C.lime},#68B42E)`,display:'flex',alignItems:'center',justifyContent:'center',color:C.greenDark,fontFamily:'var(--font-d)',fontWeight:900,fontSize:size*0.5,boxShadow:'0 8px 24px rgba(182,255,43,0.3)'}}>TFB</div>);
+
+const FEATURES = [
+  {icon:'📋',title:'Session Builder',desc:'Multi-section visual diagrams. Drag players, draw runs, save to cloud, export branded PDF.',color:C.lime,screen:'tfb-session-builder.html'},
+  {icon:'🏟',title:'Live Gameday',desc:'FM-style lineup picker, formation library, real-time match tracking with stats and substitutions.',color:C.red,screen:'tfb-gameday.html'},
+  {icon:'👥',title:'Team Management',desc:'Roster, profiles, attendance, season stats. Filter by age group and competition.',color:C.sky,screen:'tfb-team.html'},
+  {icon:'📅',title:'Block Planning',desc:'Periodise your season — pre-season, in-season, taper. Drag sessions across the calendar.',color:C.amber,screen:'tfb-blockplanner.html'},
+  {icon:'💚',title:'Wellness Tracking',desc:'Daily player check-ins, fatigue heatmap, injury risk indicators across the squad.',color:C.goal,screen:'tfb-wellness.html'},
+  {icon:'🔔',title:'One-Tap RSVP',desc:'Players and parents respond from any link. Coaches see live attendance instantly.',color:C.purple,screen:'tfb-rsvp.html'},
+];
+
+const TIERS=[
+  {id:'free',name:'Free',price:0,desc:'Try it out',features:['1 team','5 sessions/mo','Basic dashboard'],color:'#8A8F98'},
+  {id:'starter',name:'Starter',price:29,desc:'For solo coaches',features:['Up to 3 teams','Unlimited sessions','PDF export','Email support'],color:C.sky},
+  {id:'pro',name:'Pro',price:79,desc:'For ambitious clubs',popular:true,features:['Up to 10 teams','Custom branding','Video analysis','Priority support'],color:C.lime},
+  {id:'club',name:'Club',price:199,desc:'Multi-team',features:['Unlimited teams','SSO & security','Dedicated success manager','Custom integrations'],color:C.purple},
+];
+
+const TESTIMONIALS = [
+  {q:"Cut my session-planning time in half. The visual drill builder is exactly what I needed.",name:"Daniel Reyes",role:"NPL Head Coach · Brisbane Strikers"},
+  {q:"Finally, the players actually RSVP. The link goes straight to the event — no app login.",name:"Sara Mitchell",role:"U14 Manager · Camden FC"},
+  {q:"Replaced WhatsApp groups, Excel rosters, and three other apps. Worth it.",name:"James O'Connor",role:"Technical Director · Melbourne East"},
+];
+
+function App(){
+  const [scrolled,setScrolled]=useState(false);
+  useEffect(()=>{const o=()=>setScrolled(window.scrollY>20);window.addEventListener('scroll',o);return ()=>window.removeEventListener('scroll',o)},[]);
+  const nav=(p)=>{try{window.location.href=p}catch(e){}};
+
+  return (
+    <div style={{minHeight:'100vh',width:'100%'}}>
+      {/* Nav */}
+      <nav style={{position:'fixed',top:0,left:0,right:0,zIndex:100,padding:'14px 32px',background:scrolled?'rgba(10,13,17,0.85)':'transparent',backdropFilter:scrolled?'blur(16px)':'none',borderBottom:scrolled?`1px solid ${C.border}`:'1px solid transparent',transition:'all .2s'}}>
+        <div style={{maxWidth:1240,margin:'0 auto',display:'flex',alignItems:'center',gap:24}}>
+          <div style={{display:'flex',alignItems:'center',gap:10}}>
+            <Logo size={36}/>
+            <div>
+              <div style={{fontFamily:'var(--font-d)',fontSize:18,fontWeight:900,letterSpacing:'-0.02em',lineHeight:1}}>TFB</div>
+              <div style={{fontSize:9.5,fontWeight:600,color:C.txt2,letterSpacing:'0.18em',textTransform:'uppercase',marginTop:1}}>The Football Blueprint</div>
+            </div>
+          </div>
+          <div style={{flex:1,display:'flex',gap:24,marginLeft:32}}>
+            {['Features','Pricing','Coaches','For clubs'].map(l=><a key={l} href={`#${l.toLowerCase().replace(' ','-')}`} style={{fontSize:13,fontWeight:600,color:C.txt2}}>{l}</a>)}
+          </div>
+          <button onClick={()=>nav('tfb-login.html')} style={{padding:'8px 14px',background:'transparent',border:`1px solid ${C.border2}`,borderRadius:8,fontSize:12.5,fontWeight:700,color:C.txt}}>Sign in</button>
+          <button onClick={()=>nav('tfb-login.html')} style={{padding:'8px 16px',background:`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:8,fontSize:12.5,fontWeight:800,color:C.greenDark}}>Start free →</button>
+        </div>
+      </nav>
+
+      {/* Hero */}
+      <section className="hero-bg grid-bg" style={{minHeight:'100vh',position:'relative',padding:'140px 24px 80px',display:'flex',alignItems:'center',overflow:'hidden'}}>
+        <div style={{maxWidth:1240,margin:'0 auto',width:'100%',display:'grid',gridTemplateColumns:'1.05fr 0.95fr',gap:50,alignItems:'center'}}>
+          {/* Left */}
+          <div>
+            <div style={{display:'inline-flex',alignItems:'center',gap:8,padding:'5px 11px',background:'rgba(182,255,43,0.08)',border:'1px solid rgba(182,255,43,0.25)',borderRadius:30,fontSize:11,fontWeight:700,color:C.lime,letterSpacing:'0.14em',textTransform:'uppercase',marginBottom:24}}>
+              <div style={{width:6,height:6,borderRadius:'50%',background:C.lime}}></div> The all-in-one coaching platform
+            </div>
+            <h1 className="text-gradient" style={{fontFamily:'var(--font-d)',fontSize:80,fontWeight:900,lineHeight:0.95,letterSpacing:'-0.025em',marginBottom:22,textTransform:'uppercase'}}>
+              Run your team<br/>like the pros do
+            </h1>
+            <p style={{fontSize:18,color:C.txt2,lineHeight:1.5,marginBottom:32,maxWidth:540}}>
+              From session plans and lineup cards to player development and live match tracking — TFB is the operating system for serious football clubs.
+            </p>
+            <div style={{display:'flex',gap:12,marginBottom:36,flexWrap:'wrap'}}>
+              <button onClick={()=>nav('tfb-login.html')} style={{padding:'14px 28px',background:`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:11,fontSize:15,fontWeight:800,color:C.greenDark,letterSpacing:'0.04em',boxShadow:'0 12px 36px rgba(182,255,43,0.3)'}}>Start 14-day trial →</button>
+              <button onClick={()=>nav('tfb-dashboard.html')} style={{padding:'14px 24px',background:'rgba(255,255,255,0.06)',border:`1px solid ${C.border2}`,borderRadius:11,fontSize:15,fontWeight:700,color:C.txt}}>▸ Watch live demo</button>
+            </div>
+            <div style={{display:'flex',gap:24,fontSize:12,color:C.txt3,flexWrap:'wrap'}}>
+              <div style={{display:'flex',alignItems:'center',gap:6}}><span style={{color:C.goal}}>✓</span> No card needed</div>
+              <div style={{display:'flex',alignItems:'center',gap:6}}><span style={{color:C.goal}}>✓</span> Cancel anytime</div>
+              <div style={{display:'flex',alignItems:'center',gap:6}}><span style={{color:C.goal}}>✓</span> Setup in 2 mins</div>
+            </div>
+          </div>
+
+          {/* Right – stacked product preview */}
+          <div style={{position:'relative',height:520}}>
+            {/* Card 1 — back */}
+            <div className="float" style={{position:'absolute',right:0,top:30,width:'88%',height:280,background:C.s1,border:`1px solid ${C.border}`,borderRadius:16,padding:18,transform:'rotate(2deg)',animationDelay:'1s'}}>
+              <div style={{display:'flex',gap:8,marginBottom:14}}>
+                <div style={{width:10,height:10,borderRadius:'50%',background:'#FF5F56'}}/>
+                <div style={{width:10,height:10,borderRadius:'50%',background:'#FFBD2E'}}/>
+                <div style={{width:10,height:10,borderRadius:'50%',background:'#27C93F'}}/>
+              </div>
+              <div style={{fontFamily:'var(--font-d)',fontSize:11,color:C.lime,letterSpacing:'0.16em',textTransform:'uppercase',fontWeight:800,marginBottom:6}}>Session 5 · Tactical</div>
+              <div style={{fontFamily:'var(--font-d)',fontSize:22,fontWeight:900,lineHeight:1.05,marginBottom:14,textTransform:'uppercase'}}>Pressing Triggers</div>
+              {/* Mini pitch */}
+              <div style={{height:140,background:'#2d6a3f',borderRadius:8,position:'relative',border:'2px solid #3a8451'}}>
+                <div style={{position:'absolute',inset:'10% 25%',border:'1.5px solid rgba(255,255,255,0.4)',borderRadius:4}}/>
+                {[
+                  {x:25,y:30,c:C.lime},{x:35,y:60,c:C.lime},{x:45,y:40,c:C.lime},
+                  {x:55,y:50,c:C.lime},{x:70,y:35,c:C.lime},{x:75,y:65,c:C.lime},
+                  {x:50,y:50,c:'#fff',s:7,ball:true},
+                ].map((p,i)=>(
+                  <div key={i} style={{position:'absolute',left:`${p.x}%`,top:`${p.y}%`,width:p.s||14,height:p.s||14,borderRadius:'50%',background:p.c,transform:'translate(-50%,-50%)',border:p.ball?'1px solid #999':'2px solid rgba(0,0,0,0.3)',boxShadow:p.ball?'0 1px 2px rgba(0,0,0,0.4)':'none'}}/>
+                ))}
+                {/* Arrow lines */}
+                <svg style={{position:'absolute',inset:0,pointerEvents:'none'}} viewBox="0 0 100 100" preserveAspectRatio="none">
+                  <defs><marker id="ar1" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill={C.lime}/></marker></defs>
+                  <line x1="25" y1="30" x2="48" y2="48" stroke={C.lime} strokeWidth="0.7" strokeDasharray="2,1.5" markerEnd="url(#ar1)"/>
+                  <line x1="35" y1="60" x2="48" y2="50" stroke={C.lime} strokeWidth="0.7" strokeDasharray="2,1.5" markerEnd="url(#ar1)"/>
+                </svg>
+              </div>
+            </div>
+
+            {/* Card 2 — front (lineup card) */}
+            <div className="float glow-lime" style={{position:'absolute',left:0,bottom:0,width:'82%',background:`linear-gradient(180deg,${C.green},${C.greenDark})`,border:`1px solid ${C.lime}40`,borderRadius:16,padding:20,transform:'rotate(-3deg)',zIndex:2}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
+                <div>
+                  <div style={{fontFamily:'var(--font-d)',fontSize:10,color:C.lime,letterSpacing:'0.16em',textTransform:'uppercase',fontWeight:800,marginBottom:3}}>Saturday · 3pm</div>
+                  <div style={{fontFamily:'var(--font-d)',fontSize:18,fontWeight:900,letterSpacing:'-0.01em',textTransform:'uppercase'}}>Malvern vs Bentleigh</div>
+                </div>
+                <div style={{padding:'4px 9px',background:C.lime,color:C.greenDark,borderRadius:5,fontSize:10,fontWeight:800,letterSpacing:'0.1em',textTransform:'uppercase'}}>Live</div>
+              </div>
+              {/* Mini lineup */}
+              <div style={{position:'relative',height:200,background:'#1d4a2e',borderRadius:8,border:'1px solid rgba(182,255,43,0.2)'}}>
+                {/* Pitch lines */}
+                <div style={{position:'absolute',top:'50%',left:0,right:0,height:1,background:'rgba(255,255,255,0.2)'}}/>
+                <div style={{position:'absolute',top:'50%',left:'50%',width:40,height:40,borderRadius:'50%',border:'1px solid rgba(255,255,255,0.2)',transform:'translate(-50%,-50%)'}}/>
+                {/* Players 4-3-3 */}
+                {[
+                  {x:50,y:88,n:'1'},
+                  {x:18,y:70,n:'2'},{x:38,y:72,n:'4'},{x:62,y:72,n:'5'},{x:82,y:70,n:'3'},
+                  {x:30,y:48,n:'6'},{x:50,y:50,n:'8'},{x:70,y:48,n:'10'},
+                  {x:25,y:25,n:'7'},{x:50,y:18,n:'9'},{x:75,y:25,n:'11'},
+                ].map((p,i)=>(
+                  <div key={i} style={{position:'absolute',left:`${p.x}%`,top:`${p.y}%`,transform:'translate(-50%,-50%)',width:22,height:22,borderRadius:'50%',background:C.lime,color:C.greenDark,fontSize:10,fontWeight:900,display:'flex',alignItems:'center',justifyContent:'center',border:'2px solid rgba(255,255,255,0.4)',boxShadow:'0 2px 6px rgba(0,0,0,0.4)'}}>{p.n}</div>
+                ))}
+              </div>
+              <div style={{display:'flex',justifyContent:'space-between',marginTop:12,fontSize:10,color:'rgba(240,242,244,0.7)',letterSpacing:'0.06em',textTransform:'uppercase',fontWeight:700}}>
+                <span>4-3-3 · High Press</span><span style={{color:C.lime}}>11/11 confirmed</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Logo bar */}
+      <section style={{padding:'40px 24px',borderTop:`1px solid ${C.border}`,borderBottom:`1px solid ${C.border}`,background:'rgba(15,61,46,0.15)'}}>
+        <div style={{maxWidth:1100,margin:'0 auto',textAlign:'center'}}>
+          <div style={{fontSize:11,color:C.txt3,letterSpacing:'0.18em',textTransform:'uppercase',fontWeight:700,marginBottom:18}}>Trusted by 200+ clubs across Australia, UK, USA</div>
+          <div style={{display:'flex',justifyContent:'center',gap:48,flexWrap:'wrap',opacity:0.55}}>
+            {['MALVERN CITY','BRISBANE STRIKERS','CAMDEN FC','MELBOURNE EAST','RIVERSIDE UTD','HARROW ACADEMY'].map(name=>(
+              <div key={name} style={{fontFamily:'var(--font-d)',fontSize:14,fontWeight:800,letterSpacing:'0.18em',color:C.txt2}}>{name}</div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Features */}
+      <section id="features" style={{padding:'100px 24px'}}>
+        <div style={{maxWidth:1240,margin:'0 auto'}}>
+          <div style={{textAlign:'center',marginBottom:60}}>
+            <div style={{fontSize:11,color:C.lime,letterSpacing:'0.18em',textTransform:'uppercase',fontWeight:800,marginBottom:10}}>Built for serious coaches</div>
+            <h2 style={{fontFamily:'var(--font-d)',fontSize:54,fontWeight:900,letterSpacing:'-0.02em',lineHeight:1.05,textTransform:'uppercase',marginBottom:14}}>One platform. Every workflow.</h2>
+            <p style={{fontSize:16,color:C.txt2,maxWidth:620,margin:'0 auto',lineHeight:1.5}}>Stop stitching together WhatsApp groups, Excel sheets and PDF drills. TFB unifies how you plan, run, and review your team.</p>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:18}}>
+            {FEATURES.map(f=>(
+              <button key={f.title} onClick={()=>nav(f.screen)} className="tilt-card" style={{textAlign:'left',padding:24,background:C.s1,border:`1px solid ${C.border}`,borderRadius:14}}
+                onMouseEnter={e=>e.currentTarget.style.borderColor=`${f.color}50`}
+                onMouseLeave={e=>e.currentTarget.style.borderColor=C.border}>
+                <div style={{width:48,height:48,borderRadius:11,background:`${f.color}15`,border:`1px solid ${f.color}35`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,marginBottom:14}}>{f.icon}</div>
+                <div style={{fontFamily:'var(--font-d)',fontSize:20,fontWeight:900,letterSpacing:'-0.01em',marginBottom:6,textTransform:'uppercase'}}>{f.title}</div>
+                <div style={{fontSize:13,color:C.txt2,lineHeight:1.55,marginBottom:14}}>{f.desc}</div>
+                <div style={{fontSize:11.5,color:f.color,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase'}}>See it live →</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Big stat band */}
+      <section style={{padding:'80px 24px',background:`linear-gradient(180deg,transparent,${C.s1})`,borderTop:`1px solid ${C.border}`,borderBottom:`1px solid ${C.border}`}}>
+        <div style={{maxWidth:1100,margin:'0 auto',display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:28,textAlign:'center'}}>
+          {[
+            {n:'4.2M',l:'sessions planned'},
+            {n:'68%',l:'less admin time'},
+            {n:'92%',l:'rsvp response rate'},
+            {n:'4.9★',l:'avg coach rating'},
+          ].map(s=>(
+            <div key={s.l}>
+              <div style={{fontFamily:'var(--font-d)',fontSize:64,fontWeight:900,letterSpacing:'-0.03em',background:`linear-gradient(135deg,#fff,${C.lime})`,WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',lineHeight:1,marginBottom:6}}>{s.n}</div>
+              <div style={{fontSize:11,color:C.txt2,letterSpacing:'0.18em',textTransform:'uppercase',fontWeight:700}}>{s.l}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Pricing */}
+      <section id="pricing" style={{padding:'100px 24px'}}>
+        <div style={{maxWidth:1240,margin:'0 auto'}}>
+          <div style={{textAlign:'center',marginBottom:50}}>
+            <div style={{fontSize:11,color:C.lime,letterSpacing:'0.18em',textTransform:'uppercase',fontWeight:800,marginBottom:10}}>Simple pricing</div>
+            <h2 style={{fontFamily:'var(--font-d)',fontSize:54,fontWeight:900,letterSpacing:'-0.02em',lineHeight:1.05,textTransform:'uppercase',marginBottom:14}}>Pay for what you use</h2>
+            <p style={{fontSize:16,color:C.txt2,maxWidth:560,margin:'0 auto',lineHeight:1.5}}>Free forever for solo coaches. Scale up only when your club grows.</p>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:14}}>
+            {TIERS.map(t=>(
+              <div key={t.id} style={{position:'relative',background:t.popular?`linear-gradient(180deg,${t.color}10,${C.s1})`:C.s1,border:`${t.popular?2:1}px solid ${t.popular?t.color+'60':C.border}`,borderRadius:14,padding:24}}>
+                {t.popular && <div style={{position:'absolute',top:-10,left:20,background:t.color,color:C.greenDark,fontSize:10,fontWeight:800,padding:'3px 10px',borderRadius:5,letterSpacing:'0.12em',textTransform:'uppercase'}}>Most popular</div>}
+                <div style={{fontSize:11,color:t.color,fontWeight:800,letterSpacing:'0.16em',textTransform:'uppercase',marginBottom:5}}>{t.name}</div>
+                <div style={{fontSize:11.5,color:C.txt2,marginBottom:14}}>{t.desc}</div>
+                <div style={{display:'flex',alignItems:'baseline',gap:4,marginBottom:16}}>
+                  <div style={{fontFamily:'var(--font-d)',fontSize:42,fontWeight:900,letterSpacing:'-0.02em',lineHeight:1}}>${t.price}</div>
+                  <div style={{fontSize:13,color:C.txt2}}>{t.price===0?'forever':'/mo'}</div>
+                </div>
+                <button onClick={()=>nav('tfb-login.html')} style={{width:'100%',padding:'10px',background:t.popular?`linear-gradient(135deg,${C.lime},#68B42E)`:'rgba(255,255,255,0.06)',border:t.popular?'none':`1px solid ${C.border2}`,borderRadius:9,fontSize:13,fontWeight:800,color:t.popular?C.greenDark:C.txt,marginBottom:18}}>{t.price===0?'Start free':'Start trial'}</button>
+                <ul style={{listStyle:'none'}}>
+                  {t.features.map((f,i)=>(
+                    <li key={i} style={{fontSize:13,color:C.txt,padding:'6px 0',display:'flex',gap:8,borderBottom:i<t.features.length-1?`1px dashed ${C.border}`:'none'}}>
+                      <span style={{color:t.color,flexShrink:0}}>✓</span>{f}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+          <div style={{textAlign:'center',marginTop:24,fontSize:13,color:C.txt2}}>All paid plans come with a <span style={{color:C.lime,fontWeight:700}}>14-day free trial</span>. Cancel anytime, no questions.</div>
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section id="coaches" style={{padding:'80px 24px',background:C.s1,borderTop:`1px solid ${C.border}`,borderBottom:`1px solid ${C.border}`}}>
+        <div style={{maxWidth:1240,margin:'0 auto'}}>
+          <div style={{textAlign:'center',marginBottom:40}}>
+            <div style={{fontSize:11,color:C.lime,letterSpacing:'0.18em',textTransform:'uppercase',fontWeight:800,marginBottom:10}}>What coaches say</div>
+            <h2 style={{fontFamily:'var(--font-d)',fontSize:42,fontWeight:900,letterSpacing:'-0.02em',textTransform:'uppercase'}}>Built with coaches, for coaches</h2>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:16}}>
+            {TESTIMONIALS.map((t,i)=>(
+              <div key={i} style={{background:C.bg,border:`1px solid ${C.border}`,borderRadius:14,padding:24}}>
+                <div style={{fontSize:24,color:C.lime,lineHeight:1,marginBottom:10}}>"</div>
+                <div style={{fontSize:15,color:C.txt,lineHeight:1.55,marginBottom:18,fontStyle:'italic'}}>{t.q}</div>
+                <div style={{paddingTop:14,borderTop:`1px solid ${C.border}`,display:'flex',alignItems:'center',gap:10}}>
+                  <div style={{width:36,height:36,borderRadius:'50%',background:`linear-gradient(135deg,${C.lime},#68B42E)`,display:'flex',alignItems:'center',justifyContent:'center',color:C.greenDark,fontWeight:900,fontSize:13}}>{t.name.split(' ').map(x=>x[0]).join('')}</div>
+                  <div>
+                    <div style={{fontSize:13,fontWeight:800}}>{t.name}</div>
+                    <div style={{fontSize:11,color:C.txt2}}>{t.role}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section style={{padding:'100px 24px',position:'relative',overflow:'hidden'}}>
+        <div className="hero-bg" style={{position:'absolute',inset:0,opacity:0.6}}/>
+        <div style={{maxWidth:780,margin:'0 auto',textAlign:'center',position:'relative'}}>
+          <h2 style={{fontFamily:'var(--font-d)',fontSize:64,fontWeight:900,letterSpacing:'-0.025em',lineHeight:1,textTransform:'uppercase',marginBottom:20}}>
+            Ready to <span className="text-gradient">level up</span> your team?
+          </h2>
+          <p style={{fontSize:17,color:C.txt2,marginBottom:32,lineHeight:1.5}}>Set up your club in 2 minutes. Free for your first team — forever.</p>
+          <div style={{display:'flex',gap:12,justifyContent:'center',flexWrap:'wrap'}}>
+            <button onClick={()=>nav('tfb-login.html')} style={{padding:'15px 32px',background:`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:12,fontSize:16,fontWeight:800,color:C.greenDark,letterSpacing:'0.04em',boxShadow:'0 12px 40px rgba(182,255,43,0.35)'}}>Start your free trial →</button>
+            <button onClick={()=>nav('tfb-nav.html')} style={{padding:'15px 26px',background:'rgba(255,255,255,0.06)',border:`1px solid ${C.border2}`,borderRadius:12,fontSize:16,fontWeight:700,color:C.txt}}>Browse all 23 screens</button>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer style={{padding:'40px 24px 32px',borderTop:`1px solid ${C.border}`,background:'#0A0D11'}}>
+        <div style={{maxWidth:1240,margin:'0 auto',display:'grid',gridTemplateColumns:'2fr 1fr 1fr 1fr',gap:30}}>
+          <div>
+            <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14}}>
+              <Logo size={32}/>
+              <div style={{fontFamily:'var(--font-d)',fontSize:16,fontWeight:900,letterSpacing:'-0.02em'}}>The Football Blueprint</div>
+            </div>
+            <div style={{fontSize:12,color:C.txt2,lineHeight:1.55,maxWidth:300}}>The all-in-one operating system for coaches, players and clubs serious about football.</div>
+          </div>
+          {[
+            {h:'Product',l:['Features','Pricing','Roadmap','Changelog']},
+            {h:'For coaches',l:['Session library','Templates','Coaching blog','Webinars']},
+            {h:'Company',l:['About','Contact','Privacy','Terms']},
+          ].map(g=>(
+            <div key={g.h}>
+              <div style={{fontSize:11,color:C.txt3,letterSpacing:'0.18em',textTransform:'uppercase',fontWeight:700,marginBottom:10}}>{g.h}</div>
+              {g.l.map(x=><div key={x} style={{fontSize:13,color:C.txt2,padding:'4px 0',cursor:'pointer'}}>{x}</div>)}
+            </div>
+          ))}
+        </div>
+        <div style={{maxWidth:1240,margin:'24px auto 0',paddingTop:18,borderTop:`1px solid ${C.border}`,display:'flex',justifyContent:'space-between',fontSize:11,color:C.txt3}}>
+          <div>© 2026 The Football Blueprint. Made in Melbourne ⚽</div>
+          <div>v2.4.1</div>
+        </div>
+      </footer>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

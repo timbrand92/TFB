@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TFB – Navigation Hub</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="tfb-responsive.jsx"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--lime:#B6FF2B;--green:#0F3D2E;--green-dark:#0A2E20;--bg:#111418;--s1:#1C2128;--s2:#242B33;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);--txt:#F0F2F4;--txt2:rgba(240,242,244,0.5);--txt3:rgba(240,242,244,0.28);--goal:#2ED47A;--amber:#FFB020;--red:#E5533D;--sky:#3FA9F5;--font-d:'Barlow Condensed',sans-serif;--font-b:'Barlow',sans-serif;}
+html,body,#root{height:100%;overflow:auto}
+body{font-family:var(--font-b);background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased}
+button{font-family:var(--font-b);color:inherit;cursor:pointer}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:4px}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.card{animation:fadeUp .25s ease forwards}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState} = React;
+const C={lime:'#B6FF2B',green:'#0F3D2E',greenDark:'#0A2E20',bg:'#111418',s1:'#1C2128',s2:'#242B33',border:'rgba(255,255,255,0.07)',border2:'rgba(255,255,255,0.13)',txt:'#F0F2F4',txt2:'rgba(240,242,244,0.5)',txt3:'rgba(240,242,244,0.28)',goal:'#2ED47A',amber:'#FFB020',red:'#E5533D',sky:'#3FA9F5'};
+
+const ALL_SCREENS = [
+  // Core
+  {id:'dashboard',    label:'Dashboard',          desc:'Your personalised home screen',              file:'tfb-dashboard.html',   icon:'🏠', color:C.lime,   roles:['all']},
+  {id:'login',        label:'Login / Onboarding', desc:'Sign in, sign up, accept invites',           file:'tfb-login.html',       icon:'🔐', color:C.sky,    roles:['all']},
+  {id:'arch',         label:'Architecture & Data', desc:'Firebase schema, Stripe billing, settings map', file:'tfb-architecture.html', icon:'🧬', color:'#9B7FE8', roles:['admin']},
+  // Coach screens
+  {id:'sessions',     label:'Sessions',           desc:'Browse and manage all training sessions',    file:'tfb-sessions.html',    icon:'📋', color:'#3FA9F5', roles:['coach','td','admin']},
+  {id:'session-builder',label:'Session Builder',  desc:'Visual pitch canvas + session planner',      file:'tfb-session-builder.html',icon:'🎨',color:C.lime, roles:['coach','td']},
+  {id:'gameday',      label:'Gameday',            desc:'Match control — lineup, score, events',      file:'tfb-gameday.html',     icon:'⚡', color:C.red,    roles:['coach','td']},
+  {id:'team',         label:'Team Management',    desc:'Squad list, player profiles, status',        file:'tfb-team.html',        icon:'👥', color:C.goal,   roles:['coach','td','admin']},
+  {id:'planner',      label:'Block Planner',      desc:'6-week training cycle planner',              file:'tfb-planner.html',     icon:'📊', color:C.amber,  roles:['coach','td']},
+  {id:'yearly',       label:'Yearly Planner',     desc:'Full season calendar with phases',           file:'tfb-yearly.html',      icon:'📅', color:C.sky,    roles:['coach','td']},
+  {id:'development',  label:'Player Development', desc:'IDP goals tracking for all players',         file:'tfb-development.html', icon:'🎯', color:C.sky,    roles:['coach','td']},
+  {id:'coaching',     label:'Coaching Hub',       desc:'Meetings, video analysis, coaches award',    file:'tfb-coaching.html',    icon:'🎥', color:C.amber,  roles:['coach','td']},
+  {id:'fixtures',     label:'Fixtures & Results', desc:'All matches, scores and upcoming fixtures',  file:'tfb-fixtures.html',    icon:'🏟', color:C.red,    roles:['all']},
+  {id:'league',       label:'League',             desc:'Standings, top scorers, form guide',         file:'tfb-league.html',      icon:'🏆', color:C.lime,   roles:['coach','td']},
+  {id:'wellness',     label:'Wellness',           desc:'Team health dashboard and heatmap',          file:'tfb-wellness.html',    icon:'💚', color:C.goal,   roles:['coach','td']},
+  // Multi-role
+  {id:'overview',     label:'Club Overview',      desc:'Multi-team analytics for Technical Directors',file:'tfb-overview.html',   icon:'🏢', color:C.lime,   roles:['td','admin']},
+  {id:'chat',         label:'Team Chat',          desc:'Group chat, announcements, direct messages', file:'tfb-chat.html',        icon:'💬', color:C.sky,    roles:['all']},
+  {id:'availability', label:'My Availability',    desc:'RSVP to sessions and matches',               file:'tfb-availability.html',icon:'🔔', color:C.amber,  roles:['player','parent','manager']},
+  {id:'player',       label:'Player Dashboard',   desc:'Player/parent view — wellness, goals, RSVPs',file:'tfb-player.html',      icon:'👟', color:'#8A8F98', roles:['player','parent']},
+  {id:'settings',     label:'Settings',           desc:'Profile, club, notifications, subscription', file:'tfb-settings.html',    icon:'⚙️', color:'#8A8F98', roles:['all']},
+  // Design assets
+  // New pages
+  {id:'meetings',     label:'Meetings',           desc:'Agendas, minutes, actions & key messages',   file:'tfb-meetings.html',    icon:'📋', color:C.sky,    roles:['coach','td','admin','manager']},
+  {id:'award',        label:'Coaches Award',      desc:'3-2-1 Brownlow voting & season leaderboard', file:'tfb-award.html',       icon:'🏆', color:'#FFD700', roles:['coach','td','manager']},
+  {id:'parent-dev',   label:'Parent Dev View',    desc:'Child development, IDP & messages for parents',file:'tfb-parent-dev.html', icon:'👨‍👩‍👦', color:'#A78BFA', roles:['parent']},
+  // Design assets
+  {id:'comparison',   label:'Role × Device Guide',desc:'How each role sees the app across devices',  file:'tfb-comparison.html',  icon:'📱', color:C.txt3,   roles:['design']},
+  {id:'logo',         label:'Logo System',        desc:'Brand logo exploration and usage guide',     file:'tfb-logo.html',        icon:'🎨', color:C.txt3,   roles:['design']},
+];
+
+const ROLE_FILTERS = [
+  {id:'all',    label:'All Screens',  color:C.lime},
+  {id:'coach',  label:'Coach',        color:C.goal},
+  {id:'td',     label:'Tech. Director',color:C.lime},
+  {id:'admin',  label:'Club Admin',   color:C.sky},
+  {id:'manager',label:'Team Manager', color:C.amber},
+  {id:'player', label:'Player',       color:'#8A8F98'},
+  {id:'parent', label:'Parent',       color:'#A78BFA'},
+  {id:'design', label:'Design Assets',color:C.txt3},
+];
+
+function App(){
+  const [roleFilter,setRoleFilter]=useState('all');
+  const [search,setSearch]=useState('');
+
+  const filtered = ALL_SCREENS.filter(s=>{
+    const matchRole = roleFilter==='all' || s.roles.includes('all') || s.roles.includes(roleFilter);
+    const matchSearch = !search || s.label.toLowerCase().includes(search.toLowerCase()) || s.desc.toLowerCase().includes(search.toLowerCase());
+    return matchRole && matchSearch;
+  });
+
+  const nav=(file)=>{try{window.location.href=file}catch(e){}};
+
+  return(
+    <div style={{minHeight:'100vh',background:C.bg}}>
+      {/* Header */}
+      <div style={{background:`linear-gradient(135deg,${C.greenDark} 0%,${C.green} 100%)`,borderBottom:'1px solid rgba(182,255,43,0.2)',padding:'28px 32px 24px',position:'sticky',top:0,zIndex:50,boxShadow:'0 4px 24px rgba(0,0,0,0.4)'}}>
+        <div style={{display:'flex',alignItems:'center',gap:16,marginBottom:18}}>
+          <svg width="44" height="44" viewBox="0 0 40 40" fill="none"><polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="#0F3D2E" stroke="#B6FF2B" strokeWidth="1.5"/><polygon points="20,9 30,15 30,25 20,31 10,25 10,15" fill="none" stroke="#B6FF2B" strokeWidth="0.8" opacity="0.4"/><text x="20" y="26" textAnchor="middle" fill="#B6FF2B" fontFamily="Barlow Condensed" fontWeight="900" fontSize="13">TFB</text></svg>
+          <div>
+            <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:28,color:'#fff',letterSpacing:'0.04em',textTransform:'uppercase',lineHeight:1}}>The Football Blueprint</div>
+            <div style={{fontSize:11,color:'rgba(182,255,43,0.7)',fontWeight:700,letterSpacing:'0.12em',textTransform:'uppercase',marginTop:3}}>Coaching Platform · Navigation Hub · {ALL_SCREENS.length} Screens · v2.1</div>
+          </div>
+          <div style={{marginLeft:'auto',display:'flex',gap:8}}>
+            <button onClick={()=>nav('tfb-dashboard.html')} style={{padding:'8px 18px',background:`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:9,fontSize:13,fontWeight:800,color:C.green,transition:'opacity .15s'}} onMouseEnter={e=>e.currentTarget.style.opacity='.88'} onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
+              → Dashboard
+            </button>
+            <button onClick={()=>nav('tfb-login.html')} style={{padding:'8px 18px',background:'rgba(255,255,255,0.08)',border:'1px solid rgba(255,255,255,0.15)',borderRadius:9,fontSize:13,fontWeight:700,color:'rgba(255,255,255,0.8)',transition:'all .15s'}} onMouseEnter={e=>{e.currentTarget.style.background='rgba(182,255,43,0.12)';e.currentTarget.style.color='#B6FF2B'}} onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,0.08)';e.currentTarget.style.color='rgba(255,255,255,0.8)'}}>
+              Login Flow
+            </button>
+          </div>
+        </div>
+
+        {/* Filters + search */}
+        <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
+          <div style={{display:'flex',alignItems:'center',gap:6,background:'rgba(255,255,255,0.08)',border:'1px solid rgba(255,255,255,0.12)',borderRadius:9,padding:'7px 12px',minWidth:200}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search screens…" style={{background:'transparent',border:'none',outline:'none',fontSize:13,color:'#fff',flex:1}}/>
+          </div>
+          <div style={{display:'flex',gap:5,flexWrap:'wrap'}}>
+            {ROLE_FILTERS.map(r=>(
+              <button key={r.id} onClick={()=>setRoleFilter(r.id)} style={{padding:'5px 12px',background:roleFilter===r.id?`${r.color}20`:'rgba(255,255,255,0.06)',border:`1px solid ${roleFilter===r.id?r.color+'50':'rgba(255,255,255,0.12)'}`,borderRadius:7,fontSize:11,fontWeight:700,color:roleFilter===r.id?r.color:'rgba(255,255,255,0.6)',transition:'all .12s'}}>{r.label}</button>
+            ))}
+          </div>
+          <div style={{fontSize:12,color:'rgba(255,255,255,0.4)',marginLeft:'auto'}}>{filtered.length} screen{filtered.length!==1?'s':''}</div>
+        </div>
+      </div>
+
+      {/* Screen grid */}
+      <div style={{padding:'24px 32px'}}>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))',gap:12}}>
+          {filtered.map((screen,i)=>(
+            <button key={screen.id} className="card" onClick={()=>nav(screen.file)}
+              style={{display:'flex',gap:14,padding:'16px',background:C.s1,border:`1px solid ${C.border}`,borderRadius:14,cursor:'pointer',textAlign:'left',transition:'all .15s',animationDelay:`${i*0.02}s`}}
+              onMouseEnter={e=>{e.currentTarget.style.background=`${screen.color}08`;e.currentTarget.style.borderColor=`${screen.color}40`;e.currentTarget.style.transform='translateY(-2px)';e.currentTarget.style.boxShadow=`0 8px 24px rgba(0,0,0,0.3)`;}}
+              onMouseLeave={e=>{e.currentTarget.style.background=C.s1;e.currentTarget.style.borderColor=C.border;e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='none';}}>
+              {/* Icon */}
+              <div style={{width:44,height:44,borderRadius:12,background:`${screen.color}14`,border:`1px solid ${screen.color}25`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:20}}>
+                {screen.icon}
+              </div>
+              {/* Info */}
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
+                  <span style={{fontSize:14,fontWeight:700,color:C.txt,lineHeight:1}}>{screen.label}</span>
+                  {screen.roles.includes('all')&&<span style={{fontSize:8.5,color:screen.color,background:`${screen.color}12`,border:`1px solid ${screen.color}25`,borderRadius:3,padding:'1px 5px',fontWeight:700,letterSpacing:'0.04em',flexShrink:0}}>ALL ROLES</span>}
+                </div>
+                <div style={{fontSize:11.5,color:C.txt2,lineHeight:1.4}}>{screen.desc}</div>
+                <div style={{marginTop:6,fontSize:10,color:screen.color,fontWeight:600,display:'flex',alignItems:'center',gap:3}}>
+                  <span>{screen.file}</span>
+                  <span style={{color:C.txt3}}>→</span>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {filtered.length===0&&(
+          <div style={{textAlign:'center',padding:'60px',color:C.txt3}}>
+            <div style={{fontSize:32,marginBottom:12}}>🔍</div>
+            <div style={{fontSize:15,fontWeight:600,color:C.txt2,marginBottom:4}}>No screens found</div>
+            <div style={{fontSize:13}}>Try a different filter or search term</div>
+          </div>
+        )}
+
+        {/* Footer */}
+        <div style={{marginTop:32,padding:'20px 0',borderTop:`1px solid ${C.border}`,display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:10}}>
+          <div style={{fontSize:12,color:C.txt3}}>
+            <b style={{color:C.txt2}}>TFB Design System</b> · {ALL_SCREENS.length} screens · Built with React + Babel
+          </div>
+          <div style={{display:'flex',gap:8}}>
+            {[['tfb-dashboard.html','Dashboard'],['tfb-gameday.html','Gameday'],['tfb-meetings.html','Meetings'],['tfb-award.html','Award'],['tfb-parent-dev.html','Parent Dev']].map(([f,l])=>(
+              <button key={f} onClick={()=>nav(f)} style={{padding:'5px 12px',background:'rgba(182,255,43,0.08)',border:'1px solid rgba(182,255,43,0.2)',borderRadius:7,fontSize:11,fontWeight:700,color:C.lime,transition:'background .15s'}} onMouseEnter={e=>e.currentTarget.style.background='rgba(182,255,43,0.15)'} onMouseLeave={e=>e.currentTarget.style.background='rgba(182,255,43,0.08)'}>{l}</button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

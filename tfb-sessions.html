@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TFB – Sessions</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="tfb-responsive.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--lime:#B6FF2B;--green:#0F3D2E;--green-dark:#0A2E20;--bg:#111418;--s1:#1C2128;--s2:#242B33;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);--txt:#F0F2F4;--txt2:rgba(240,242,244,0.5);--txt3:rgba(240,242,244,0.28);--goal:#2ED47A;--amber:#FFB020;--red:#E5533D;--sky:#3FA9F5;--font-d:'Barlow Condensed',sans-serif;--font-b:'Barlow',sans-serif;--hh:54px;}
+html,body,#root{height:100%;overflow:hidden}
+body{font-family:var(--font-b);background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased}
+button,input,select{font-family:var(--font-b);color:inherit}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:3px}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}.fade-in{animation:fadeIn .18s ease forwards}
+</style>
+</head>
+<body><div id="root"></div>
+<script type="text/babel">
+const {useState} = React;
+const C={lime:'#B6FF2B',green:'#0F3D2E',greenDark:'#0A2E20',bg:'#111418',s1:'#1C2128',s2:'#242B33',border:'rgba(255,255,255,0.07)',border2:'rgba(255,255,255,0.13)',txt:'#F0F2F4',txt2:'rgba(240,242,244,0.5)',txt3:'rgba(240,242,244,0.28)',goal:'#2ED47A',amber:'#FFB020',red:'#E5533D',sky:'#3FA9F5'};
+const PC={Technical:'#3FA9F5',Tactical:'#B6FF2B',Physical:'#FFB020',Psychological:'#2ED47A',Mixed:'#8A8F98'};
+
+const Ic=({d,size=16,color='currentColor',stroke=2,fill='none'})=>(<svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>{Array.isArray(d)?d.map((p,i)=><path key={i} d={p}/>):<path d={d}/> }</svg>);
+const P={back:'M15 18l-6-6 6-6',plus:'M12 5v14M5 12h14',search:'M21 21l-6-6m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0z',clock:'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zm0-14v4l3 3',users:'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8z',edit:'M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z',copy:['M20 9H11a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2z','M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'],trash:'M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6',filter:'M22 3H2l8 9.46V19l4 2v-8.54L22 3',grid:['M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z'],list:'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01',chevD:'M6 9l6 6 6-6',};
+
+const SESSIONS=[
+  {id:1,name:'Technical: Ball Mastery & First Touch',pillar:'Technical',date:'Thu 1 May',time:'6:00 PM',duration:60,players:'All',drills:5,fc:'Small Games',status:'upcoming',notes:'Focus on weak foot work'},
+  {id:2,name:'Tactical: Pressing Shape & Triggers',pillar:'Tactical',date:'Tue 6 May',time:'6:30 PM',duration:75,players:'11',drills:4,fc:'Medium Games',status:'upcoming',notes:'Watch for trigger recognition'},
+  {id:3,name:'Physical: Speed & Acceleration',pillar:'Physical',date:'Thu 8 May',time:'6:00 PM',duration:45,players:'All',drills:3,fc:'Technical Circuits',status:'upcoming',notes:''},
+  {id:4,name:'Tactical: Defensive Organisation',pillar:'Tactical',date:'Mon 28 Apr',time:'6:00 PM',duration:75,players:'11',drills:6,fc:'Big Games',status:'completed',notes:'Strong session — pressing improved'},
+  {id:5,name:'Technical: Crossing & Finishing',pillar:'Technical',date:'Thu 24 Apr',time:'6:00 PM',duration:60,players:'All',drills:5,fc:'Small Games',status:'completed',notes:''},
+  {id:6,name:'Psych: Team Building & Video',pillar:'Psychological',date:'Mon 21 Apr',time:'6:00 PM',duration:60,players:'All',drills:3,fc:null,status:'completed',notes:'Great bonding session'},
+  {id:7,name:'Physical: Strength & Conditioning',pillar:'Physical',date:'Thu 17 Apr',time:'6:00 PM',duration:45,players:'All',drills:4,fc:'Technical Circuits',status:'completed',notes:''},
+  {id:8,name:'Pre-Season: Full Tactical Review',pillar:'Mixed',date:'Mon 14 Apr',time:'10:00 AM',duration:90,players:'11',drills:8,fc:'Big Games',status:'completed',notes:'Pre-season final session'},
+];
+
+const TEMPLATES=[
+  {id:1,name:'Standard Pre-Season Session',pillar:'Mixed',duration:90,drills:8,usedCount:12},
+  {id:2,name:'Match Day Warm-Up',pillar:'Technical',duration:30,drills:3,usedCount:7},
+  {id:3,name:'Technical: Ball Mastery',pillar:'Technical',duration:60,drills:5,usedCount:5},
+  {id:4,name:'Tactical: Pressing System',pillar:'Tactical',duration:75,drills:4,usedCount:4},
+  {id:5,name:'Physical: Game-Based Conditioning',pillar:'Physical',duration:60,drills:4,usedCount:3},
+];
+
+function Header({onBack}){return(<header style={{height:'var(--hh)',background:`linear-gradient(90deg,${C.greenDark},${C.green})`,borderBottom:'1px solid rgba(182,255,43,0.18)',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 20px',flexShrink:0,boxShadow:'0 2px 12px rgba(0,0,0,0.3)',zIndex:50}}>
+  <div style={{display:'flex',alignItems:'center',gap:12}}>
+    <button onClick={onBack} style={{display:'flex',alignItems:'center',gap:6,padding:'6px 10px',background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,color:'rgba(255,255,255,0.7)',fontSize:12,fontWeight:600,cursor:'pointer',transition:'all .15s'}} onMouseEnter={e=>{e.currentTarget.style.background='rgba(182,255,43,0.12)';e.currentTarget.style.color='#B6FF2B'}} onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,0.07)';e.currentTarget.style.color='rgba(255,255,255,0.7)'}}>
+      <Ic d={P.back} size={14} color="currentColor"/> Dashboard
+    </button>
+    <div style={{width:1,height:24,background:'rgba(255,255,255,0.12)'}}/>
+    <div style={{display:'flex',alignItems:'center',gap:10}}>
+      <svg width="28" height="28" viewBox="0 0 40 40" fill="none"><polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="#0F3D2E" stroke="#B6FF2B" strokeWidth="1.5"/><text x="20" y="26" textAnchor="middle" fill="#B6FF2B" fontFamily="Barlow Condensed" fontWeight="900" fontSize="13">TFB</text></svg>
+      <div><div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:17,color:'#fff',letterSpacing:'0.04em',lineHeight:1}}>SESSIONS</div><div style={{fontSize:9.5,color:'rgba(182,255,43,0.65)',fontWeight:700,letterSpacing:'0.1em'}}>Malvern City U18 Men</div></div>
+    </div>
+  </div>
+  <button onClick={()=>{try{window.location.href='tfb-session-builder.html'}catch(e){}}} style={{display:'flex',alignItems:'center',gap:6,padding:'7px 16px',background:`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:8,fontSize:13,fontWeight:800,color:C.green,cursor:'pointer'}}><Ic d={P.plus} size={14} color={C.green}/> New Session</button>
+</header>);}
+
+function SessionCard({session,view}){
+  const pc=PC[session.pillar]||C.lime;
+  const isUpcoming=session.status==='upcoming';
+  if(view==='list') return(
+    <div style={{display:'flex',alignItems:'center',gap:12,padding:'11px 14px',background:C.s1,borderRadius:10,border:`1px solid ${isUpcoming?`${pc}25`:C.border}`,marginBottom:6,cursor:'pointer',transition:'all .15s'}} onMouseEnter={e=>{e.currentTarget.style.borderColor=`${pc}50`;e.currentTarget.style.background='rgba(255,255,255,0.03)'}} onMouseLeave={e=>{e.currentTarget.style.borderColor=isUpcoming?`${pc}25`:C.border;e.currentTarget.style.background=C.s1}}>
+      <div style={{width:4,height:40,borderRadius:2,background:pc,flexShrink:0}}/>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:3}}>
+          <span style={{fontSize:13.5,fontWeight:700,color:C.txt,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{session.name}</span>
+          {isUpcoming&&<span style={{fontSize:9,fontWeight:800,color:C.goal,background:'rgba(46,212,122,0.12)',border:'1px solid rgba(46,212,122,0.25)',borderRadius:4,padding:'1px 6px',flexShrink:0}}>UPCOMING</span>}
+        </div>
+        <div style={{display:'flex',gap:10,alignItems:'center',fontSize:11,color:C.txt3,flexWrap:'wrap'}}>
+          <span>{session.date} · {session.time}</span>
+          <span style={{color:pc,fontWeight:700}}>{session.pillar}</span>
+          <span style={{display:'flex',alignItems:'center',gap:3}}><Ic d={P.clock} size={10} color={C.txt3}/>{session.duration}min</span>
+          <span style={{display:'flex',alignItems:'center',gap:3}}><Ic d={P.users} size={10} color={C.txt3}/>{session.players}</span>
+          <span>{session.drills} drills</span>
+          {session.fc&&<span style={{background:`${pc}12`,border:`1px solid ${pc}25`,borderRadius:4,padding:'1px 6px',color:pc,fontWeight:700}}>{session.fc}</span>}
+        </div>
+      </div>
+      <div style={{display:'flex',gap:6,flexShrink:0}}>
+        <button onClick={()=>{try{window.location.href='tfb-session-builder.html'}catch(e){}}} style={{padding:'5px 10px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:7,fontSize:11,fontWeight:700,color:C.txt2,cursor:'pointer',display:'flex',alignItems:'center',gap:4,transition:'all .15s'}} onMouseEnter={e=>{e.currentTarget.style.borderColor='rgba(182,255,43,0.3)';e.currentTarget.style.color=C.lime}} onMouseLeave={e=>{e.currentTarget.style.borderColor=C.border2;e.currentTarget.style.color=C.txt2}}><Ic d={P.edit} size={12} color="currentColor"/> Edit</button>
+        <button style={{padding:'5px 9px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:7,cursor:'pointer',display:'flex',transition:'all .15s'}} onMouseEnter={e=>e.currentTarget.style.background='rgba(63,169,245,0.1)'} onMouseLeave={e=>e.currentTarget.style.background=C.s2}><Ic d={P.copy} size={13} color={C.sky}/></button>
+        <button style={{padding:'5px 9px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:7,cursor:'pointer',display:'flex',transition:'all .15s'}} onMouseEnter={e=>e.currentTarget.style.background='rgba(229,83,61,0.1)'} onMouseLeave={e=>e.currentTarget.style.background=C.s2}><Ic d={P.trash} size={13} color={C.red}/></button>
+      </div>
+    </div>
+  );
+  return(
+    <div style={{background:C.s1,borderRadius:12,border:`1px solid ${isUpcoming?`${pc}25`:C.border}`,overflow:'hidden',cursor:'pointer',transition:'all .15s'}} onMouseEnter={e=>e.currentTarget.style.borderColor=`${pc}50`} onMouseLeave={e=>e.currentTarget.style.borderColor=isUpcoming?`${pc}25`:C.border}>
+      <div style={{height:4,background:pc}}/>
+      <div style={{padding:'12px 14px'}}>
+        <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:8}}>
+          <span style={{fontSize:13,fontWeight:700,color:C.txt,lineHeight:1.3,flex:1,marginRight:8}}>{session.name}</span>
+          {isUpcoming&&<span style={{fontSize:9,fontWeight:800,color:C.goal,background:'rgba(46,212,122,0.12)',border:'1px solid rgba(46,212,122,0.25)',borderRadius:4,padding:'1px 6px',flexShrink:0}}>UPCOMING</span>}
+        </div>
+        <div style={{fontSize:11,color:C.txt3,marginBottom:8}}>{session.date} · {session.time}</div>
+        <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:8}}>
+          <span style={{fontSize:10,fontWeight:700,color:pc,background:`${pc}12`,border:`1px solid ${pc}25`,borderRadius:4,padding:'2px 7px'}}>{session.pillar}</span>
+          <span style={{fontSize:10,color:C.txt3,display:'flex',alignItems:'center',gap:3}}><Ic d={P.clock} size={10} color={C.txt3}/>{session.duration}min</span>
+          <span style={{fontSize:10,color:C.txt3,display:'flex',alignItems:'center',gap:3}}><Ic d={P.users} size={10} color={C.txt3}/>{session.players}</span>
+        </div>
+        <div style={{display:'flex',gap:4}}>
+          <button onClick={()=>{try{window.location.href='tfb-session-builder.html'}catch(e){}}} style={{flex:1,padding:'6px',background:`${pc}12`,border:`1px solid ${pc}30`,borderRadius:7,fontSize:11,fontWeight:700,color:pc,cursor:'pointer',transition:'background .15s'}} onMouseEnter={e=>e.currentTarget.style.background=`${pc}22`} onMouseLeave={e=>e.currentTarget.style.background=`${pc}12`}>Open</button>
+          <button style={{padding:'6px 8px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:7,cursor:'pointer',display:'flex'}}><Ic d={P.copy} size={13} color={C.sky}/></button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function App(){
+  const [tab,setTab]=useState('sessions');
+  const [view,setView]=useState('list');
+  const [search,setSearch]=useState('');
+  const [pillarFilter,setPillarFilter]=useState('All');
+
+  const filtered=SESSIONS.filter(s=>{
+    const q=search.toLowerCase();
+    return(!q||s.name.toLowerCase().includes(q))&&(pillarFilter==='All'||s.pillar===pillarFilter);
+  });
+  const upcoming=filtered.filter(s=>s.status==='upcoming');
+  const completed=filtered.filter(s=>s.status==='completed');
+
+  return(<div style={{height:'100vh',display:'flex',flexDirection:'column',background:C.bg,overflow:'hidden'}}>
+    <Header onBack={()=>{try{window.location.href='tfb-dashboard.html'}catch(e){}}}/>
+    {/* Tabs */}
+    <div style={{background:C.s1,borderBottom:`1px solid ${C.border}`,padding:'0 20px',display:'flex',alignItems:'center',gap:0,flexShrink:0}}>
+      {[['sessions','Sessions'],['templates','Templates']].map(([t,l])=>(
+        <button key={t} onClick={()=>setTab(t)} style={{padding:'11px 18px',background:'transparent',border:'none',borderBottom:`2px solid ${tab===t?C.lime:'transparent'}`,color:tab===t?C.lime:C.txt2,fontSize:13,fontWeight:700,cursor:'pointer',letterSpacing:'0.03em',transition:'color .15s,border-color .15s'}}>{l}</button>
+      ))}
+    </div>
+    {/* Toolbar */}
+    <div style={{background:C.bg,padding:'10px 20px',display:'flex',alignItems:'center',gap:10,flexShrink:0,borderBottom:`1px solid ${C.border}`}}>
+      <div style={{display:'flex',alignItems:'center',gap:6,background:C.s1,border:`1px solid ${C.border2}`,borderRadius:8,padding:'7px 10px',flex:1,maxWidth:280}}>
+        <Ic d={P.search} size={14} color={C.txt3}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search sessions…" style={{background:'transparent',border:'none',outline:'none',fontSize:13,color:C.txt,flex:1}}/>
+      </div>
+      <div style={{display:'flex',gap:5}}>
+        {['All','Technical','Tactical','Physical','Psychological','Mixed'].map(p=>{
+          const pc=PC[p]||C.lime;
+          return(<button key={p} onClick={()=>setPillarFilter(p)} style={{padding:'4px 10px',background:pillarFilter===p?(p==='All'?'rgba(182,255,43,0.12)':`${pc}18`):'transparent',border:`1px solid ${pillarFilter===p?(p==='All'?'rgba(182,255,43,0.35)':`${pc}45`):C.border}`,borderRadius:6,fontSize:11,fontWeight:700,color:pillarFilter===p?(p==='All'?C.lime:pc):C.txt3,cursor:'pointer',transition:'all .12s'}}>{p==='All'?'All':p.slice(0,4)}</button>);
+        })}
+      </div>
+      <div style={{flex:1}}/>
+      <div style={{display:'flex',gap:4}}>
+        <button onClick={()=>setView('list')} style={{padding:'5px 8px',background:view==='list'?'rgba(182,255,43,0.1)':'transparent',border:`1px solid ${view==='list'?'rgba(182,255,43,0.3)':C.border2}`,borderRadius:6,cursor:'pointer',display:'flex',transition:'all .12s'}}><Ic d={P.list} size={14} color={view==='list'?C.lime:C.txt3}/></button>
+        <button onClick={()=>setView('grid')} style={{padding:'5px 8px',background:view==='grid'?'rgba(182,255,43,0.1)':'transparent',border:`1px solid ${view==='grid'?'rgba(182,255,43,0.3)':C.border2}`,borderRadius:6,cursor:'pointer',display:'flex',transition:'all .12s'}}><Ic d={P.grid} size={14} color={view==='grid'?C.lime:C.txt3}/></button>
+      </div>
+    </div>
+
+    <div style={{flex:1,overflowY:'auto',padding:'16px 20px'}}>
+      {tab==='sessions'&&(
+        <div>
+          {upcoming.length>0&&(<div style={{marginBottom:20}}>
+            <div style={{fontSize:11,fontWeight:700,color:C.lime,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:10}}>Upcoming ({upcoming.length})</div>
+            {view==='list'?upcoming.map(s=><SessionCard key={s.id} session={s} view="list"/>):
+              <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10}}>{upcoming.map(s=><SessionCard key={s.id} session={s} view="grid"/>)}</div>}
+          </div>)}
+          {completed.length>0&&(<div>
+            <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:10}}>Completed ({completed.length})</div>
+            {view==='list'?completed.map(s=><SessionCard key={s.id} session={s} view="list"/>):
+              <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10}}>{completed.map(s=><SessionCard key={s.id} session={s} view="grid"/>)}</div>}
+          </div>)}
+          {filtered.length===0&&<div style={{padding:'40px',textAlign:'center',color:C.txt3,fontSize:14}}>No sessions found</div>}
+        </div>
+      )}
+      {tab==='templates'&&(
+        <div>
+          <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:12}}>Session Templates ({TEMPLATES.length})</div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10}}>
+            {TEMPLATES.map(t=>{const pc=PC[t.pillar]||C.lime;return(
+              <div key={t.id} style={{background:C.s1,borderRadius:12,border:`1px solid ${C.border}`,padding:'14px',cursor:'pointer',transition:'all .15s'}} onMouseEnter={e=>e.currentTarget.style.borderColor=`${pc}40`} onMouseLeave={e=>e.currentTarget.style.borderColor=C.border}>
+                <div style={{height:3,background:pc,borderRadius:2,marginBottom:12}}/>
+                <div style={{fontSize:13.5,fontWeight:700,color:C.txt,marginBottom:6,lineHeight:1.3}}>{t.name}</div>
+                <div style={{display:'flex',gap:8,fontSize:11,color:C.txt3,marginBottom:10}}>
+                  <span style={{display:'flex',alignItems:'center',gap:3}}><Ic d={P.clock} size={10} color={C.txt3}/>{t.duration}min</span>
+                  <span>{t.drills} drills</span>
+                  <span style={{color:C.txt3}}>Used {t.usedCount}×</span>
+                </div>
+                <div style={{display:'flex',gap:5}}>
+                  <button onClick={()=>{try{window.location.href='tfb-session-builder.html'}catch(e){}}} style={{flex:1,padding:'6px',background:`${pc}12`,border:`1px solid ${pc}30`,borderRadius:7,fontSize:11,fontWeight:700,color:pc,cursor:'pointer'}}>Use Template</button>
+                  <button style={{padding:'6px 8px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:7,cursor:'pointer',display:'flex'}}><Ic d={P.edit} size={13} color={C.txt2}/></button>
+                </div>
+              </div>
+            );})}
+            {/* Add template */}
+            <div style={{background:'rgba(255,255,255,0.02)',borderRadius:12,border:`2px dashed rgba(255,255,255,0.1)`,padding:'14px',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:8,minHeight:140,transition:'all .15s'}} onMouseEnter={e=>{e.currentTarget.style.borderColor='rgba(182,255,43,0.3)';e.currentTarget.style.background='rgba(182,255,43,0.04)'}} onMouseLeave={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,0.1)';e.currentTarget.style.background='rgba(255,255,255,0.02)'}}>
+              <Ic d={P.plus} size={22} color={C.txt3}/><span style={{fontSize:12,color:C.txt3,fontWeight:600}}>New Template</span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  </div>);}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TFB – Gameday</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="tfb-responsive.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --lime:#B6FF2B; --lime-dim:rgba(182,255,43,0.12);
+  --green:#0F3D2E; --green-dark:#081F19;
+  --bg:#111418; --s1:#1C2128; --s2:#242B33; --s3:#2D3640;
+  --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.13);
+  --txt:#F0F2F4; --txt2:rgba(240,242,244,0.5); --txt3:rgba(240,242,244,0.28);
+  --goal:#2ED47A; --amber:#FFB020; --red:#E5533D; --sky:#3FA9F5;
+  --font-d:'Barlow Condensed',sans-serif;
+  --font-b:'Barlow',sans-serif;
+  --hh:52px;
+}
+html,body,#root{height:100%;overflow:hidden}
+body{font-family:var(--font-b);background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased}
+button{cursor:pointer;font-family:var(--font-b)}
+input,textarea,select{font-family:var(--font-b)}
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:3px}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.pulse{animation:pulse 1.4s infinite}
+.fade-in{animation:fadeIn .18s ease forwards}
+
+/* Pitch grass */
+.pitch-surface{
+  background-color:#2d6a3f;
+  background-image:
+    repeating-linear-gradient(90deg,
+      transparent 0px, transparent 47px,
+      rgba(0,0,0,0.07) 47px, rgba(0,0,0,0.07) 94px
+    );
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useRef,useCallback} = React;
+
+// ── Palette ──────────────────────────────────────────────────────────────────
+const C = {
+  lime:'#B6FF2B', limeDim:'rgba(182,255,43,0.12)', limeMid:'rgba(182,255,43,0.25)',
+  green:'#0F3D2E', greenDark:'#081F19',
+  bg:'#111418', s1:'#1C2128', s2:'#242B33', s3:'#2D3640',
+  border:'rgba(255,255,255,0.07)', border2:'rgba(255,255,255,0.13)',
+  txt:'#F0F2F4', txt2:'rgba(240,242,244,0.5)', txt3:'rgba(240,242,244,0.28)',
+  goal:'#2ED47A', amber:'#FFB020', red:'#E5533D', sky:'#3FA9F5',
+};
+
+const statusColor = {available:C.goal, late:C.amber, injured:C.red, unknown:'#8A8F98'};
+
+// ── Icon (SVG path) ──────────────────────────────────────────────────────────
+const Ic = ({d,size=16,color='currentColor',stroke=2,fill='none',style={}}) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke={color}
+    strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round"
+    style={{flexShrink:0,...style}}>
+    {Array.isArray(d)?d.map((p,i)=><path key={i} d={p}/>):<path d={d}/>}
+  </svg>
+);
+const P = {
+  back:'M15 18l-6-6 6-6',
+  menu:'M3 12h18M3 6h18M3 18h18',
+  user:'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z',
+  bell:'M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0',
+  chevD:'M6 9l6 6 6-6',
+  clock:'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zm0-14v4l3 3',
+  plus:'M12 5v14M5 12h14',
+  x:'M18 6L6 18M6 6l12 12',
+  note:'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8',
+  act:'M22 12h-4l-3 9L9 3l-3 9H2',
+  users:'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm8 4a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zm3 8v-2a4 4 0 0 0-3-3.87',
+  check:'M20 6L9 17l-5-5',
+  logout:'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9',
+  flag:'M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7',
+  swap:'M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4',
+  settings:'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm8.2-2a8 8 0 0 0 .2-1 8 8 0 0 0-.2-1l2-1.6a.5.5 0 0 0 .1-.6l-1.8-3.2a.5.5 0 0 0-.6-.2l-2.4 1a7.9 7.9 0 0 0-1.6-.9l-.4-2.5A.5.5 0 0 0 14 2h-4a.5.5 0 0 0-.5.4l-.4 2.5a7.9 7.9 0 0 0-1.6.9l-2.4-1a.5.5 0 0 0-.6.2L2.7 8.2a.5.5 0 0 0 .1.6l2 1.6a8 8 0 0 0 0 2l-2 1.6a.5.5 0 0 0-.1.6l1.8 3.2a.5.5 0 0 0 .6.2l2.4-1c.5.3 1 .6 1.6.9l.4 2.5c.1.2.3.4.5.4h4c.3 0 .5-.2.5-.4l.4-2.5c.6-.2 1.1-.5 1.6-.9l2.4 1c.2.1.5 0 .6-.2l1.8-3.2a.5.5 0 0 0-.1-.6l-2-1.6z',
+};
+
+// ── Data ─────────────────────────────────────────────────────────────────────
+const SQUAD = [
+  {id:1, name:'J. Mitchell',  first:'Jamie',   last:'Mitchell',  pos:'GK', num:1,  status:'available', wellness:92},
+  {id:2, name:'A. Nguyen',    first:'Alex',     last:'Nguyen',    pos:'RB', num:2,  status:'available', wellness:88},
+  {id:3, name:'M. Osei',      first:'Marcus',   last:'Osei',      pos:'CB', num:5,  status:'available', wellness:85},
+  {id:4, name:'T. Kovacs',    first:'Tamas',    last:'Kovacs',    pos:'CB', num:6,  status:'available', wellness:78},
+  {id:5, name:'L. Santos',    first:'Luis',     last:'Santos',    pos:'LB', num:3,  status:'injured',   wellness:60},
+  {id:6, name:'B. Tremblay',  first:'Beau',     last:'Tremblay',  pos:'CM', num:8,  status:'available', wellness:90},
+  {id:7, name:'C. Walsh',     first:'Cian',     last:'Walsh',     pos:'CM', num:14, status:'available', wellness:72},
+  {id:8, name:'R. Al-Farsi',  first:'Rami',     last:'Al-Farsi',  pos:'AM', num:10, status:'available', wellness:88},
+  {id:9, name:'O. Petersen',  first:'Oscar',    last:'Petersen',  pos:'LW', num:11, status:'available', wellness:82},
+  {id:10,name:'K. Mensah',    first:'Kwame',    last:'Mensah',    pos:'RW', num:7,  status:'available', wellness:77},
+  {id:11,name:'D. Kowalski',  first:'Damian',   last:'Kowalski',  pos:'ST', num:9,  status:'available', wellness:91},
+  {id:12,name:'F. Brennan',   first:'Finn',     last:'Brennan',   pos:'GK', num:16, status:'available', wellness:85},
+  {id:13,name:'S. Park',      first:'Sung',     last:'Park',      pos:'CB', num:4,  status:'available', wellness:80},
+  {id:14,name:'J. Rossi',     first:'Jacopo',   last:'Rossi',     pos:'CM', num:13, status:'available', wellness:76},
+  {id:15,name:'M. Diallo',    first:'Mamadou',  last:'Diallo',    pos:'ST', num:19, status:'available', wellness:83},
+  {id:16,name:'P. Tran',      first:'Phillip',  last:'Tran',      pos:'LB', num:17, status:'available', wellness:79},
+  {id:17,name:'C. Reid',      first:'Connor',   last:'Reid',      pos:'RW', num:22, status:'available', wellness:81},
+  {id:18,name:'T. Murphy',    first:'Tom',      last:'Murphy',    pos:'CM', num:18, status:'available', wellness:74},
+];
+
+const FORMATIONS = {
+  '4-3-3':{label:'4-3-3',positions:[
+    {role:'GK',x:50,y:90},
+    {role:'RB',x:82,y:74},{role:'CB',x:63,y:77},{role:'CB',x:37,y:77},{role:'LB',x:18,y:74},
+    {role:'CM',x:72,y:53},{role:'CM',x:50,y:50},{role:'CM',x:28,y:53},
+    {role:'RW',x:82,y:24},{role:'ST',x:50,y:17},{role:'LW',x:18,y:24},
+  ]},
+  '4-4-2':{label:'4-4-2',positions:[
+    {role:'GK',x:50,y:90},
+    {role:'RB',x:82,y:74},{role:'CB',x:63,y:77},{role:'CB',x:37,y:77},{role:'LB',x:18,y:74},
+    {role:'RM',x:85,y:52},{role:'CM',x:63,y:52},{role:'CM',x:37,y:52},{role:'LM',x:15,y:52},
+    {role:'ST',x:63,y:20},{role:'ST',x:37,y:20},
+  ]},
+  '4-2-3-1':{label:'4-2-3-1',positions:[
+    {role:'GK',x:50,y:90},
+    {role:'RB',x:82,y:74},{role:'CB',x:63,y:77},{role:'CB',x:37,y:77},{role:'LB',x:18,y:74},
+    {role:'DM',x:63,y:60},{role:'DM',x:37,y:60},
+    {role:'RW',x:80,y:38},{role:'AM',x:50,y:36},{role:'LW',x:20,y:38},
+    {role:'ST',x:50,y:16},
+  ]},
+  '3-5-2':{label:'3-5-2',positions:[
+    {role:'GK',x:50,y:90},
+    {role:'CB',x:70,y:76},{role:'CB',x:50,y:79},{role:'CB',x:30,y:76},
+    {role:'RM',x:88,y:54},{role:'CM',x:68,y:52},{role:'CM',x:50,y:49},{role:'CM',x:32,y:52},{role:'LM',x:12,y:54},
+    {role:'ST',x:64,y:18},{role:'ST',x:36,y:18},
+  ]},
+  '4-5-1':{label:'4-5-1',positions:[
+    {role:'GK',x:50,y:90},
+    {role:'RB',x:82,y:74},{role:'CB',x:63,y:77},{role:'CB',x:37,y:77},{role:'LB',x:18,y:74},
+    {role:'RM',x:85,y:50},{role:'CM',x:68,y:50},{role:'CM',x:50,y:47},{role:'CM',x:32,y:50},{role:'LM',x:15,y:50},
+    {role:'ST',x:50,y:17},
+  ]},
+};
+
+const INIT_EVENTS = [
+  {id:1, min:12, type:'goal',   team:'home', player:'D. Kowalski', detail:'Assist: R. Al-Farsi'},
+  {id:2, min:34, type:'yellow', team:'away', player:'K. Brown',     detail:'Foul'},
+  {id:3, min:45, type:'goal',   team:'away', player:'T. Smith',     detail:''},
+  {id:4, min:58, type:'sub',    team:'home', player:'J. Rossi ↑',   detail:'C. Walsh ↓'},
+  {id:5, min:67, type:'goal',   team:'home', player:'O. Petersen',  detail:'Assist: A. Nguyen'},
+  {id:6, min:71, type:'red',    team:'away', player:'M. Jones',     detail:'Second yellow'},
+];
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function initLineup(formation) {
+  const defaults = [SQUAD[0],SQUAD[1],SQUAD[2],SQUAD[3],null,SQUAD[5],SQUAD[6],SQUAD[7],SQUAD[8],SQUAD[10],SQUAD[9]];
+  const count = FORMATIONS[formation].positions.length;
+  const arr = [];
+  for(let i=0;i<count;i++) arr.push(defaults[i] || null);
+  return arr;
+}
+
+// ── Top Bar ───────────────────────────────────────────────────────────────────
+function TopBar({homeScore,awayScore,onHomeGoal,onAwayGoal,minute,isLive,onToggleLive,matchState,formation,setFormation,onBack}) {
+  const [showForms, setShowForms] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const isMobile = window.useIsMobile ? window.useIsMobile() : false;
+  return (
+    <>
+    {menuOpen && window.MobileDrawer && React.createElement(window.MobileDrawer,{open:true,onClose:()=>setMenuOpen(false),currentPath:'tfb-gameday.html',role:(()=>{try{return localStorage.getItem('tfb_role')||'Coach';}catch(e){return 'Coach';}})()})}
+    <div style={{height:'var(--hh)',background:C.green,borderBottom:`1px solid rgba(182,255,43,0.18)`,display:'flex',alignItems:'center',gap:0,flexShrink:0,boxShadow:'0 2px 12px rgba(0,0,0,0.3)',position:'relative',zIndex:50}}>
+
+      {/* Hamburger (mobile) or Back (desktop) */}
+      {isMobile ? (
+        <button onClick={()=>setMenuOpen(v=>!v)} aria-label="Menu" style={{height:'100%',padding:'0 14px',background:'transparent',border:'none',borderRight:`1px solid rgba(255,255,255,0.08)`,color:'rgba(255,255,255,0.7)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0}}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+        </button>
+      ) : (
+        <button onClick={onBack} style={{height:'100%',padding:'0 14px',background:'transparent',border:'none',borderRight:`1px solid rgba(255,255,255,0.08)`,color:'rgba(255,255,255,0.6)',display:'flex',alignItems:'center',gap:6,fontSize:12,fontWeight:600,transition:'all .15s'}}
+          onMouseEnter={e=>{e.currentTarget.style.background='rgba(182,255,43,0.1)';e.currentTarget.style.color='#B6FF2B'}}
+          onMouseLeave={e=>{e.currentTarget.style.background='transparent';e.currentTarget.style.color='rgba(255,255,255,0.6)'}}>
+          <Ic d={P.back} size={14} color="currentColor"/>
+          <span>Dashboard</span>
+        </button>
+      )}
+
+      {/* Logo area */}
+      <div style={{padding:'0 16px',borderRight:`1px solid rgba(255,255,255,0.08)`,height:'100%',display:'flex',alignItems:'center',gap:10}}>
+        <svg width="28" height="28" viewBox="0 0 40 40" fill="none">
+          <polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="#0F3D2E" stroke="#B6FF2B" strokeWidth="1.5"/>
+          <text x="20" y="26" textAnchor="middle" fill="#B6FF2B" fontFamily="Barlow Condensed" fontWeight="900" fontSize="13">TFB</text>
+        </svg>
+        <div>
+          <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:16,color:'#fff',letterSpacing:'0.05em',lineHeight:1}}>GAMEDAY</div>
+          <div style={{fontSize:9,color:'rgba(182,255,43,0.65)',fontWeight:700,letterSpacing:'0.12em',textTransform:'uppercase'}}>Match Control</div>
+        </div>
+      </div>
+
+      {/* ── SCOREBOARD ── centred */}
+      <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',gap:0,height:'100%'}}>
+        {/* Home team */}
+        <div style={{display:'flex',alignItems:'center',gap:10,paddingRight:16}}>
+          <div style={{textAlign:'right'}}>
+            <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:15,color:'#fff',lineHeight:1,letterSpacing:'0.02em',whiteSpace:'nowrap'}}>MALVERN CITY</div>
+            <div style={{fontSize:9,color:'rgba(255,255,255,0.4)',fontWeight:600,letterSpacing:'0.08em'}}>U18 MEN · HOME</div>
+          </div>
+          {/* Home kit swatch */}
+          <div style={{width:26,height:26,borderRadius:5,background:'linear-gradient(135deg,#B6FF2B,#68B42E)',border:'2px solid rgba(255,255,255,0.2)',flexShrink:0}}/>
+        </div>
+
+        {/* Score block */}
+        <div style={{background:'rgba(0,0,0,0.3)',border:`1px solid rgba(255,255,255,0.12)`,borderRadius:10,padding:'0 6px',display:'flex',alignItems:'center',gap:0,height:36}}>
+          <button onClick={onHomeGoal} style={{width:26,height:'100%',background:'transparent',border:'none',color:C.lime,fontSize:18,fontWeight:900,transition:'background .1s',borderRadius:'8px 0 0 8px'}}
+            onMouseEnter={e=>e.currentTarget.style.background='rgba(182,255,43,0.15)'}
+            onMouseLeave={e=>e.currentTarget.style.background='transparent'}>+</button>
+          <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:30,color:C.lime,lineHeight:1,letterSpacing:'-1px',padding:'0 10px',minWidth:70,textAlign:'center'}}>
+            {homeScore}<span style={{color:'rgba(255,255,255,0.2)',fontSize:20,margin:'0 2px'}}>–</span>{awayScore}
+          </div>
+          <button onClick={onAwayGoal} style={{width:26,height:'100%',background:'transparent',border:'none',color:'rgba(255,255,255,0.5)',fontSize:18,fontWeight:900,transition:'background .1s',borderRadius:'0 8px 8px 0'}}
+            onMouseEnter={e=>e.currentTarget.style.background='rgba(229,83,61,0.15)'}
+            onMouseLeave={e=>e.currentTarget.style.background='transparent'}>+</button>
+        </div>
+
+        {/* Away team */}
+        <div style={{display:'flex',alignItems:'center',gap:10,paddingLeft:16}}>
+          <div style={{width:26,height:26,borderRadius:5,background:'rgba(255,255,255,0.15)',border:'2px solid rgba(255,255,255,0.2)',flexShrink:0}}/>
+          <div>
+            <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:15,color:'#fff',lineHeight:1,letterSpacing:'0.02em',whiteSpace:'nowrap'}}>BULLEEN LIONS</div>
+            <div style={{fontSize:9,color:'rgba(255,255,255,0.4)',fontWeight:600,letterSpacing:'0.08em'}}>AWAY</div>
+          </div>
+        </div>
+
+        {/* Separator */}
+        <div style={{width:1,height:30,background:'rgba(255,255,255,0.1)',margin:'0 16px'}}/>
+
+        {/* Minute + live */}
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          <div style={{background:'rgba(0,0,0,0.25)',border:`1px solid rgba(255,255,255,0.1)`,borderRadius:8,padding:'4px 10px',display:'flex',alignItems:'center',gap:6}}>
+            <Ic d={P.clock} size={13} color={C.lime}/>
+            <span style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:20,color:'#fff',lineHeight:1}}>{minute}<span style={{fontSize:12,color:'rgba(255,255,255,0.5)',fontWeight:700}}>'</span></span>
+          </div>
+          {MATCH_STATES[matchState] && MATCH_STATES[matchState].next && (
+            <button onClick={onToggleLive} style={{display:'flex',alignItems:'center',gap:5,padding:'4px 10px',background:'rgba(182,255,43,0.12)',border:'1px solid rgba(182,255,43,0.35)',borderRadius:7,fontSize:11,fontWeight:800,color:'#B6FF2B',letterSpacing:'0.04em',transition:'all .15s',whiteSpace:'nowrap'}}
+              onMouseEnter={e=>e.currentTarget.style.background='rgba(182,255,43,0.22)'}
+              onMouseLeave={e=>e.currentTarget.style.background='rgba(182,255,43,0.12)'}>
+              {MATCH_STATES[matchState].nextLabel} ▶
+            </button>
+          )}
+          <div style={{display:'flex',alignItems:'center',gap:5,padding:'4px 9px',background:isLive?'rgba(229,83,61,0.18)':'rgba(255,255,255,0.06)',border:`1px solid ${isLive?'rgba(229,83,61,0.4)':C.border2}`,borderRadius:7}}>
+            <div className={isLive?'pulse':''} style={{width:6,height:6,borderRadius:'50%',background:isLive?C.red:'#8A8F98',flexShrink:0}}/>
+            <span style={{fontSize:11,fontWeight:800,color:isLive?C.red:C.txt2,letterSpacing:'0.06em',whiteSpace:'nowrap'}}>{MATCH_STATES[matchState]?MATCH_STATES[matchState].label:'LIVE'}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Formation picker */}
+      <div style={{position:'relative',borderLeft:`1px solid rgba(255,255,255,0.08)`,height:'100%',display:'flex',alignItems:'center',padding:'0 12px'}}>
+        <button onClick={()=>setShowForms(v=>!v)} style={{display:'flex',alignItems:'center',gap:8,background:showForms?'rgba(182,255,43,0.1)':'rgba(255,255,255,0.05)',border:`1px solid ${showForms?'rgba(182,255,43,0.35)':'rgba(255,255,255,0.1)'}`,borderRadius:8,padding:'5px 12px',color:showForms?C.lime:'rgba(255,255,255,0.7)',transition:'all .15s',whiteSpace:'nowrap'}}>
+          <span style={{fontFamily:'var(--font-d)',fontWeight:800,fontSize:17,letterSpacing:'0.03em'}}>{formation}</span>
+          <Ic d={P.chevD} size={13} color="currentColor"/>
+        </button>
+        {showForms && (
+          <div className="fade-in" style={{position:'absolute',top:'calc(100% + 4px)',right:0,background:C.s1,border:`1px solid ${C.border2}`,borderRadius:10,overflow:'hidden',boxShadow:'0 12px 40px rgba(0,0,0,0.5)',zIndex:100,minWidth:120}}>
+            {Object.keys(FORMATIONS).map(f=>(
+              <button key={f} onClick={()=>{setFormation(f);setShowForms(false)}} style={{width:'100%',padding:'9px 16px',background:f===formation?'rgba(182,255,43,0.1)':'transparent',border:'none',textAlign:'left',fontFamily:'var(--font-d)',fontWeight:800,fontSize:16,color:f===formation?C.lime:C.txt,letterSpacing:'0.03em',display:'flex',alignItems:'center',gap:10,transition:'background .15s'}}
+                onMouseEnter={e=>{if(f!==formation)e.currentTarget.style.background='rgba(255,255,255,0.05)'}}
+                onMouseLeave={e=>{if(f!==formation)e.currentTarget.style.background='transparent'}}>
+                {f===formation && <Ic d={P.check} size={13} color={C.lime}/>}
+                {f!==formation && <span style={{width:13}}/>}
+                {f}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* User pill */}
+      <div style={{borderLeft:`1px solid rgba(255,255,255,0.08)`,height:'100%',display:'flex',alignItems:'center',padding:'0 14px',gap:8}}>
+        <div style={{width:30,height:30,borderRadius:'50%',background:`linear-gradient(135deg,${C.lime},#68B42E)`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+          <span style={{fontSize:12,fontWeight:900,color:C.green,fontFamily:'var(--font-d)'}}>TB</span>
+        </div>
+      </div>
+    </div>
+    </>
+  );
+}
+
+// ── Pitch ────────────────────────────────────────────────────────────────────
+function Pitch({formation,lineup,selectedSlot,setSelectedSlot,swapMode,swapFrom,onSwapStart}) {
+  const positions = FORMATIONS[formation].positions;
+  const pitchRef = useRef(null);
+  const [dims, setDims] = useState({w:400,h:560});
+
+  useEffect(()=>{
+    if(!pitchRef.current) return;
+    const ro = new ResizeObserver(entries=>{
+      for(const e of entries){
+        const {width,height} = e.contentRect;
+        setDims({w:width,h:height});
+      }
+    });
+    ro.observe(pitchRef.current);
+    return ()=>ro.disconnect();
+  },[]);
+
+  return (
+    <div ref={pitchRef} className="pitch-surface" style={{width:'100%',height:'100%',position:'relative',borderRadius:8,overflow:'hidden',userSelect:'none'}}>
+
+      {/* Pitch markings SVG — overlaid, pointer-events none */}
+      <svg style={{position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:'none'}} viewBox="0 0 100 140" preserveAspectRatio="none">
+        {/* Outer */}
+        <rect x="2" y="2" width="96" height="136" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="0.5"/>
+        {/* Centre line */}
+        <line x1="2" y1="70" x2="98" y2="70" stroke="rgba(255,255,255,0.18)" strokeWidth="0.4"/>
+        {/* Centre circle */}
+        <circle cx="50" cy="70" r="12" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="0.4"/>
+        <circle cx="50" cy="70" r="0.8" fill="rgba(255,255,255,0.4)"/>
+        {/* Top penalty */}
+        <rect x="22" y="2" width="56" height="22" fill="none" stroke="rgba(255,255,255,0.16)" strokeWidth="0.4"/>
+        {/* Bottom penalty */}
+        <rect x="22" y="116" width="56" height="22" fill="none" stroke="rgba(255,255,255,0.16)" strokeWidth="0.4"/>
+        {/* Top 6yd */}
+        <rect x="35" y="2" width="30" height="9" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="0.35"/>
+        {/* Bottom 6yd */}
+        <rect x="35" y="129" width="30" height="9" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="0.35"/>
+        {/* Goals */}
+        <rect x="41" y="0" width="18" height="2.5" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.2)" strokeWidth="0.3"/>
+        <rect x="41" y="137.5" width="18" height="2.5" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.2)" strokeWidth="0.3"/>
+        {/* Penalty spots */}
+        <circle cx="50" cy="17" r="0.8" fill="rgba(255,255,255,0.35)"/>
+        <circle cx="50" cy="123" r="0.8" fill="rgba(255,255,255,0.35)"/>
+        {/* Arc top */}
+        <path d="M34.5 24 A11 11 0 0 0 65.5 24" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="0.35"/>
+        {/* Arc bottom */}
+        <path d="M34.5 116 A11 11 0 0 1 65.5 116" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="0.35"/>
+        {/* Corner arcs */}
+        <path d="M2 5 A3 3 0 0 0 5 2" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="0.35"/>
+        <path d="M95 2 A3 3 0 0 0 98 5" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="0.35"/>
+        <path d="M2 135 A3 3 0 0 1 5 138" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="0.35"/>
+        <path d="M95 138 A3 3 0 0 1 98 135" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="0.35"/>
+        {/* Attack arrow */}
+        <text x="50" y="7" textAnchor="middle" fill="rgba(255,255,255,0.2)" fontSize="3.5" fontFamily="Barlow Condensed" fontWeight="700" letterSpacing="0.5">▲ ATTACK</text>
+      </svg>
+
+      {/* Player tokens */}
+      {positions.map((pos,i)=>{
+        const player = lineup[i];
+        const isSelected = selectedSlot===i;
+        const isSwapFrom = swapFrom===i;
+        const isEmpty = !player;
+        const injured = player?.status==='injured';
+
+        return (
+          <div key={i}
+            onClick={()=>{
+              if(swapMode && swapFrom!==null && swapFrom!==i){
+                onSwapStart(swapFrom,i);
+              } else {
+                setSelectedSlot(isSelected?null:i);
+              }
+            }}
+            style={{
+              position:'absolute',
+              left:`${pos.x}%`, top:`${pos.y}%`,
+              transform:'translate(-50%,-50%)',
+              display:'flex',flexDirection:'column',alignItems:'center',gap:3,
+              cursor:'pointer',zIndex:isSelected||isSwapFrom?10:2,
+              transition:'transform .12s',
+            }}
+            onMouseEnter={e=>e.currentTarget.style.transform='translate(-50%,-50%) scale(1.08)'}
+            onMouseLeave={e=>e.currentTarget.style.transform='translate(-50%,-50%) scale(1)'}>
+
+            {/* Token circle */}
+            <div style={{
+              width:40,height:40,borderRadius:'50%',
+              background: isEmpty ? 'rgba(255,255,255,0.06)' :
+                          isSelected||isSwapFrom ? `linear-gradient(135deg,${C.lime},#68B42E)` :
+                          'linear-gradient(135deg,#243040,#1a2535)',
+              border:`2.5px solid ${isSelected||isSwapFrom ? '#fff' : isEmpty ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.35)'}`,
+              display:'flex',alignItems:'center',justifyContent:'center',
+              boxShadow: isSelected||isSwapFrom ? `0 0 0 3px rgba(255,255,255,0.25), 0 4px 12px rgba(0,0,0,0.5)` : '0 2px 8px rgba(0,0,0,0.5)',
+              position:'relative',
+            }}>
+              {isEmpty ? (
+                <Ic d={P.plus} size={16} color="rgba(255,255,255,0.3)"/>
+              ) : (
+                <span style={{fontSize:13,fontWeight:900,color:isSelected||isSwapFrom?C.green:'#fff',fontFamily:'var(--font-d)',lineHeight:1}}>{player.num}</span>
+              )}
+              {/* Status dot */}
+              {player && player.status !== 'available' && (
+                <div style={{position:'absolute',bottom:-1,right:-1,width:10,height:10,borderRadius:'50%',background:statusColor[player.status],border:`1.5px solid ${C.bg}`,flexShrink:0}}/>
+              )}
+            </div>
+
+            {/* Name label */}
+            <div style={{
+              background:isSelected||isSwapFrom?'#fff':'rgba(0,0,0,0.72)',
+              backdropFilter:'blur(6px)',
+              borderRadius:4,padding:'2px 6px',whiteSpace:'nowrap',
+              border:`1px solid ${isSelected||isSwapFrom?'rgba(255,255,255,0.9)':'rgba(255,255,255,0.12)'}`,
+              maxWidth:80,overflow:'hidden',
+            }}>
+              <div style={{fontSize:10,fontWeight:700,color:isSelected||isSwapFrom?C.green:'#fff',lineHeight:1.2,textAlign:'center',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                {isEmpty ? pos.role : (player.last || player.name)}
+              </div>
+              {!isEmpty && <div style={{fontSize:8.5,color:isSelected||isSwapFrom?'rgba(0,0,0,0.5)':'rgba(255,255,255,0.45)',textAlign:'center',lineHeight:1}}>{pos.role}</div>}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Bench Row ────────────────────────────────────────────────────────────────
+function BenchRow({lineup,squad,onAssign,selectedSlot,swapMode,setSwapMode,swapFrom,setSwapFrom,onSwapFromBench}) {
+  const usedIds = lineup.filter(Boolean).map(p=>p.id);
+  const bench = squad.filter(p=>!usedIds.includes(p.id)&&p.status!=='injured').slice(0,7);
+  const [hoveredId, setHoveredId] = useState(null);
+
+  return (
+    <div style={{background:C.s1,borderTop:`1px solid ${C.border}`,padding:'8px 12px',display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
+      <div style={{fontSize:10,fontWeight:700,color:C.txt3,letterSpacing:'0.1em',textTransform:'uppercase',flexShrink:0,marginRight:4}}>BENCH</div>
+      <div style={{display:'flex',gap:6,flex:1,overflowX:'auto'}}>
+        {bench.map(p=>{
+          const isTarget = selectedSlot!==null && !lineup[selectedSlot];
+          const isHov = hoveredId===p.id;
+          return (
+            <button key={p.id}
+              onClick={()=>{
+                if(selectedSlot!==null){
+                  onAssign(selectedSlot,p);
+                } else if(swapMode&&swapFrom!==null){
+                  onSwapFromBench(swapFrom,p);
+                }
+              }}
+              onMouseEnter={()=>setHoveredId(p.id)}
+              onMouseLeave={()=>setHoveredId(null)}
+              style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3,background:(isTarget||swapFrom!==null)&&isHov?'rgba(182,255,43,0.1)':'transparent',border:`1px solid ${(isTarget||swapFrom!==null)&&isHov?'rgba(182,255,43,0.4)':'transparent'}`,borderRadius:8,padding:'4px 6px',cursor:'pointer',flexShrink:0,transition:'all .12s'}}>
+              <div style={{width:30,height:30,borderRadius:'50%',background:C.s2,border:`1.5px solid ${isHov&&(selectedSlot!==null||swapFrom!==null)?C.lime:'rgba(255,255,255,0.2)'}`,display:'flex',alignItems:'center',justifyContent:'center',transition:'border-color .12s'}}>
+                <span style={{fontSize:11,fontWeight:900,color:C.txt,fontFamily:'var(--font-d)'}}>{p.num}</span>
+              </div>
+              <div style={{fontSize:9,fontWeight:600,color:C.txt2,whiteSpace:'nowrap'}}>{p.last||p.name.split('.')[1]?.trim()}</div>
+            </button>
+          );
+        })}
+      </div>
+      {/* Swap toggle */}
+      <button onClick={()=>{setSwapMode(v=>!v);setSwapFrom(null)}} style={{display:'flex',alignItems:'center',gap:5,padding:'5px 10px',background:swapMode?'rgba(63,169,245,0.15)':'rgba(255,255,255,0.05)',border:`1px solid ${swapMode?'rgba(63,169,245,0.4)':C.border2}`,borderRadius:7,fontSize:11,fontWeight:700,color:swapMode?C.sky:C.txt2,flexShrink:0,transition:'all .15s'}}>
+        <Ic d={P.swap} size={13} color="currentColor"/>
+        {swapMode?'Cancel Swap':'Swap'}
+      </button>
+    </div>
+  );
+}
+
+// ── Right Panel ───────────────────────────────────────────────────────────────
+function RightPanel({tab,setTab,events,onAddEvent,onOpenWizard,lineup,selectedSlot,onAssign,onRemove,formation,squad,notes,setNotes,minute}) {
+  const positions = FORMATIONS[formation].positions;
+  const usedIds = lineup.filter(Boolean).map(p=>p?.id);
+  const selectedPos = selectedSlot!==null ? positions[selectedSlot] : null;
+  const currentPlayer = selectedSlot!==null ? lineup[selectedSlot] : null;
+  const available = squad.filter(p=>p.status!=='injured'&&!usedIds.includes(p.id));
+
+  const TABS = ['squad','events','tactics','notes'];
+  const LABELS = {squad:'Squad',events:'Events',tactics:'Tactics',notes:'Notes'};
+  const ICONS = {squad:P.users,events:P.act,tactics:P.settings,notes:P.note};
+
+  const evColor = {goal:C.goal,yellow:C.amber,red:C.red,sub:C.sky};
+  const evEmoji = {goal:'⚽',yellow:'🟨',red:'🟥',sub:'🔄'};
+
+  return (
+    <div style={{width:280,background:C.s1,borderLeft:`1px solid ${C.border}`,display:'flex',flexDirection:'column',flexShrink:0,overflow:'hidden'}}>
+
+      {/* Tab bar */}
+      <div style={{display:'flex',borderBottom:`1px solid ${C.border}`,flexShrink:0}}>
+        {TABS.map(t=>(
+          <button key={t} onClick={()=>setTab(t)} style={{flex:1,height:40,background:'transparent',border:'none',borderBottom:`2px solid ${tab===t?C.lime:'transparent'}`,color:tab===t?C.lime:C.txt2,fontSize:11,fontWeight:700,letterSpacing:'0.06em',textTransform:'uppercase',display:'flex',alignItems:'center',justifyContent:'center',gap:5,transition:'color .15s,border-color .15s'}}>
+            <Ic d={ICONS[t]} size={13} color="currentColor"/>
+            {LABELS[t]}
+          </button>
+        ))}
+      </div>
+
+      {/* Squad panel */}
+      {tab==='squad' && (
+        <div style={{flex:1,overflow:'hidden',display:'flex',flexDirection:'column'}}>
+          {/* Context header */}
+          {selectedPos && (
+            <div style={{padding:'10px 12px',background:'rgba(182,255,43,0.06)',borderBottom:`1px solid ${C.border}`,flexShrink:0}}>
+              <div style={{fontSize:11,fontWeight:700,color:C.lime,letterSpacing:'0.06em',textTransform:'uppercase',marginBottom:2}}>
+                Assign <span style={{color:'#fff'}}>{selectedPos.role}</span>
+              </div>
+              {currentPlayer && (
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                  <div style={{fontSize:12,color:C.txt2}}>Current: <b style={{color:C.txt}}>{currentPlayer.name}</b></div>
+                  <button onClick={()=>onRemove(selectedSlot)} style={{fontSize:10,fontWeight:700,color:C.red,background:'rgba(229,83,61,0.1)',border:`1px solid rgba(229,83,61,0.25)`,borderRadius:5,padding:'2px 8px',cursor:'pointer'}}>Remove</button>
+                </div>
+              )}
+              {!currentPlayer && <div style={{fontSize:11,color:C.txt3}}>Tap a player below to assign</div>}
+            </div>
+          )}
+          {!selectedPos && (
+            <div style={{padding:'10px 12px',borderBottom:`1px solid ${C.border}`,flexShrink:0}}>
+              <div style={{fontSize:11,color:C.txt3}}>Tap a position on the pitch to assign a player</div>
+            </div>
+          )}
+          {/* Player list */}
+          <div style={{flex:1,overflowY:'auto',padding:'6px 8px'}}>
+            {/* Unassigned / available */}
+            <div style={{fontSize:9.5,fontWeight:700,color:C.txt3,letterSpacing:'0.1em',textTransform:'uppercase',padding:'6px 4px 4px'}}>
+              {selectedPos ? 'Available' : 'Full Squad'}
+            </div>
+            {(selectedPos ? available : squad).map(p=>{
+              const isUsed = usedIds.includes(p.id);
+              const sc = statusColor[p.status]||'#8A8F98';
+              return (
+                <button key={p.id}
+                  onClick={()=>selectedSlot!==null&&!isUsed&&onAssign(selectedSlot,p)}
+                  disabled={isUsed||p.status==='injured'}
+                  style={{width:'100%',display:'flex',alignItems:'center',gap:8,padding:'7px 8px',background:'transparent',border:`1px solid transparent`,borderRadius:8,cursor:selectedSlot!==null&&!isUsed&&p.status!=='injured'?'pointer':'default',marginBottom:2,opacity:isUsed||p.status==='injured'?0.4:1,transition:'all .12s',textAlign:'left'}}>
+                  <div style={{width:30,height:30,borderRadius:'50%',background:`${sc}18`,border:`1.5px solid ${sc}40`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                    <span style={{fontSize:11,fontWeight:900,color:sc,fontFamily:'var(--font-d)'}}>{p.num}</span>
+                  </div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:12.5,fontWeight:600,color:C.txt,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{p.name}</div>
+                    <div style={{fontSize:10,color:C.txt2}}>{p.pos} {isUsed?'· On pitch':p.status==='injured'?'· INJURED':''}</div>
+                  </div>
+                  <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:2}}>
+                    <span style={{fontSize:9,fontWeight:700,color:sc,background:`${sc}15`,border:`1px solid ${sc}30`,borderRadius:4,padding:'1px 5px',textTransform:'uppercase'}}>{isUsed?'XI':p.status}</span>
+                    <span style={{fontSize:9,color:C.txt3}}>W:{p.wellness}%</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Events panel */}
+      {tab==='events' && (
+        <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
+          {/* Quick log */}
+          <div style={{padding:'10px 10px 8px',borderBottom:`1px solid ${C.border}`,flexShrink:0}}>
+            <div style={{fontSize:10,fontWeight:700,color:C.txt3,letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:7}}>Quick Log</div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:5}}>
+              {[
+                ['⚽ Goal','goal',C.goal],
+                ['🟨 Yellow','yellow',C.amber],
+                ['🟥 Red','red',C.red],
+                ['🔄 Sub','sub',C.sky],
+              ].map(([label,type,color])=>(
+                <button key={type} onClick={()=>onOpenWizard(type)}
+                  style={{padding:'7px 6px',background:`${color}12`,border:`1px solid ${color}30`,borderRadius:7,fontSize:12,fontWeight:700,color,cursor:'pointer',transition:'all .12s',textAlign:'center'}}
+                  onMouseEnter={e=>{e.currentTarget.style.background=`${color}22`;e.currentTarget.style.borderColor=`${color}60`}}
+                  onMouseLeave={e=>{e.currentTarget.style.background=`${color}12`;e.currentTarget.style.borderColor=`${color}30`}}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Events timeline */}
+          <div style={{flex:1,overflowY:'auto',padding:'8px 0'}}>
+            {events.length===0 && (
+              <div style={{padding:'24px 16px',textAlign:'center',color:C.txt3,fontSize:13}}>No events yet</div>
+            )}
+            {[...events].reverse().map((ev,i)=>(
+              <div key={ev.id||i} className="fade-in" style={{display:'flex',alignItems:'flex-start',gap:8,padding:'7px 12px',borderBottom:`1px solid ${C.border}`,cursor:'default',transition:'background .12s'}}
+                onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.02)'}
+                onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                {/* Minute */}
+                <div style={{minWidth:28,textAlign:'right',flexShrink:0}}>
+                  <span style={{fontFamily:'var(--font-d)',fontWeight:800,fontSize:14,color:evColor[ev.type]||C.txt2}}>{ev.min}'</span>
+                </div>
+                {/* Dot + line */}
+                <div style={{display:'flex',flexDirection:'column',alignItems:'center',flexShrink:0,paddingTop:4}}>
+                  <div style={{width:8,height:8,borderRadius:'50%',background:evColor[ev.type]||C.txt2,flexShrink:0}}/>
+                  {i<events.length-1&&<div style={{width:1,height:'100%',background:C.border,flex:1,marginTop:3}}/>}
+                </div>
+                {/* Content */}
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:12,fontWeight:700,color:C.txt,lineHeight:1.3}}>
+                    <span style={{fontSize:14}}>{evEmoji[ev.type]}</span>{' '}
+                    {ev.player||'Unknown'}
+                  </div>
+                  {ev.detail&&<div style={{fontSize:10.5,color:C.txt2,marginTop:1}}>{ev.detail}</div>}
+                  <div style={{fontSize:10,color:C.txt3,marginTop:1}}>{ev.team==='home'?'Malvern City':'Bulleen Lions'}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Tactics panel */}
+      {tab==='tactics' && (
+        <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
+          <div style={{flex:1,overflowY:'auto',padding:'10px 12px',display:'flex',flexDirection:'column',gap:10}}>
+
+            {/* Mentality */}
+            <div style={{background:C.s2,borderRadius:10,border:`1px solid ${C.border}`,padding:'10px 12px'}}>
+              <div style={{fontSize:10,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8}}>Mentality</div>
+              <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
+                {['Defensive','Cautious','Balanced','Positive','Attacking'].map((m,i)=>{
+                  const colors=['#3FA9F5','#2ED47A','#B6FF2B','#FFB020','#E5533D'];
+                  const isActive=i===3;
+                  return(
+                    <button key={m} style={{flex:1,padding:'6px 4px',background:isActive?`${colors[i]}18`:'transparent',border:`1px solid ${isActive?colors[i]+'50':C.border}`,borderRadius:6,fontSize:9.5,fontWeight:700,color:isActive?colors[i]:C.txt3,cursor:'pointer',transition:'all .12s',whiteSpace:'nowrap'}}>{m}</button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Pressing */}
+            <div style={{background:C.s2,borderRadius:10,border:`1px solid ${C.border}`,padding:'10px 12px'}}>
+              <div style={{fontSize:10,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8}}>Pressing Intensity</div>
+              <div style={{display:'flex',gap:4}}>
+                {['Low','Medium','High','Very High'].map((m,i)=>{
+                  const isActive=i===2;
+                  return(
+                    <button key={m} style={{flex:1,padding:'6px 2px',background:isActive?'rgba(182,255,43,0.15)':'transparent',border:`1px solid ${isActive?'rgba(182,255,43,0.4)':C.border}`,borderRadius:6,fontSize:9,fontWeight:700,color:isActive?C.lime:C.txt3,cursor:'pointer',transition:'all .12s',whiteSpace:'nowrap'}}>{m}</button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Defensive line */}
+            <div style={{background:C.s2,borderRadius:10,border:`1px solid ${C.border}`,padding:'10px 12px'}}>
+              <div style={{fontSize:10,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8}}>Defensive Line</div>
+              <div style={{display:'flex',gap:4}}>
+                {['Deep','Normal','High'].map((m,i)=>{
+                  const isActive=i===2;
+                  return(
+                    <button key={m} style={{flex:1,padding:'6px',background:isActive?'rgba(63,169,245,0.15)':'transparent',border:`1px solid ${isActive?'rgba(63,169,245,0.4)':C.border}`,borderRadius:6,fontSize:10,fontWeight:700,color:isActive?C.sky:C.txt3,cursor:'pointer',transition:'all .12s'}}>{m}</button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Team instructions */}
+            <div style={{background:C.s2,borderRadius:10,border:`1px solid ${C.border}`,padding:'10px 12px'}}>
+              <div style={{fontSize:10,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8}}>Team Instructions</div>
+              {[
+                {label:'Play out from back',active:true,color:C.lime},
+                {label:'Short passing',active:true,color:C.lime},
+                {label:'High tempo',active:false,color:C.lime},
+                {label:'Press triggers: GK ball',active:true,color:C.amber},
+                {label:'Wide attacks',active:true,color:C.lime},
+                {label:'Overlap left',active:false,color:C.lime},
+                {label:'Overlap right',active:false,color:C.lime},
+                {label:'Cross often',active:false,color:C.lime},
+                {label:'Shoot on sight',active:false,color:C.lime},
+                {label:'Counter-attack',active:false,color:C.lime},
+              ].map(({label,active,color})=>(
+                <button key={label} style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'6px 8px',background:active?`${color}08`:'transparent',border:`1px solid ${active?color+'25':C.border}`,borderRadius:6,marginBottom:4,cursor:'pointer',transition:'all .12s',textAlign:'left'}}>
+                  <span style={{fontSize:11,color:active?C.txt:C.txt3,fontWeight:active?600:400}}>{label}</span>
+                  <div style={{width:28,height:15,borderRadius:8,background:active?`linear-gradient(135deg,${color},${color}cc)`:'rgba(255,255,255,0.1)',border:'none',position:'relative',flexShrink:0}}>
+                    <div style={{position:'absolute',top:2,left:active?'calc(100% - 13px)':2,width:11,height:11,borderRadius:'50%',background:'#fff',transition:'left .15s'}}/>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* Player roles */}
+            <div style={{background:C.s2,borderRadius:10,border:`1px solid ${C.border}`,padding:'10px 12px'}}>
+              <div style={{fontSize:10,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8}}>Key Player Instructions</div>
+              {[
+                {name:'B. Tremblay',num:8,role:'Box-to-Box',duty:'Attack',color:C.lime},
+                {name:'R. Al-Farsi',num:10,role:'Shadow Striker',duty:'Attack',color:C.amber},
+                {name:'O. Petersen',num:11,role:'Inside Forward',duty:'Attack',color:C.goal},
+                {name:'A. Nguyen',num:2,role:'Complete Wing-Back',duty:'Support',color:C.sky},
+              ].map(p=>(
+                <div key={p.num} style={{display:'flex',alignItems:'center',gap:8,padding:'5px 0',borderBottom:`1px solid ${C.border}`}}>
+                  <div style={{width:22,height:22,borderRadius:'50%',background:`${p.color}18`,border:`1.5px solid ${p.color}40`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                    <span style={{fontSize:9,fontWeight:900,color:p.color,fontFamily:'var(--font-d)'}}>{p.num}</span>
+                  </div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:11,fontWeight:600,color:C.txt,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{p.name}</div>
+                    <div style={{fontSize:9.5,color:C.txt3}}>{p.role}</div>
+                  </div>
+                  <span style={{fontSize:9,fontWeight:700,color:p.color,background:`${p.color}12`,border:`1px solid ${p.color}25`,borderRadius:4,padding:'1px 5px'}}>{p.duty}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* In-game adjustments */}
+            <div style={{background:'rgba(63,169,245,0.07)',border:'1px solid rgba(63,169,245,0.2)',borderRadius:10,padding:'10px 12px'}}>
+              <div style={{fontSize:10,fontWeight:700,color:C.sky,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8}}>Quick Adjustments</div>
+              {[
+                {label:'Park the Bus','emoji':'🚌'},
+                {label:'All Out Attack','emoji':'⚡'},
+                {label:'Time Wasting','emoji':'⏱'},
+                {label:'Exploit Left Flank','emoji':'←'},
+                {label:'Exploit Right Flank','emoji':'→'},
+              ].map(({label,emoji})=>(
+                <button key={label} style={{width:'100%',display:'flex',alignItems:'center',gap:8,padding:'7px 8px',background:'transparent',border:`1px solid ${C.border}`,borderRadius:7,marginBottom:4,cursor:'pointer',transition:'all .12s',textAlign:'left'}}
+                  onMouseEnter={e=>{e.currentTarget.style.background='rgba(63,169,245,0.1)';e.currentTarget.style.borderColor='rgba(63,169,245,0.35)'}}
+                  onMouseLeave={e=>{e.currentTarget.style.background='transparent';e.currentTarget.style.borderColor=C.border}}>
+                  <span style={{fontSize:14}}>{emoji}</span>
+                  <span style={{fontSize:11,fontWeight:600,color:C.txt2}}>{label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notes panel */}
+      {tab==='notes' && (
+        <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
+          <div style={{padding:'10px 12px',borderBottom:`1px solid ${C.border}`,flexShrink:0}}>
+            <div style={{fontSize:10,fontWeight:700,color:C.txt3,letterSpacing:'0.1em',textTransform:'uppercase'}}>Match Notes</div>
+          </div>
+          <textarea
+            value={notes}
+            onChange={e=>setNotes(e.target.value)}
+            placeholder="Tactical observations, player instructions, half-time notes…"
+            style={{flex:1,background:'transparent',border:'none',color:C.txt,fontSize:13,lineHeight:1.7,padding:'12px 14px',resize:'none',outline:'none',fontFamily:'var(--font-b)'}}
+          />
+          {/* Quick note chips */}
+          <div style={{padding:'8px 10px',borderTop:`1px solid ${C.border}`,display:'flex',flexWrap:'wrap',gap:5,flexShrink:0}}>
+            {['Press high 🔺','Drop deep 🔻','Wide play →','Switch formation','Sub needed'].map(chip=>(
+              <button key={chip} onClick={()=>setNotes(n=>n+(n?'\n':'')+`- ${chip}`)}
+                style={{padding:'3px 8px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:5,fontSize:11,fontWeight:600,color:C.txt2,cursor:'pointer',transition:'all .12s'}}
+                onMouseEnter={e=>{e.currentTarget.style.borderColor='rgba(182,255,43,0.3)';e.currentTarget.style.color=C.lime}}
+                onMouseLeave={e=>{e.currentTarget.style.borderColor=C.border2;e.currentTarget.style.color=C.txt2}}>
+                {chip}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Match State Machine ─────────────────────────────────────────────────────
+const MATCH_STATES = {
+  prematch:    {label:'PRE-MATCH',  next:'first_half',  nextLabel:'Kick Off',   color:'#8A8F98'},
+  first_half:  {label:'1ST HALF',   next:'half_time',   nextLabel:'Half Time',  color:'#2ED47A'},
+  half_time:   {label:'HALF TIME',  next:'second_half', nextLabel:'2nd Half',   color:'#FFB020'},
+  second_half: {label:'2ND HALF',   next:'full_time',   nextLabel:'Full Time',  color:'#2ED47A'},
+  full_time:   {label:'FULL TIME',  next:null,          nextLabel:null,         color:'#E5533D'},
+};
+
+// ── Event Wizard Modal ───────────────────────────────────────────────────────
+function EventWizard({type,onClose,onConfirm,minute,squad,lineup}) {
+  const [team,setTeam] = React.useState('home');
+  const [player,setPlayer] = React.useState(null);
+  const [assist,setAssist] = React.useState(null);
+  const [subOn,setSubOn] = React.useState(null);
+  const [subOff,setSubOff] = React.useState(null);
+  const [min,setMin] = React.useState(minute);
+  const homePlayers = lineup.filter(Boolean);
+  const usedIds = lineup.filter(Boolean).map(p=>p&&p.id);
+  const benchPlayers = squad.filter(p=>!usedIds.includes(p.id)&&p.status!=='injured');
+  const cfgMap = {
+    goal:  {label:'Goal',        color:'#2ED47A', emoji:'⚽'},
+    yellow:{label:'Yellow Card', color:'#FFB020', emoji:'🟨'},
+    red:   {label:'Red Card',    color:'#E5533D', emoji:'🟥'},
+    sub:   {label:'Substitution',color:'#3FA9F5', emoji:'🔄'},
+  };
+  const cfg = cfgMap[type] || cfgMap.goal;
+  const isValid = type==='sub'?(subOn&&subOff):!!player;
+  const handleConfirm = () => {
+    if(type==='sub') onConfirm({type,team,min,player:(subOn&&subOn.name?subOn.name:'')+' ↑',detail:(subOff&&subOff.name?subOff.name:'')+' ↓'});
+    else if(type==='goal') onConfirm({type,team,min,player:player&&player.name||'',detail:assist?('Assist: '+assist.name):'Unassisted'});
+    else onConfirm({type,team,min,player:player&&player.name||'',detail:''});
+    onClose();
+  };
+  const PlayerBtn = function({p,selected,onSel,excludeId}) {
+    if(p.id===excludeId) return null;
+    return React.createElement('button',{
+      onClick:()=>onSel(selected&&selected.id===p.id?null:p),
+      style:{display:'flex',alignItems:'center',gap:7,padding:'6px 8px',
+        background:selected&&selected.id===p.id?(cfg.color+'18'):'transparent',
+        border:'1px solid '+(selected&&selected.id===p.id?(cfg.color+'50'):C.border),
+        borderRadius:7,cursor:'pointer',width:'100%',textAlign:'left',marginBottom:3,transition:'all .12s'},
+    },
+      React.createElement('div',{style:{width:24,height:24,borderRadius:'50%',background:(statusColor[p.status]||'#8A8F98')+'18',border:'1.5px solid '+(statusColor[p.status]||'#8A8F98')+'40',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}},
+        React.createElement('span',{style:{fontSize:10,fontWeight:900,color:statusColor[p.status]||'#8A8F98',fontFamily:'var(--font-d)'}},p.num)
+      ),
+      React.createElement('div',{style:{flex:1,minWidth:0}},
+        React.createElement('div',{style:{fontSize:12,fontWeight:600,color:C.txt,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}},p.name),
+        React.createElement('div',{style:{fontSize:9.5,color:C.txt2}},p.pos)
+      ),
+      selected&&selected.id===p.id ? React.createElement(Ic,{d:P.check,size:13,color:cfg.color}) : null
+    );
+  };
+  return (
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.82)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:200,padding:16,backdropFilter:'blur(4px)'}} onClick={onClose}>
+      <div className="fade-in" style={{background:C.s1,border:'1px solid '+C.border2,borderRadius:16,width:'100%',maxWidth:460,maxHeight:'88vh',display:'flex',flexDirection:'column',boxShadow:'0 24px 64px rgba(0,0,0,0.7)',overflow:'hidden'}} onClick={e=>e.stopPropagation()}>
+        <div style={{padding:'14px 18px',borderBottom:'1px solid '+C.border,display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0,background:cfg.color+'10'}}>
+          <div style={{display:'flex',alignItems:'center',gap:10}}>
+            <span style={{fontSize:24}}>{cfg.emoji}</span>
+            <div>
+              <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:18,color:cfg.color,letterSpacing:'0.03em'}}>Log {cfg.label}</div>
+              <div style={{fontSize:11,color:C.txt2}}>Minute <b style={{color:C.txt}}>{min}'</b></div>
+            </div>
+          </div>
+          <button onClick={onClose} style={{background:'transparent',border:'none',color:C.txt2,display:'flex',padding:4,cursor:'pointer'}}><Ic d={P.x} size={18} color="currentColor"/></button>
+        </div>
+        <div style={{flex:1,overflowY:'auto',padding:'14px 18px',display:'flex',flexDirection:'column',gap:12}}>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+            <div>
+              <div style={{fontSize:10,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:5}}>Minute</div>
+              <div style={{display:'flex',alignItems:'center',gap:5}}>
+                <button onClick={()=>setMin(m=>Math.max(0,m-1))} style={{width:28,height:32,background:C.s2,border:'1px solid '+C.border2,borderRadius:6,color:C.txt2,fontSize:16,cursor:'pointer'}}>−</button>
+                <input type="number" value={min} min={0} max={120} onChange={e=>setMin(Math.max(0,Math.min(120,parseInt(e.target.value)||0)))} style={{flex:1,height:32,background:C.s2,border:'1px solid '+C.border2,borderRadius:6,color:C.txt,fontSize:15,fontWeight:800,textAlign:'center',outline:'none',fontFamily:'var(--font-d)'}}/>
+                <button onClick={()=>setMin(m=>Math.min(120,m+1))} style={{width:28,height:32,background:C.s2,border:'1px solid '+C.border2,borderRadius:6,color:C.txt2,fontSize:16,cursor:'pointer'}}>+</button>
+              </div>
+            </div>
+            <div>
+              <div style={{fontSize:10,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:5}}>Team</div>
+              <div style={{display:'flex',gap:5}}>
+                {[['home','Malvern'],['away','Bulleen']].map(function([v,l]){return(
+                  <button key={v} onClick={()=>setTeam(v)} style={{flex:1,padding:'6px 4px',background:team===v?(cfg.color+'18'):'transparent',border:'1px solid '+(team===v?(cfg.color+'50'):C.border),borderRadius:7,fontSize:11,fontWeight:700,color:team===v?cfg.color:C.txt2,cursor:'pointer',transition:'all .12s'}}>{l}</button>
+                );})}
+              </div>
+            </div>
+          </div>
+          {type!=='sub' && (
+            <div>
+              <div style={{fontSize:10,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:5}}>{type==='goal'?'Scorer':'Player'}</div>
+              <div style={{maxHeight:180,overflowY:'auto'}}>
+                {(team==='home'?homePlayers:squad.slice(0,8)).map(p=><PlayerBtn key={p.id} p={p} selected={player} onSel={setPlayer}/>)}
+              </div>
+            </div>
+          )}
+          {type==='goal'&&team==='home' && (
+            <div>
+              <div style={{fontSize:10,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:5}}>Assist (optional)</div>
+              <div style={{maxHeight:140,overflowY:'auto'}}>
+                {homePlayers.map(p=><PlayerBtn key={p.id} p={p} selected={assist} onSel={setAssist} excludeId={player&&player.id}/>)}
+              </div>
+            </div>
+          )}
+          {type==='sub' && (
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+              <div>
+                <div style={{fontSize:10,fontWeight:700,color:'#2ED47A',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:5}}>↑ Coming On</div>
+                <div style={{maxHeight:200,overflowY:'auto'}}>{benchPlayers.map(p=><PlayerBtn key={p.id} p={p} selected={subOn} onSel={setSubOn} excludeId={subOff&&subOff.id}/>)}</div>
+              </div>
+              <div>
+                <div style={{fontSize:10,fontWeight:700,color:'#E5533D',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:5}}>↓ Going Off</div>
+                <div style={{maxHeight:200,overflowY:'auto'}}>{homePlayers.map(p=><PlayerBtn key={p.id} p={p} selected={subOff} onSel={setSubOff} excludeId={subOn&&subOn.id}/>)}</div>
+              </div>
+            </div>
+          )}
+        </div>
+        <div style={{padding:'12px 18px',borderTop:'1px solid '+C.border,flexShrink:0}}>
+          <button onClick={handleConfirm} disabled={!isValid}
+            style={{width:'100%',padding:'11px',background:isValid?('linear-gradient(135deg,'+cfg.color+','+cfg.color+'bb)'):'rgba(255,255,255,0.07)',border:'none',borderRadius:10,fontSize:14,fontWeight:800,color:isValid?(type==='yellow'||type==='goal'?'#111':'#fff'):C.txt3,cursor:isValid?'pointer':'not-allowed',fontFamily:'var(--font-b)',transition:'opacity .15s'}}>
+            {cfg.emoji} Confirm {cfg.label}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Half Time Modal ──────────────────────────────────────────────────────────
+function HalfTimeModal({homeScore,awayScore,onClose,onResume,htNotes,setHtNotes}) {
+  return (
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.88)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:300,backdropFilter:'blur(6px)'}}>
+      <div className="fade-in" style={{background:C.s1,border:'1px solid '+C.border2,borderRadius:20,width:'100%',maxWidth:420,overflow:'hidden',boxShadow:'0 32px 80px rgba(0,0,0,0.8)'}}>
+        <div style={{background:'linear-gradient(135deg,#0A2E20,#0F3D2E)',padding:'24px 24px 18px',textAlign:'center',borderBottom:'1px solid rgba(182,255,43,0.2)'}}>
+          <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:13,color:'#FFB020',letterSpacing:'0.15em',marginBottom:8}}>HALF TIME</div>
+          <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:54,color:'#B6FF2B',lineHeight:1,letterSpacing:'-1px'}}>{homeScore}<span style={{color:'rgba(255,255,255,0.2)',fontSize:34,margin:'0 6px'}}>–</span>{awayScore}</div>
+          <div style={{fontSize:12,color:'rgba(255,255,255,0.4)',marginTop:6}}>Malvern City vs Bulleen Lions</div>
+        </div>
+        <div style={{padding:'16px 20px'}}>
+          <div style={{fontSize:10,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:7}}>Team Talk Notes</div>
+          <textarea value={htNotes} onChange={e=>setHtNotes(e.target.value)} placeholder="Second half instructions…"
+            style={{width:'100%',height:90,background:C.s2,border:'1px solid '+C.border2,borderRadius:10,color:C.txt,fontSize:13,lineHeight:1.6,padding:'10px 12px',resize:'none',outline:'none',fontFamily:'var(--font-b)'}}/>
+          <div style={{display:'flex',flexWrap:'wrap',gap:5,marginTop:8}}>
+            {['Keep pressing','Sit deeper','More width','Hold the lead','Push for winner'].map(chip=>(
+              <button key={chip} onClick={()=>setHtNotes(n=>n+(n?'\n':'')+('- '+chip))}
+                style={{padding:'3px 8px',background:C.s2,border:'1px solid '+C.border2,borderRadius:5,fontSize:11,fontWeight:600,color:C.txt2,cursor:'pointer'}}
+                onMouseEnter={e=>{e.currentTarget.style.borderColor='rgba(182,255,43,0.3)';e.currentTarget.style.color='#B6FF2B'}}
+                onMouseLeave={e=>{e.currentTarget.style.borderColor=C.border2;e.currentTarget.style.color=C.txt2}}>{chip}</button>
+            ))}
+          </div>
+        </div>
+        <div style={{padding:'0 20px 20px',display:'flex',gap:10}}>
+          <button onClick={onClose} style={{flex:1,padding:'10px',background:'transparent',border:'1px solid '+C.border2,borderRadius:10,fontSize:13,fontWeight:700,color:C.txt2,cursor:'pointer'}}>Back</button>
+          <button onClick={onResume} style={{flex:2,padding:'10px',background:'linear-gradient(135deg,#B6FF2B,#68B42E)',border:'none',borderRadius:10,fontSize:14,fontWeight:800,color:'#0F3D2E',cursor:'pointer'}}>▶ Start 2nd Half</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Full Time Modal ──────────────────────────────────────────────────────────
+function FullTimeModal({homeScore,awayScore,events,onClose}) {
+  const homeGoals = events.filter(e=>e.type==='goal'&&e.team==='home');
+  const awayGoals = events.filter(e=>e.type==='goal'&&e.team==='away');
+  const result = homeScore>awayScore?'WIN':homeScore<awayScore?'LOSS':'DRAW';
+  const rc = result==='WIN'?'#2ED47A':result==='LOSS'?'#E5533D':'#FFB020';
+  return (
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.92)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:300,backdropFilter:'blur(8px)'}}>
+      <div className="fade-in" style={{background:C.s1,border:'1px solid '+C.border2,borderRadius:20,width:'100%',maxWidth:400,overflow:'hidden',boxShadow:'0 32px 80px rgba(0,0,0,0.9)'}}>
+        <div style={{background:'linear-gradient(135deg,#0A2E20,#0F3D2E)',padding:'28px 24px 20px',textAlign:'center',borderBottom:'1px solid rgba(182,255,43,0.2)'}}>
+          <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:12,color:C.txt3,letterSpacing:'0.15em',marginBottom:6}}>FULL TIME</div>
+          <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:56,color:'#B6FF2B',lineHeight:1,letterSpacing:'-1px'}}>{homeScore}<span style={{color:'rgba(255,255,255,0.2)',fontSize:34,margin:'0 6px'}}>–</span>{awayScore}</div>
+          <div style={{display:'inline-block',marginTop:10,padding:'4px 16px',background:rc+'20',border:'1px solid '+rc+'50',borderRadius:8,fontFamily:'var(--font-d)',fontWeight:900,fontSize:18,color:rc,letterSpacing:'0.1em'}}>{result}</div>
+        </div>
+        <div style={{padding:'16px 20px',maxHeight:260,overflowY:'auto'}}>
+          <div style={{fontSize:10,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:8}}>Scorers</div>
+          {[...homeGoals,...awayGoals].sort((a,b)=>a.min-b.min).map((g,i)=>(
+            <div key={i} style={{display:'flex',alignItems:'center',gap:8,padding:'6px 0',borderBottom:'1px solid '+C.border}}>
+              <span style={{fontSize:14}}>⚽</span>
+              <span style={{fontSize:13,fontWeight:600,color:C.txt,flex:1}}>{g.player||'Unknown'}</span>
+              <span style={{fontSize:12,color:C.txt2}}>{g.min}'</span>
+              <span style={{fontSize:11,fontWeight:700,color:g.team==='home'?'#B6FF2B':C.txt2}}>{g.team==='home'?'MCC':'BUL'}</span>
+            </div>
+          ))}
+          {homeGoals.length+awayGoals.length===0&&<div style={{fontSize:13,color:C.txt3}}>No goals recorded</div>}
+        </div>
+        <div style={{padding:'0 20px 20px'}}>
+          <button onClick={onClose} style={{width:'100%',padding:'11px',background:'linear-gradient(135deg,#B6FF2B,#68B42E)',border:'none',borderRadius:10,fontSize:14,fontWeight:800,color:'#0F3D2E',cursor:'pointer'}}>✓ Done</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── App ───────────────────────────────────────────────────────────────────────
+function App() {
+  const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{"formation":"4-3-3","colorMode":"dark"}/*EDITMODE-END*/;
+  const [tweaks,setTweak] = window.useTweaks(TWEAK_DEFAULTS);
+
+  const [formation, setFormation] = useState(tweaks.formation);
+  const [lineup, setLineup] = useState(()=>initLineup(tweaks.formation));
+  const [selectedSlot, setSelectedSlot] = useState(null);
+  const [swapMode, setSwapMode] = useState(false);
+  const [swapFrom, setSwapFrom] = useState(null);
+
+  const [homeScore, setHomeScore] = useState(2);
+  const [awayScore, setAwayScore] = useState(1);
+  const [minute, setMinute] = useState(67);
+  const [isLive, setIsLive] = useState(true);
+
+  const [events, setEvents] = useState(INIT_EVENTS);
+  const [notes, setNotes] = useState('- Strong press in first 20 min\n- Watch their #7 on the left\n- Switch to 4-4-2 at HT if tired');
+  const [tab, setTab] = useState('squad');
+  const [matchState, setMatchState] = useState('first_half');
+  const [wizard, setWizard] = useState(null);
+  const [showHT, setShowHT] = useState(false);
+  const [showFT, setShowFT] = useState(false);
+  const [htNotes, setHtNotes] = useState('');
+
+  const advanceState = () => {
+    const ms = MATCH_STATES[matchState];
+    if(!ms || !ms.next) return;
+    if(matchState==='first_half')  { setMinute(45); setIsLive(false); setShowHT(true); }
+    if(matchState==='half_time')   { setMinute(46); setIsLive(true); }
+    if(matchState==='second_half') { setMinute(90); setIsLive(false); setShowFT(true); }
+    setMatchState(ms.next);
+  };
+
+  // Auto-tick minute when live
+  useEffect(()=>{
+    if(!isLive) return;
+    const t = setInterval(()=>setMinute(m=>Math.min(120,m+1)),60000);
+    return ()=>clearInterval(t);
+  },[isLive]);
+
+  // Reset lineup on formation change
+  useEffect(()=>{
+    setLineup(initLineup(formation));
+    setSelectedSlot(null);
+    setSwapMode(false);
+    setSwapFrom(null);
+  },[formation]);
+
+  useEffect(()=>{
+    document.body.style.background = C.bg;
+    document.body.dataset.tfbHasOwnMenu = '1';
+  },[]);
+
+  const handleAssign = useCallback((slot,player)=>{
+    setLineup(prev=>{const n=[...prev];n[slot]=player;return n;});
+    setSelectedSlot(null);
+  },[]);
+
+  const handleRemove = useCallback((slot)=>{
+    setLineup(prev=>{const n=[...prev];n[slot]=null;return n;});
+    setSelectedSlot(null);
+  },[]);
+
+  const handleSwap = useCallback((fromSlot,toSlot)=>{
+    setLineup(prev=>{
+      const n=[...prev];
+      [n[fromSlot],n[toSlot]]=[n[toSlot],n[fromSlot]];
+      return n;
+    });
+    setSwapMode(false);
+    setSwapFrom(null);
+    setSelectedSlot(null);
+  },[]);
+
+  const handleSwapFromBench = useCallback((slot,player)=>{
+    setLineup(prev=>{const n=[...prev];n[slot]=player;return n;});
+    setSwapMode(false);
+    setSwapFrom(null);
+    setSelectedSlot(null);
+  },[]);
+
+  const handleSlotClick = useCallback((slot)=>{
+    if(swapMode){
+      if(swapFrom===null){setSwapFrom(slot);}
+      else if(swapFrom===slot){setSwapFrom(null);}
+      else{handleSwap(swapFrom,slot);}
+    } else {
+      setSelectedSlot(s=>s===slot?null:slot);
+    }
+  },[swapMode,swapFrom,handleSwap]);
+
+  const handleAddEvent = useCallback((ev)=>{
+    setEvents(prev=>[...prev,{...ev,id:Date.now()}].sort((a,b)=>a.min-b.min));
+    setTab('events');
+  },[]);
+
+  return (
+    <div style={{height:'100vh',display:'flex',flexDirection:'column',background:C.bg,overflow:'hidden'}}>
+
+      {/* Top bar — always visible */}
+      <TopBar
+        homeScore={homeScore} awayScore={awayScore}
+        onHomeGoal={()=>setWizard('goal')}
+        onAwayGoal={()=>{ setAwayScore(s=>s+1); handleAddEvent({type:'goal',team:'away',player:'',detail:'',min:minute}); }}
+        minute={minute} isLive={isLive}
+        onToggleLive={advanceState}
+        matchState={matchState}
+        formation={formation} setFormation={setFormation}
+        onBack={()=>{ try{window.location.href='tfb-dashboard.html';}catch(e){} }}
+      />
+
+      {/* Body */}
+      <div style={{flex:1,display:'flex',overflow:'hidden'}}>
+
+        {/* Pitch area */}
+        <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',background:C.bg,gap:0}}>
+          {/* Pitch — fills available space */}
+          <div style={{flex:1,padding:'12px',overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center'}}>
+            {/* Constrain pitch to correct aspect ratio */}
+            <div style={{height:'100%',aspectRatio:'0.68',maxWidth:'100%',maxHeight:'100%'}}>
+              <Pitch
+                formation={formation}
+                lineup={lineup}
+                selectedSlot={swapMode?swapFrom:selectedSlot}
+                setSelectedSlot={swapMode?handleSlotClick:handleSlotClick}
+                swapMode={swapMode}
+                swapFrom={swapFrom}
+                onSwapStart={handleSwap}
+              />
+            </div>
+          </div>
+
+          {/* Bench row */}
+          <BenchRow
+            lineup={lineup} squad={SQUAD}
+            onAssign={handleAssign}
+            selectedSlot={selectedSlot}
+            swapMode={swapMode} setSwapMode={setSwapMode}
+            swapFrom={swapFrom} setSwapFrom={setSwapFrom}
+            onSwapFromBench={handleSwapFromBench}
+          />
+        </div>
+
+        {/* Right sidebar */}
+        <RightPanel
+          tab={tab} setTab={setTab}
+          events={events} onAddEvent={handleAddEvent} onOpenWizard={setWizard}
+          lineup={lineup}
+          selectedSlot={selectedSlot}
+          onAssign={handleAssign}
+          onRemove={handleRemove}
+          formation={formation}
+          squad={SQUAD}
+          notes={notes} setNotes={setNotes}
+          minute={minute}
+        />
+      </div>
+
+      {/* Event wizard */}
+      {wizard && <EventWizard type={wizard} onClose={()=>setWizard(null)} onConfirm={(ev)=>{handleAddEvent(ev);if(ev.type==='goal'&&ev.team==='home')setHomeScore(s=>s+1);}} minute={minute} squad={SQUAD} lineup={lineup}/>}
+      {/* Half time modal */}
+      {showHT && <HalfTimeModal homeScore={homeScore} awayScore={awayScore} onClose={()=>setShowHT(false)} onResume={()=>{setShowHT(false);setMatchState('second_half');setMinute(46);setIsLive(true);}} htNotes={htNotes} setHtNotes={setHtNotes}/>}
+      {/* Full time modal */}
+      {showFT && <FullTimeModal homeScore={homeScore} awayScore={awayScore} events={events} onClose={()=>setShowFT(false)}/>}
+
+      {/* Tweaks */}
+      <TweaksPanel>
+        <TweakSection label="Formation"/>
+        <TweakSelect label="Default" value={formation} options={Object.keys(FORMATIONS)} onChange={v=>{setFormation(v);setTweak('formation',v);}}/>
+      </TweaksPanel>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

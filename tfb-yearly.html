@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TFB – Yearly Planner</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="tfb-responsive.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --lime:#B6FF2B;--green:#0F3D2E;--green-dark:#0A2E20;
+  --bg:#111418;--s1:#1C2128;--s2:#242B33;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --txt:#F0F2F4;--txt2:rgba(240,242,244,0.5);--txt3:rgba(240,242,244,0.28);
+  --goal:#2ED47A;--amber:#FFB020;--red:#E5533D;--sky:#3FA9F5;
+  --font-d:'Barlow Condensed',sans-serif;--font-b:'Barlow',sans-serif;--hh:54px;
+}
+html,body,#root{height:100%;overflow:hidden}
+body{font-family:var(--font-b);background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font-family:var(--font-b);color:inherit}
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:3px}
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn .18s ease forwards}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useCallback,useMemo} = React;
+
+const C = {
+  lime:'#B6FF2B',green:'#0F3D2E',greenDark:'#0A2E20',
+  bg:'#111418',s1:'#1C2128',s2:'#242B33',
+  border:'rgba(255,255,255,0.07)',border2:'rgba(255,255,255,0.13)',
+  txt:'#F0F2F4',txt2:'rgba(240,242,244,0.5)',txt3:'rgba(240,242,244,0.28)',
+  goal:'#2ED47A',amber:'#FFB020',red:'#E5533D',sky:'#3FA9F5',
+};
+
+const Ic = ({d,size=16,color='currentColor',stroke=2,fill='none'}) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke={color}
+    strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>
+    {Array.isArray(d)?d.map((p,i)=><path key={i} d={p}/>):<path d={d}/>}
+  </svg>
+);
+const P = {
+  back:'M15 18l-6-6 6-6',plus:'M12 5v14M5 12h14',x:'M18 6L6 18M6 6l12 12',
+  check:'M20 6L9 17l-5-5',chevL:'M15 18l-6-6 6-6',chevR:'M9 18l6-6-6-6',
+  calendar:'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z',
+  zap:'M13 2L3 14h9l-1 8 10-12h-9l1-8z',
+  layers:['M12 2L2 7l10 5 10-5-10-5z','M2 17l10 5 10-5','M2 12l10 5 10-5'],
+  edit:'M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z',
+  trophy:'M6 9H4.5a2.5 2.5 0 0 1 0-5H6m12 5h1.5a2.5 2.5 0 0 0 0-5H18m-6 14v-4m-4 4h8M12 9a6 6 0 1 1 0-12 6 6 0 0 1 0 12',
+};
+
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const SHORT_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+// ── Season phases ──────────────────────────────────────────────────────────
+const SEASON_PHASES = [
+  {label:'Pre-Season',  start:[0,15], end:[1,28],  color:'#3FA9F5', bg:'rgba(63,169,245,0.12)'},
+  {label:'Early Season',start:[2,1],  end:[4,30],  color:'#B6FF2B', bg:'rgba(182,255,43,0.1)'},
+  {label:'Mid Season',  start:[5,1],  end:[7,31],  color:'#2ED47A', bg:'rgba(46,212,122,0.1)'},
+  {label:'Finals Block',start:[8,1],  end:[9,15],  color:'#FFB020', bg:'rgba(255,176,32,0.12)'},
+  {label:'Off Season',  start:[10,1], end:[11,31], color:'#8A8F98', bg:'rgba(138,143,152,0.1)'},
+];
+
+// ── Sample events ──────────────────────────────────────────────────────────
+const INIT_EVENTS = [
+  // Training blocks
+  {id:1,  type:'block',   label:'Pre-Season Block 1',    month:0, day:15, duration:14, color:'#3FA9F5'},
+  {id:2,  type:'block',   label:'Pre-Season Block 2',    month:1, day:1,  duration:21, color:'#3FA9F5'},
+  {id:3,  type:'block',   label:'Technical Foundation',  month:2, day:1,  duration:28, color:'#B6FF2B'},
+  {id:4,  type:'block',   label:'Tactical Development',  month:3, day:1,  duration:28, color:'#2ED47A'},
+  {id:5,  type:'block',   label:'Physical Peak',         month:5, day:1,  duration:28, color:'#FFB020'},
+  {id:6,  type:'block',   label:'In-Season Maintenance', month:7, day:1,  duration:28, color:'#B6FF2B'},
+  // Fixtures
+  {id:7,  type:'match',   label:'Season Opener',         month:2, day:8,  color:'#E5533D'},
+  {id:8,  type:'match',   label:'Derby — Hume City',     month:3, day:12, color:'#E5533D'},
+  {id:9,  type:'match',   label:'Mid-Season Cup',        month:5, day:20, color:'#FFB020'},
+  {id:10, type:'match',   label:'Finals Series',         month:8, day:7,  color:'#E5533D'},
+  // Key dates
+  {id:11, type:'event',   label:'Registration Opens',    month:0, day:10, color:'#3FA9F5'},
+  {id:12, type:'event',   label:'Trials',                month:1, day:15, color:'#B6FF2B'},
+  {id:13, type:'event',   label:'Season Launch',         month:2, day:1,  color:'#2ED47A'},
+  {id:14, type:'event',   label:'Coaches Conference',    month:6, day:20, color:'#3FA9F5'},
+  {id:15, type:'event',   label:'End of Season Dinner',  month:9, day:28, color:'#B6FF2B'},
+  {id:16, type:'event',   label:'Xmas Break',            month:11,day:20, color:'#8A8F98'},
+];
+
+const EVENT_TYPE_CONFIG = {
+  block: {label:'Training Block', color:'#B6FF2B', icon:P.layers},
+  match: {label:'Match / Fixture', color:'#E5533D', icon:P.zap},
+  event: {label:'Club Event',     color:'#3FA9F5', icon:P.calendar},
+};
+
+// ── Header ────────────────────────────────────────────────────────────────
+function Header({onBack}) {
+  return (
+    <header style={{height:'var(--hh)',background:`linear-gradient(90deg,${C.greenDark},${C.green})`,borderBottom:'1px solid rgba(182,255,43,0.18)',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 20px',flexShrink:0,boxShadow:'0 2px 12px rgba(0,0,0,0.3)',zIndex:50}}>
+      <div style={{display:'flex',alignItems:'center',gap:12}}>
+        <button onClick={onBack} style={{display:'flex',alignItems:'center',gap:6,padding:'6px 10px',background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,color:'rgba(255,255,255,0.7)',fontSize:12,fontWeight:600,cursor:'pointer',transition:'all .15s'}}
+          onMouseEnter={e=>{e.currentTarget.style.background='rgba(182,255,43,0.12)';e.currentTarget.style.color='#B6FF2B'}}
+          onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,0.07)';e.currentTarget.style.color='rgba(255,255,255,0.7)'}}>
+          <Ic d={P.back} size={14} color="currentColor"/> Dashboard
+        </button>
+        <div style={{width:1,height:24,background:'rgba(255,255,255,0.12)'}}/>
+        <div style={{display:'flex',alignItems:'center',gap:10}}>
+          <svg width="28" height="28" viewBox="0 0 40 40" fill="none">
+            <polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="#0F3D2E" stroke="#B6FF2B" strokeWidth="1.5"/>
+            <text x="20" y="26" textAnchor="middle" fill="#B6FF2B" fontFamily="Barlow Condensed" fontWeight="900" fontSize="13">TFB</text>
+          </svg>
+          <div>
+            <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:17,color:'#fff',letterSpacing:'0.04em',lineHeight:1}}>YEARLY PLANNER</div>
+            <div style={{fontSize:9.5,color:'rgba(182,255,43,0.65)',fontWeight:700,letterSpacing:'0.1em'}}>Season 2025 · Malvern City U18 Men</div>
+          </div>
+        </div>
+      </div>
+      <div style={{display:'flex',alignItems:'center',gap:10}}>
+        <div style={{width:30,height:30,borderRadius:'50%',background:`linear-gradient(135deg,${C.lime},#68B42E)`,display:'flex',alignItems:'center',justifyContent:'center'}}>
+          <span style={{fontSize:12,fontWeight:900,color:C.green,fontFamily:'var(--font-d)'}}>TB</span>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+// ── Add Event Modal ──────────────────────────────────────────────────────────
+function AddEventModal({onClose,onSave,existingEvent}) {
+  const [type,setType] = useState(existingEvent?.type||'event');
+  const [label,setLabel] = useState(existingEvent?.label||'');
+  const [month,setMonth] = useState(existingEvent?.month??4);
+  const [day,setDay] = useState(existingEvent?.day??1);
+  const [duration,setDuration] = useState(existingEvent?.duration||1);
+  const cfg = EVENT_TYPE_CONFIG[type];
+
+  return (
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.8)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:200,padding:16,backdropFilter:'blur(4px)'}} onClick={onClose}>
+      <div className="fade-in" style={{background:C.s1,border:`1px solid ${C.border2}`,borderRadius:16,width:'100%',maxWidth:440,display:'flex',flexDirection:'column',boxShadow:'0 24px 64px rgba(0,0,0,0.7)',overflow:'hidden'}} onClick={e=>e.stopPropagation()}>
+        <div style={{padding:'14px 18px',borderBottom:`1px solid ${C.border}`,display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
+          <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:17,color:C.lime}}>{existingEvent?'Edit Event':'Add to Calendar'}</div>
+          <button onClick={onClose} style={{background:'transparent',border:'none',color:C.txt2,cursor:'pointer',display:'flex'}}><Ic d={P.x} size={18} color="currentColor"/></button>
+        </div>
+        <div style={{padding:'16px 18px',display:'flex',flexDirection:'column',gap:14}}>
+          {/* Type */}
+          <div>
+            <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:7}}>Type</div>
+            <div style={{display:'flex',gap:6}}>
+              {Object.entries(EVENT_TYPE_CONFIG).map(([k,v])=>(
+                <button key={k} onClick={()=>setType(k)}
+                  style={{flex:1,padding:'7px 4px',background:type===k?`${v.color}18`:'transparent',border:`1px solid ${type===k?v.color+'45':C.border}`,borderRadius:7,fontSize:11,fontWeight:700,color:type===k?v.color:C.txt2,cursor:'pointer',transition:'all .12s',textAlign:'center'}}>
+                  {v.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          {/* Label */}
+          <div>
+            <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:7}}>Name</div>
+            <input value={label} onChange={e=>setLabel(e.target.value)} placeholder="Event name…"
+              style={{width:'100%',padding:'9px 12px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:8,color:C.txt,fontSize:13,outline:'none'}}/>
+          </div>
+          {/* Month + Day */}
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+            <div>
+              <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:7}}>Month</div>
+              <select value={month} onChange={e=>setMonth(parseInt(e.target.value))}
+                style={{width:'100%',padding:'8px 10px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:8,color:C.txt,fontSize:13,outline:'none'}}>
+                {MONTHS.map((m,i)=><option key={i} value={i}>{m}</option>)}
+              </select>
+            </div>
+            <div>
+              <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:7}}>Day</div>
+              <input type="number" value={day} onChange={e=>setDay(Math.max(1,Math.min(31,parseInt(e.target.value)||1)))} min={1} max={31}
+                style={{width:'100%',padding:'8px 10px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:8,color:C.txt,fontSize:13,outline:'none'}}/>
+            </div>
+          </div>
+          {/* Duration (for blocks) */}
+          {type==='block' && (
+            <div>
+              <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:7}}>Duration: {duration} days</div>
+              <input type="range" min={7} max={56} step={7} value={duration} onChange={e=>setDuration(parseInt(e.target.value))}
+                style={{width:'100%',accentColor:C.lime}}/>
+              <div style={{display:'flex',justifyContent:'space-between',fontSize:10,color:C.txt3,marginTop:3}}>
+                <span>1 week</span><span>4 weeks</span><span>8 weeks</span>
+              </div>
+            </div>
+          )}
+        </div>
+        <div style={{padding:'12px 18px',borderTop:`1px solid ${C.border}`}}>
+          <button onClick={()=>{if(label.trim())onSave({type,label,month,day,duration,color:cfg.color,id:existingEvent?.id||Date.now()});}}
+            disabled={!label.trim()}
+            style={{width:'100%',padding:'11px',background:label.trim()?`linear-gradient(135deg,${C.lime},#68B42E)`:'rgba(255,255,255,0.07)',border:'none',borderRadius:10,fontSize:14,fontWeight:800,color:label.trim()?C.green:C.txt3,cursor:label.trim()?'pointer':'not-allowed'}}>
+            {existingEvent?'Update':'Add to Calendar'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Month Cell ────────────────────────────────────────────────────────────────
+function MonthCell({month,year,events,phases,onAddEvent,onEditEvent,selectedMonth,setSelectedMonth}) {
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const firstDay = new Date(year, month, 1).getDay(); // 0=Sun
+  const adjustedFirst = firstDay===0?6:firstDay-1; // Mon=0
+  const today = new Date();
+  const isCurrentMonth = today.getMonth()===month && today.getFullYear()===year;
+  const monthPhases = phases.filter(ph=>{
+    const pStart = ph.start[0]*31+ph.start[1];
+    const pEnd = ph.end[0]*31+ph.end[1];
+    const mPos = month*31;
+    return mPos<=pEnd && (month+1)*31>=pStart;
+  });
+  const phase = monthPhases[0];
+  const monthEvents = events.filter(e=>e.month===month);
+  const isSelected = selectedMonth===month;
+
+  return (
+    <div onClick={()=>setSelectedMonth(isSelected?null:month)}
+      style={{background:isSelected?'rgba(182,255,43,0.06)':C.s1,borderRadius:10,border:`1px solid ${isSelected?'rgba(182,255,43,0.3)':C.border}`,overflow:'hidden',cursor:'pointer',transition:'all .15s'}}
+      onMouseEnter={e=>{if(!isSelected){e.currentTarget.style.borderColor=C.border2;e.currentTarget.style.background='rgba(255,255,255,0.02)'}}}
+      onMouseLeave={e=>{if(!isSelected){e.currentTarget.style.borderColor=C.border;e.currentTarget.style.background=C.s1}}}>
+      {/* Month header */}
+      <div style={{padding:'8px 10px',borderBottom:`1px solid ${C.border}`,display:'flex',alignItems:'center',justifyContent:'space-between',background:phase?`${phase.color}10`:'transparent'}}>
+        <div style={{display:'flex',alignItems:'center',gap:6}}>
+          {isCurrentMonth&&<div style={{width:6,height:6,borderRadius:'50%',background:C.lime,flexShrink:0}}/>}
+          <span style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:15,color:isSelected?C.lime:C.txt,letterSpacing:'0.02em'}}>{SHORT_MONTHS[month]}</span>
+        </div>
+        {phase&&<span style={{fontSize:8,fontWeight:800,color:phase.color,background:`${phase.color}15`,border:`1px solid ${phase.color}30`,borderRadius:3,padding:'1px 5px',letterSpacing:'0.05em'}}>{phase.label.split(' ')[0].toUpperCase()}</span>}
+      </div>
+      {/* Mini calendar grid */}
+      <div style={{padding:'6px 8px'}}>
+        {/* Day headers */}
+        <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:0,marginBottom:2}}>
+          {['M','T','W','T','F','S','S'].map((d,i)=>(
+            <div key={i} style={{textAlign:'center',fontSize:7,color:C.txt3,fontWeight:700,padding:'1px 0'}}>{d}</div>
+          ))}
+        </div>
+        {/* Day cells */}
+        <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:0}}>
+          {Array.from({length:adjustedFirst}).map((_,i)=><div key={`e${i}`}/>)}
+          {Array.from({length:daysInMonth}).map((_,i)=>{
+            const d = i+1;
+            const isToday = isCurrentMonth && today.getDate()===d;
+            const hasEvent = monthEvents.some(e=>e.day===d);
+            const eventOnDay = monthEvents.filter(e=>e.day===d);
+            return (
+              <div key={d} style={{textAlign:'center',padding:'1px 0',position:'relative'}}>
+                <div style={{fontSize:7.5,color:isToday?C.green:hasEvent?C.lime:C.txt3,fontWeight:isToday||hasEvent?700:400,background:isToday?C.lime:hasEvent?'rgba(182,255,43,0.12)':'transparent',borderRadius:2,width:12,height:12,display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto',fontSize:7}}>
+                  {d}
+                </div>
+                {hasEvent&&<div style={{position:'absolute',bottom:0,left:'50%',transform:'translateX(-50%)',width:3,height:3,borderRadius:'50%',background:eventOnDay[0]?.color||C.lime}}/>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      {/* Events for this month */}
+      {monthEvents.length>0&&(
+        <div style={{padding:'4px 8px 6px',borderTop:`1px solid ${C.border}`}}>
+          {monthEvents.slice(0,3).map(ev=>(
+            <div key={ev.id} style={{display:'flex',alignItems:'center',gap:4,padding:'2px 0'}}>
+              <div style={{width:5,height:5,borderRadius:'50%',background:ev.color,flexShrink:0}}/>
+              <span style={{fontSize:8.5,color:C.txt2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',flex:1}}>{ev.label}</span>
+            </div>
+          ))}
+          {monthEvents.length>3&&<div style={{fontSize:8,color:C.txt3,paddingLeft:9}}>+{monthEvents.length-3} more</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Month Detail Panel ────────────────────────────────────────────────────────
+function MonthDetail({month,year,events,onAddEvent,onEditEvent,onDeleteEvent}) {
+  const monthEvents = events.filter(e=>e.month===month);
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const firstDay = new Date(year, month, 1).getDay();
+  const adjustedFirst = firstDay===0?6:firstDay-1;
+  const today = new Date();
+  const isCurrentMonth = today.getMonth()===month && today.getFullYear()===year;
+
+  // Group events by day
+  const byDay = {};
+  monthEvents.forEach(ev=>{
+    if(!byDay[ev.day]) byDay[ev.day]=[];
+    byDay[ev.day].push(ev);
+  });
+
+  return (
+    <div style={{background:C.s1,borderRadius:12,border:`1px solid rgba(182,255,43,0.2)`,overflow:'hidden',display:'flex',flexDirection:'column',height:'100%'}}>
+      <div style={{padding:'12px 16px',borderBottom:`1px solid ${C.border}`,display:'flex',alignItems:'center',justifyContent:'space-between',background:'rgba(182,255,43,0.04)',flexShrink:0}}>
+        <span style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:18,color:C.lime,letterSpacing:'0.02em'}}>{MONTHS[month]} {year}</span>
+        <button onClick={()=>onAddEvent(month)}
+          style={{display:'flex',alignItems:'center',gap:5,padding:'5px 12px',background:'rgba(182,255,43,0.12)',border:'1px solid rgba(182,255,43,0.3)',borderRadius:7,fontSize:12,fontWeight:700,color:C.lime,cursor:'pointer',transition:'background .15s'}}
+          onMouseEnter={e=>e.currentTarget.style.background='rgba(182,255,43,0.2)'}
+          onMouseLeave={e=>e.currentTarget.style.background='rgba(182,255,43,0.12)'}>
+          <Ic d={P.plus} size={13} color={C.lime}/> Add
+        </button>
+      </div>
+      <div style={{flex:1,overflowY:'auto',padding:'10px 14px'}}>
+        {/* Full calendar grid */}
+        <div style={{marginBottom:14}}>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:2,marginBottom:4}}>
+            {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d=>(
+              <div key={d} style={{textAlign:'center',fontSize:9.5,color:C.txt3,fontWeight:700,padding:'3px 0'}}>{d}</div>
+            ))}
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:2}}>
+            {Array.from({length:adjustedFirst}).map((_,i)=><div key={`e${i}`} style={{height:36}}/>)}
+            {Array.from({length:daysInMonth}).map((_,i)=>{
+              const d = i+1;
+              const isToday = isCurrentMonth && today.getDate()===d;
+              const dayEvs = byDay[d]||[];
+              return (
+                <div key={d} style={{height:36,background:isToday?'rgba(182,255,43,0.12)':dayEvs.length?'rgba(255,255,255,0.03)':'transparent',borderRadius:5,border:`1px solid ${isToday?'rgba(182,255,43,0.3)':'transparent'}`,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-start',padding:'3px 2px',cursor:'pointer',transition:'border-color .12s'}}
+                  onMouseEnter={e=>e.currentTarget.style.borderColor='rgba(182,255,43,0.2)'}
+                  onMouseLeave={e=>e.currentTarget.style.borderColor=isToday?'rgba(182,255,43,0.3)':'transparent'}>
+                  <div style={{fontSize:10,fontWeight:isToday?800:400,color:isToday?C.lime:C.txt2,lineHeight:1}}>{d}</div>
+                  {dayEvs.slice(0,2).map(ev=>(
+                    <div key={ev.id} style={{width:'90%',height:3,borderRadius:1.5,background:ev.color,marginTop:1}}/>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        {/* Events list */}
+        <div style={{fontSize:10,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:8}}>Events this month</div>
+        {monthEvents.length===0&&<div style={{fontSize:12,color:C.txt3,fontStyle:'italic'}}>No events scheduled. Click + Add to add one.</div>}
+        {monthEvents.sort((a,b)=>a.day-b.day).map(ev=>(
+          <div key={ev.id} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 0',borderBottom:`1px solid ${C.border}`}}>
+            <div style={{width:8,height:8,borderRadius:'50%',background:ev.color,flexShrink:0}}/>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:12.5,fontWeight:600,color:C.txt,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{ev.label}</div>
+              <div style={{fontSize:10,color:C.txt3,marginTop:1}}>{MONTHS[ev.month]} {ev.day}{ev.duration?` · ${ev.duration} days`:''}</div>
+            </div>
+            <span style={{fontSize:9,fontWeight:700,color:EVENT_TYPE_CONFIG[ev.type]?.color||C.lime,background:`${EVENT_TYPE_CONFIG[ev.type]?.color||C.lime}15`,border:`1px solid ${EVENT_TYPE_CONFIG[ev.type]?.color||C.lime}30`,borderRadius:4,padding:'2px 6px',flexShrink:0}}>{ev.type.toUpperCase()}</span>
+            <button onClick={()=>onEditEvent(ev)} style={{background:'transparent',border:'none',color:C.txt3,cursor:'pointer',padding:3,display:'flex',transition:'color .12s'}}
+              onMouseEnter={e=>e.currentTarget.style.color=C.lime}
+              onMouseLeave={e=>e.currentTarget.style.color=C.txt3}>
+              <Ic d={P.edit} size={13} color="currentColor"/>
+            </button>
+            <button onClick={()=>onDeleteEvent(ev.id)} style={{background:'transparent',border:'none',color:C.txt3,cursor:'pointer',padding:3,display:'flex',transition:'color .12s'}}
+              onMouseEnter={e=>e.currentTarget.style.color=C.red}
+              onMouseLeave={e=>e.currentTarget.style.color=C.txt3}>
+              <Ic d={P.x} size={13} color="currentColor"/>
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Timeline Row ──────────────────────────────────────────────────────────────
+function TimelineRow({events,year}) {
+  const totalDays = 365;
+  const getDayOfYear = (month,day) => {
+    const d = new Date(year,month,day);
+    const start = new Date(year,0,1);
+    return Math.floor((d-start)/(1000*60*60*24));
+  };
+
+  const blocks = events.filter(e=>e.type==='block');
+  const matches = events.filter(e=>e.type==='match');
+  const clubEvents = events.filter(e=>e.type==='event');
+
+  const renderBar = (ev,i) => {
+    const startDay = getDayOfYear(ev.month,ev.day);
+    const dur = ev.duration||1;
+    const left = (startDay/totalDays)*100;
+    const width = Math.max(0.3,(dur/totalDays)*100);
+    return (
+      <div key={ev.id} title={`${ev.label} · ${MONTHS[ev.month]} ${ev.day}${ev.duration?` (${ev.duration} days)`:''}`}
+        style={{position:'absolute',left:`${left}%`,width:`${width}%`,height:18,background:ev.color,borderRadius:3,opacity:0.85,cursor:'pointer',display:'flex',alignItems:'center',overflow:'hidden',transition:'opacity .15s'}}
+        onMouseEnter={e=>e.currentTarget.style.opacity='1'}
+        onMouseLeave={e=>e.currentTarget.style.opacity='0.85'}>
+        <span style={{fontSize:8,fontWeight:700,color:ev.color==='#B6FF2B'?C.green:'#fff',padding:'0 4px',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{ev.label}</span>
+      </div>
+    );
+  };
+
+  const renderDot = (ev) => {
+    const startDay = getDayOfYear(ev.month,ev.day);
+    const left = (startDay/totalDays)*100;
+    return (
+      <div key={ev.id} title={`${ev.label} · ${MONTHS[ev.month]} ${ev.day}`}
+        style={{position:'absolute',left:`${left}%`,transform:'translateX(-50%)',width:8,height:8,borderRadius:'50%',background:ev.color,cursor:'pointer',transition:'transform .15s',top:'50%',marginTop:-4}}
+        onMouseEnter={e=>e.currentTarget.style.transform='translateX(-50%) scale(1.5)'}
+        onMouseLeave={e=>e.currentTarget.style.transform='translateX(-50%) scale(1)'}>
+      </div>
+    );
+  };
+
+  return (
+    <div style={{background:C.s1,borderRadius:12,border:`1px solid ${C.border}`,padding:'14px 16px',marginBottom:16}}>
+      <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:12}}>Season Timeline {year}</div>
+      {/* Month headers */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(12,1fr)',marginBottom:8,position:'relative'}}>
+        {SHORT_MONTHS.map((m,i)=>(
+          <div key={i} style={{textAlign:'center',fontSize:9,fontWeight:700,color:i===new Date().getMonth()?C.lime:C.txt3,letterSpacing:'0.04em'}}>{m}</div>
+        ))}
+        {/* Today marker */}
+        <div style={{position:'absolute',left:`${(new Date().getMonth()/12+new Date().getDate()/(31*12))*100}%`,top:-2,bottom:-2,width:1,background:C.lime,opacity:0.5}}/>
+      </div>
+      {/* Phase bands */}
+      <div style={{height:6,background:'rgba(255,255,255,0.04)',borderRadius:3,overflow:'hidden',marginBottom:8,position:'relative'}}>
+        {SEASON_PHASES.map(phase=>{
+          const startDay = getDayOfYear(phase.start[0],phase.start[1]);
+          const endDay = getDayOfYear(phase.end[0],phase.end[1]);
+          return (
+            <div key={phase.label} title={phase.label} style={{position:'absolute',left:`${(startDay/totalDays)*100}%`,width:`${((endDay-startDay)/totalDays)*100}%`,height:'100%',background:phase.color,opacity:0.5}}/>
+          );
+        })}
+      </div>
+      {/* Training blocks row */}
+      <div style={{marginBottom:4}}>
+        <div style={{fontSize:9,fontWeight:700,color:C.txt3,marginBottom:3,letterSpacing:'0.06em'}}>TRAINING BLOCKS</div>
+        <div style={{height:20,position:'relative',background:'rgba(255,255,255,0.02)',borderRadius:3}}>
+          {blocks.map((ev,i)=>renderBar(ev,i))}
+        </div>
+      </div>
+      {/* Matches row */}
+      <div style={{marginBottom:4}}>
+        <div style={{fontSize:9,fontWeight:700,color:C.txt3,marginBottom:3,letterSpacing:'0.06em'}}>FIXTURES & MATCHES</div>
+        <div style={{height:20,position:'relative',background:'rgba(255,255,255,0.02)',borderRadius:3}}>
+          {matches.map(ev=>renderDot(ev))}
+        </div>
+      </div>
+      {/* Events row */}
+      <div>
+        <div style={{fontSize:9,fontWeight:700,color:C.txt3,marginBottom:3,letterSpacing:'0.06em'}}>KEY DATES & CLUB EVENTS</div>
+        <div style={{height:20,position:'relative',background:'rgba(255,255,255,0.02)',borderRadius:3}}>
+          {clubEvents.map(ev=>renderDot(ev))}
+        </div>
+      </div>
+      {/* Legend */}
+      <div style={{display:'flex',gap:14,marginTop:10,flexWrap:'wrap'}}>
+        {SEASON_PHASES.map(ph=>(
+          <div key={ph.label} style={{display:'flex',alignItems:'center',gap:5}}>
+            <div style={{width:12,height:4,borderRadius:2,background:ph.color}}/>
+            <span style={{fontSize:9,color:C.txt3}}>{ph.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── App ───────────────────────────────────────────────────────────────────────
+function App() {
+  const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{"year":2025}/*EDITMODE-END*/;
+  const [tweaks,setTweak] = window.useTweaks(TWEAK_DEFAULTS);
+
+  const [events,setEvents] = useState(INIT_EVENTS);
+  const [selectedMonth,setSelectedMonth] = useState(new Date().getMonth());
+  const [modal,setModal] = useState(null);
+  const year = tweaks.year||2025;
+
+  const handleAddEvent = useCallback((month)=>{
+    setModal({month,event:null});
+  },[]);
+
+  const handleEditEvent = useCallback((ev)=>{
+    setModal({month:ev.month,event:ev});
+  },[]);
+
+  const handleSaveEvent = useCallback((ev)=>{
+    if(modal?.event) {
+      setEvents(prev=>prev.map(e=>e.id===ev.id?ev:e));
+    } else {
+      setEvents(prev=>[...prev,ev]);
+    }
+    setModal(null);
+  },[modal]);
+
+  const handleDeleteEvent = useCallback((id)=>{
+    setEvents(prev=>prev.filter(e=>e.id!==id));
+  },[]);
+
+  const stats = useMemo(()=>({
+    blocks: events.filter(e=>e.type==='block').length,
+    matches: events.filter(e=>e.type==='match').length,
+    clubEvents: events.filter(e=>e.type==='event').length,
+  }),[events]);
+
+  return (
+    <div style={{height:'100vh',display:'flex',flexDirection:'column',background:C.bg,overflow:'hidden'}}>
+      <Header onBack={()=>{try{window.location.href='tfb-dashboard.html'}catch(e){}}}/>
+
+      {/* Toolbar */}
+      <div style={{background:C.s1,borderBottom:`1px solid ${C.border}`,padding:'8px 20px',display:'flex',alignItems:'center',gap:14,flexShrink:0}}>
+        {/* Year nav */}
+        <div style={{display:'flex',alignItems:'center',gap:6}}>
+          <button onClick={()=>setTweak('year',(tweaks.year||2025)-1)} style={{width:26,height:26,background:'transparent',border:`1px solid ${C.border2}`,borderRadius:6,color:C.txt2,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',transition:'all .12s'}}
+            onMouseEnter={e=>{e.currentTarget.style.borderColor=C.lime;e.currentTarget.style.color=C.lime}}
+            onMouseLeave={e=>{e.currentTarget.style.borderColor=C.border2;e.currentTarget.style.color=C.txt2}}>
+            <Ic d={P.chevL} size={13} color="currentColor"/>
+          </button>
+          <span style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:18,color:C.txt,letterSpacing:'0.02em',minWidth:44,textAlign:'center'}}>{year}</span>
+          <button onClick={()=>setTweak('year',(tweaks.year||2025)+1)} style={{width:26,height:26,background:'transparent',border:`1px solid ${C.border2}`,borderRadius:6,color:C.txt2,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',transition:'all .12s'}}
+            onMouseEnter={e=>{e.currentTarget.style.borderColor=C.lime;e.currentTarget.style.color=C.lime}}
+            onMouseLeave={e=>{e.currentTarget.style.borderColor=C.border2;e.currentTarget.style.color=C.txt2}}>
+            <Ic d={P.chevR} size={13} color="currentColor"/>
+          </button>
+        </div>
+        <div style={{width:1,height:20,background:C.border}}/>
+        {/* Stats */}
+        {[
+          {label:'Blocks',value:stats.blocks,color:C.lime},
+          {label:'Matches',value:stats.matches,color:C.red},
+          {label:'Events',value:stats.clubEvents,color:C.sky},
+        ].map(({label,value,color})=>(
+          <div key={label} style={{display:'flex',alignItems:'center',gap:5}}>
+            <span style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:16,color}}>{value}</span>
+            <span style={{fontSize:11,color:C.txt3}}>{label}</span>
+          </div>
+        ))}
+        <div style={{flex:1}}/>
+        <button onClick={()=>setModal({month:selectedMonth||0,event:null})}
+          style={{display:'flex',alignItems:'center',gap:6,padding:'6px 14px',background:`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:8,fontSize:12,fontWeight:800,color:C.green,cursor:'pointer',transition:'opacity .15s'}}
+          onMouseEnter={e=>e.currentTarget.style.opacity='.88'}
+          onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
+          <Ic d={P.plus} size={14} color={C.green}/> Add to Calendar
+        </button>
+      </div>
+
+      {/* Main content */}
+      <div style={{flex:1,overflow:'hidden',display:'flex',gap:0}}>
+        {/* Left: Calendar grid + timeline */}
+        <div style={{flex:1,overflowY:'auto',padding:'16px 20px'}}>
+          <TimelineRow events={events} year={year}/>
+          {/* 12-month grid */}
+          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10}}>
+            {Array.from({length:12}).map((_,m)=>(
+              <MonthCell
+                key={m} month={m} year={year}
+                events={events} phases={SEASON_PHASES}
+                onAddEvent={handleAddEvent}
+                onEditEvent={handleEditEvent}
+                selectedMonth={selectedMonth}
+                setSelectedMonth={setSelectedMonth}
+              />
+            ))}
+          </div>
+        </div>
+        {/* Right: Month detail */}
+        {selectedMonth!==null && (
+          <div style={{width:300,padding:'16px 16px 16px 0',flexShrink:0,overflow:'hidden',display:'flex',flexDirection:'column'}}>
+            <MonthDetail
+              month={selectedMonth} year={year}
+              events={events}
+              onAddEvent={handleAddEvent}
+              onEditEvent={handleEditEvent}
+              onDeleteEvent={handleDeleteEvent}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Modal */}
+      {modal&&(
+        <AddEventModal
+          existingEvent={modal.event}
+          onClose={()=>setModal(null)}
+          onSave={handleSaveEvent}
+        />
+      )}
+
+      <TweaksPanel>
+        <TweakSection label="Season"/>
+        <TweakNumber label="Year" value={year} min={2020} max={2030} step={1} onChange={v=>setTweak('year',v)}/>
+      </TweaksPanel>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TFB – Login & Onboarding</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="tfb-responsive.jsx"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--lime:#B6FF2B;--green:#0F3D2E;--green-dark:#0A2E20;--bg:#0A0D11;--s1:#15191F;--s2:#1F252D;--s3:#2A3139;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.16);--txt:#F0F2F4;--txt2:rgba(240,242,244,0.55);--txt3:rgba(240,242,244,0.32);--goal:#2ED47A;--amber:#FFB020;--red:#E5533D;--sky:#3FA9F5;--purple:#9B7FE8;--font-d:'Barlow Condensed',sans-serif;--font-b:'Barlow',sans-serif}
+html,body,#root{height:100%}
+body{font-family:var(--font-b);background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased;overflow:hidden}
+button,input,select{font-family:var(--font-b);color:inherit;font-size:14px}
+input,select{outline:none}
+input:focus{border-color:var(--lime)!important}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:5px}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn .35s ease forwards}
+@keyframes slideRight{from{transform:translateX(20px);opacity:0}to{transform:translateX(0);opacity:1}}
+.slide-r{animation:slideRight .3s ease forwards}
+.bg-pitch{background:radial-gradient(ellipse at 30% 20%,rgba(15,61,46,0.4),transparent 60%),radial-gradient(ellipse at 80% 90%,rgba(182,255,43,0.08),transparent 60%),var(--bg)}
+.checkbox-glow{box-shadow:0 0 0 4px rgba(182,255,43,0.12)}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState} = React;
+const C={lime:'#B6FF2B',green:'#0F3D2E',greenDark:'#0A2E20',bg:'#0A0D11',s1:'#15191F',s2:'#1F252D',s3:'#2A3139',border:'rgba(255,255,255,0.07)',border2:'rgba(255,255,255,0.16)',txt:'#F0F2F4',txt2:'rgba(240,242,244,0.55)',txt3:'rgba(240,242,244,0.32)',goal:'#2ED47A',amber:'#FFB020',red:'#E5533D',sky:'#3FA9F5',purple:'#9B7FE8'};
+
+const STAGES = ['login','signup','role','context','club','solo','team','plan','payment','done'];
+
+const TIERS = [
+  {id:'free',name:'Free',price:0,desc:'Try it out — 1 team, 5 sessions/mo',features:['1 team','25 players max','5 sessions/month','Basic dashboard','Community support'],color:'#8A8F98'},
+  {id:'starter',name:'Starter',price:29,desc:'For single-team coaches',features:['Up to 3 teams','Unlimited sessions','PDF session export','Email support','Calendar sync'],color:C.sky},
+  {id:'pro',name:'Pro',price:79,desc:'For ambitious clubs',popular:true,features:['Up to 10 teams','Custom club branding','Video analysis','Priority support','API access'],color:C.lime},
+  {id:'club',name:'Club',price:199,desc:'Multi-team, multi-coach',features:['Unlimited teams','Multi-club hierarchy','SSO & advanced security','Dedicated success manager','Custom integrations'],color:C.purple},
+];
+
+const ROLES = [
+  {id:'coach',label:'Head Coach / Manager',desc:'Build sessions, manage squad, run match-days',icon:'⚽'},
+  {id:'assistant',label:'Assistant Coach',desc:'Support sessions and gamedays',icon:'📋'},
+  {id:'tdir',label:'Technical Director',desc:'Oversee multiple teams across the club',icon:'🎯'},
+  {id:'player',label:'Player',desc:'View sessions, RSVP availability, track development',icon:'👟'},
+  {id:'parent',label:'Parent / Guardian',desc:'Manage your child\'s availability and updates',icon:'👨‍👩‍👧'},
+];
+
+const Logo = ({size=44}) => (
+  <div style={{width:size,height:size,borderRadius:size*0.22,background:`linear-gradient(135deg,${C.lime},#68B42E)`,display:'flex',alignItems:'center',justifyContent:'center',color:C.greenDark,fontFamily:'var(--font-d)',fontWeight:900,fontSize:size*0.5,letterSpacing:'-0.04em',boxShadow:'0 8px 24px rgba(182,255,43,0.3)'}}>TFB</div>
+);
+
+// ── Stepper ────────────────────────────────────────────────────────────────
+const Stepper = ({stage,setStage,solo}) => {
+  const steps = solo
+    ? ['Account','Role','Profile','Team','Plan','Payment','Done']
+    : ['Account','Role','Club','Team','Plan','Payment','Done'];
+  // Map actual stage to logical step idx (skip 'context' which is a sub-step of role)
+  const stepFor = {login:0,signup:0,role:1,context:1,club:2,solo:2,team:3,plan:4,payment:5,done:6};
+  const stageIdx = stepFor[stage] ?? 0;
+  return (
+    <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:32}}>
+      {steps.map((s,i)=>(
+        <React.Fragment key={i}>
+          <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:6,opacity:i>stageIdx?0.4:1,transition:'opacity .2s'}}>
+            <div style={{width:26,height:26,borderRadius:'50%',background:i<=stageIdx?C.lime:'transparent',border:`2px solid ${i<=stageIdx?C.lime:C.border2}`,color:i<=stageIdx?C.greenDark:C.txt2,fontSize:11,fontWeight:800,display:'flex',alignItems:'center',justifyContent:'center'}}>
+              {i<stageIdx?'✓':i+1}
+            </div>
+            <div style={{fontSize:9.5,fontWeight:700,color:i<=stageIdx?C.txt:C.txt3,letterSpacing:'0.1em',textTransform:'uppercase'}}>{s}</div>
+          </div>
+          {i<steps.length-1 && <div style={{flex:1,height:2,background:i<stageIdx?C.lime:C.border,borderRadius:1,marginTop:-14}}/>}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+};
+
+// ── Card wrapper ───────────────────────────────────────────────────────────
+const Card = ({children,wide}) => (
+  <div className="fade-in" style={{width:'100%',maxWidth:wide?960:480,background:C.s1,border:`1px solid ${C.border}`,borderRadius:18,padding:wide?'40px 44px':'36px 38px',boxShadow:'0 30px 80px rgba(0,0,0,0.5)'}}>
+    {children}
+  </div>
+);
+
+const Heading = ({sub,title,desc}) => (
+  <div style={{marginBottom:24}}>
+    <div style={{fontFamily:'var(--font-d)',fontSize:11,fontWeight:700,color:C.lime,letterSpacing:'0.18em',textTransform:'uppercase',marginBottom:8}}>{sub}</div>
+    <div style={{fontFamily:'var(--font-d)',fontSize:30,fontWeight:900,color:'#fff',letterSpacing:'-0.01em',lineHeight:1.05,marginBottom:8,textTransform:'uppercase'}}>{title}</div>
+    {desc && <div style={{fontSize:14,color:C.txt2,lineHeight:1.5}}>{desc}</div>}
+  </div>
+);
+
+const Field = ({label,children,hint}) => (
+  <div style={{marginBottom:14}}>
+    <label style={{display:'block',fontSize:11,fontWeight:700,color:C.txt2,letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:6}}>{label}</label>
+    {children}
+    {hint && <div style={{fontSize:11.5,color:C.txt3,marginTop:5}}>{hint}</div>}
+  </div>
+);
+
+const inp = {width:'100%',padding:'11px 14px',background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border2}`,borderRadius:9,fontSize:14,color:C.txt,transition:'border-color .15s, background .15s'};
+
+const Btn = ({onClick,children,variant='primary',disabled,style={}}) => (
+  <button onClick={onClick} disabled={disabled} style={{
+    padding:'12px 22px',
+    background: disabled ? 'rgba(255,255,255,0.04)' : variant==='primary'?`linear-gradient(135deg,${C.lime},#68B42E)`:variant==='ghost'?'transparent':'rgba(255,255,255,0.06)',
+    border: variant==='ghost'?`1px solid ${C.border2}`:'none',
+    borderRadius:10,fontSize:14,fontWeight:800,color: disabled ? C.txt3 : variant==='primary'?C.greenDark:C.txt,
+    letterSpacing:'0.04em',cursor:disabled?'not-allowed':'pointer',transition:'transform .1s',...style
+  }} onMouseDown={e=>!disabled && (e.currentTarget.style.transform='scale(0.98)')} onMouseUp={e=>e.currentTarget.style.transform='scale(1)'}>{children}</button>
+);
+
+// ── Stage components ──────────────────────────────────────────────────────
+function LoginStage({setStage}) {
+  return (
+    <Card>
+      <div style={{textAlign:'center',marginBottom:28}}>
+        <div style={{display:'inline-block',marginBottom:18}}><Logo size={56}/></div>
+        <div style={{fontFamily:'var(--font-d)',fontSize:30,fontWeight:900,letterSpacing:'-0.01em',marginBottom:6,textTransform:'uppercase'}}>Welcome back</div>
+        <div style={{fontSize:14,color:C.txt2}}>The Football Blueprint — sign in to your account</div>
+      </div>
+
+      <Field label="Email"><input type="email" placeholder="coach@malverncity.com" style={inp} defaultValue="alex@malverncity.com"/></Field>
+      <Field label="Password"><input type="password" placeholder="••••••••" style={inp} defaultValue="demopass"/></Field>
+
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:18,fontSize:12.5}}>
+        <label style={{display:'flex',alignItems:'center',gap:7,color:C.txt2,cursor:'pointer'}}>
+          <input type="checkbox" defaultChecked style={{accentColor:C.lime}}/> Remember me
+        </label>
+        <a href="#" style={{color:C.lime,textDecoration:'none',fontWeight:600}}>Forgot password?</a>
+      </div>
+
+      <Btn onClick={()=>{try{window.location.href='tfb-dashboard.html'}catch(e){}}} style={{width:'100%',marginBottom:14}}>Sign in →</Btn>
+
+      <div style={{display:'flex',alignItems:'center',gap:10,margin:'18px 0',color:C.txt3,fontSize:11}}>
+        <div style={{flex:1,height:1,background:C.border}}/> OR <div style={{flex:1,height:1,background:C.border}}/>
+      </div>
+
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:18}}>
+        {[{n:'Google',c:'#fff'},{n:'Apple',c:'#fff'}].map(p=>(
+          <button key={p.n} style={{padding:'10px',background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border2}`,borderRadius:9,fontSize:13,fontWeight:600,color:C.txt}}>Continue with {p.n}</button>
+        ))}
+      </div>
+
+      <div style={{textAlign:'center',fontSize:13,color:C.txt2}}>
+        New to TFB? <button onClick={()=>setStage('signup')} style={{background:'none',border:'none',color:C.lime,fontWeight:700,cursor:'pointer'}}>Create an account →</button>
+      </div>
+    </Card>
+  );
+}
+
+function SignupStage({setStage,data,update}) {
+  const valid = data.fname && data.lname && data.email && data.password && data.password.length >=8;
+  return (
+    <Card>
+      <Stepper stage="signup" solo={data.context==='solo'}/>
+      <Heading sub="Create your account" title="Let's get you set up" desc="Just a few quick details to get started — under 2 minutes."/>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+        <Field label="First name"><input style={inp} value={data.fname} onChange={e=>update('fname',e.target.value)} placeholder="Alex"/></Field>
+        <Field label="Last name"><input style={inp} value={data.lname} onChange={e=>update('lname',e.target.value)} placeholder="Mitchell"/></Field>
+      </div>
+      <Field label="Email"><input type="email" style={inp} value={data.email} onChange={e=>update('email',e.target.value)} placeholder="coach@yourclub.com"/></Field>
+      <Field label="Password" hint="Minimum 8 characters">
+        <input type="password" style={inp} value={data.password} onChange={e=>update('password',e.target.value)} placeholder="••••••••"/>
+      </Field>
+      <Field label="Mobile (optional)" hint="Used for SMS reminders"><input style={inp} value={data.phone} onChange={e=>update('phone',e.target.value)} placeholder="04XX XXX XXX"/></Field>
+      <div style={{display:'flex',gap:10,justifyContent:'space-between',marginTop:18}}>
+        <Btn variant="ghost" onClick={()=>setStage('login')}>← Back to sign in</Btn>
+        <Btn onClick={()=>setStage('role')} disabled={!valid}>Continue →</Btn>
+      </div>
+    </Card>
+  );
+}
+
+function RoleStage({setStage,data,update}) {
+  return (
+    <Card wide>
+      <Stepper stage="role" solo={data.context==='solo'}/>
+      <Heading sub="Step 02 · Your role" title="What brings you to TFB?" desc="This personalises your dashboard and the screens you'll see."/>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))',gap:12}}>
+        {ROLES.map(r=>(
+          <button key={r.id} onClick={()=>update('role',r.id)} style={{textAlign:'left',padding:18,background:data.role===r.id?`${C.lime}10`:C.s2,border:`2px solid ${data.role===r.id?C.lime:C.border}`,borderRadius:12,cursor:'pointer',transition:'all .15s'}}>
+            <div style={{fontSize:32,marginBottom:10}}>{r.icon}</div>
+            <div style={{fontSize:15,fontWeight:800,color:C.txt,marginBottom:4}}>{r.label}</div>
+            <div style={{fontSize:12.5,color:C.txt2,lineHeight:1.5}}>{r.desc}</div>
+          </button>
+        ))}
+      </div>
+      <div style={{display:'flex',gap:10,justifyContent:'space-between',marginTop:24}}>
+        <Btn variant="ghost" onClick={()=>setStage('signup')}>← Back</Btn>
+        <Btn onClick={()=>{
+        if(data.role==='coach'||data.role==='assistant') setStage('context');
+        else if(data.role==='tdir') { update('context','club'); setStage('club'); }
+        else { update('context','solo'); setStage('team'); }
+      }} disabled={!data.role}>Continue →</Btn>
+      </div>
+    </Card>
+  );
+}
+
+function ContextStage({setStage,data,update}) {
+  const opts = [
+    {id:'club',title:'I coach for a club',desc:'I\'m part of a registered football club, association, or academy. I want to set up the club and invite other coaches/staff.',icon:'🏟️',cta:'Set up your club'},
+    {id:'solo',title:'I coach independently',desc:'I run private sessions, small-sided games, or freelance coaching. No club registration needed.',icon:'⚽',cta:'Set up your coaching profile'},
+  ];
+  return (
+    <Card wide>
+      <Stepper stage="role" solo={data.context==='solo'}/>
+      <Heading sub="Step 02b · Coaching context" title="How do you coach?" desc="This determines whether we set up a full club workspace or a solo coaching profile. You can change this later."/>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
+        {opts.map(o=>(
+          <button key={o.id} onClick={()=>update('context',o.id)} style={{textAlign:'left',padding:'24px 22px',background:data.context===o.id?`${C.lime}10`:C.s2,border:`2px solid ${data.context===o.id?C.lime:C.border}`,borderRadius:14,cursor:'pointer',transition:'all .15s'}}>
+            <div style={{fontSize:38,marginBottom:14}}>{o.icon}</div>
+            <div style={{fontSize:17,fontWeight:800,color:C.txt,marginBottom:7}}>{o.title}</div>
+            <div style={{fontSize:13,color:C.txt2,lineHeight:1.55,marginBottom:14}}>{o.desc}</div>
+            <div style={{fontSize:11,fontWeight:800,color:data.context===o.id?C.lime:C.txt3,letterSpacing:'0.1em',textTransform:'uppercase'}}>→ {o.cta}</div>
+          </button>
+        ))}
+      </div>
+      <div style={{display:'flex',gap:10,justifyContent:'space-between',marginTop:24}}>
+        <Btn variant="ghost" onClick={()=>setStage('role')}>← Back</Btn>
+        <Btn onClick={()=>setStage(data.context==='solo'?'solo':'club')} disabled={!data.context}>Continue →</Btn>
+      </div>
+    </Card>
+  );
+}
+
+function SoloStage({setStage,data,update}) {
+  const specs = ['1-on-1 coaching','Small group sessions','Goalkeeping specialist','Strength & conditioning','Technical skills','Mental performance','Match prep / scouting','Youth development'];
+  const toggleSpec = (sp)=> {
+    const list = data.specialties || [];
+    update('specialties', list.includes(sp) ? list.filter(x=>x!==sp) : [...list,sp]);
+  };
+  const valid = data.brandName && (data.specialties||[]).length>0;
+  return (
+    <Card>
+      <Stepper stage="club" solo/>
+      <Heading sub="Step 03 · Coaching profile" title="Set up your solo profile" desc="This is how players and parents will find you. You can edit any of this later."/>
+      <Field label="Coaching brand or your name" hint="This shows on session invites and PDFs"><input style={inp} value={data.brandName||''} onChange={e=>update('brandName',e.target.value)} placeholder="Mitchell Football Performance"/></Field>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+        <Field label="City"><input style={inp} value={data.city||''} onChange={e=>update('city',e.target.value)} placeholder="Melbourne"/></Field>
+        <Field label="Country"><select style={inp} value={data.country} onChange={e=>update('country',e.target.value)}>
+          <option>Australia</option><option>England</option><option>USA</option><option>Other</option>
+        </select></Field>
+      </div>
+      <Field label="Years coaching"><select style={inp} value={data.experience||'1-3'} onChange={e=>update('experience',e.target.value)}>
+        <option>Less than 1 year</option><option>1-3 years</option><option>4-7 years</option><option>8-15 years</option><option>15+ years</option>
+      </select></Field>
+      <Field label="Highest qualification (optional)" hint="AFC, FA, USSF, or local federation badge"><input style={inp} value={data.qualification||''} onChange={e=>update('qualification',e.target.value)} placeholder="FFA C-Licence"/></Field>
+      <Field label="Specialties" hint="Pick all that apply">
+        <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+          {specs.map(sp=>{
+            const on = (data.specialties||[]).includes(sp);
+            return <button key={sp} onClick={()=>toggleSpec(sp)} style={{padding:'7px 12px',background:on?`${C.lime}18`:'rgba(255,255,255,0.04)',border:`1px solid ${on?C.lime:C.border2}`,borderRadius:20,fontSize:12,fontWeight:600,color:on?C.lime:C.txt2,cursor:'pointer'}}>{on?'✓ ':''}{sp}</button>;
+          })}
+        </div>
+      </Field>
+      <div style={{display:'flex',gap:10,justifyContent:'space-between',marginTop:18}}>
+        <Btn variant="ghost" onClick={()=>setStage('context')}>← Back</Btn>
+        <Btn onClick={()=>setStage('team')} disabled={!valid}>Continue →</Btn>
+      </div>
+    </Card>
+  );
+}
+
+function ClubStage({setStage,data,update}) {
+  return (
+    <Card>
+      <Stepper stage="club" solo={false}/>
+      <Heading sub="Step 03 · Your club" title="Set up your club" desc="Add your club details. You'll be the admin, and can invite coaches and managers later."/>
+      <Field label="Club name"><input style={inp} value={data.clubName} onChange={e=>update('clubName',e.target.value)} placeholder="Malvern City SC"/></Field>
+      <Field label="Country"><select style={inp} value={data.country} onChange={e=>update('country',e.target.value)}>
+        <option>Australia</option><option>England</option><option>USA</option><option>Other</option>
+      </select></Field>
+      <Field label="State / Region"><input style={inp} value={data.region} onChange={e=>update('region',e.target.value)} placeholder="Victoria"/></Field>
+      <Field label="Federation / League" hint="Optional — helps us tailor calendar templates"><input style={inp} value={data.federation} onChange={e=>update('federation',e.target.value)} placeholder="Football Victoria — NPL"/></Field>
+      <div style={{display:'flex',gap:10,justifyContent:'space-between',marginTop:18}}>
+        <Btn variant="ghost" onClick={()=>setStage('role')}>← Back</Btn>
+        <Btn onClick={()=>setStage('team')} disabled={!data.clubName}>Continue →</Btn>
+      </div>
+    </Card>
+  );
+}
+
+function TeamStage({setStage,data,update}) {
+  return (
+    <Card>
+      <Stepper stage="team" solo={data.context==='solo'}/>
+      <Heading sub={data.context==='solo'?"Step 04 · First group":"Step 04 · First team"} title={data.context==='solo'?"Add your first coaching group":"Add your first team"} desc={data.context==='solo'?"This could be a player you coach 1-on-1, a small group, or a clinic. You can add more later.":"You can add more teams later. We'll auto-generate a roster template you can fill in."}/>
+      <Field label={data.context==='solo'?"Group / program name":"Team name"}><input style={inp} value={data.teamName} onChange={e=>update('teamName',e.target.value)} placeholder={data.context==='solo'?"Tuesday Striker Clinic":"U16 Boys"}/></Field>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+        <Field label="Age group"><select style={inp} value={data.ageGroup} onChange={e=>update('ageGroup',e.target.value)}>
+          <option>U10</option><option>U12</option><option>U14</option><option>U16</option><option>U18</option><option>Senior</option>
+        </select></Field>
+        <Field label="Level"><select style={inp} value={data.level} onChange={e=>update('level',e.target.value)}>
+          <option>Recreational</option><option>Development</option><option>NPL</option><option>State League</option>
+        </select></Field>
+      </div>
+      <Field label="Number of players (estimate)"><input type="number" style={inp} value={data.playerCount} onChange={e=>update('playerCount',e.target.value)} placeholder="18"/></Field>
+      <Field label="Season">
+        <select style={inp} value={data.season} onChange={e=>update('season',e.target.value)}>
+          <option>2026</option><option>2026/27</option>
+        </select>
+      </Field>
+      <div style={{display:'flex',gap:10,justifyContent:'space-between',marginTop:18}}>
+        <Btn variant="ghost" onClick={()=>setStage(data.context==='solo'?'solo':(data.role==='coach'||data.role==='tdir'||data.role==='assistant')?'club':'role')}>← Back</Btn>
+        <Btn onClick={()=>setStage('plan')} disabled={!data.teamName}>Continue →</Btn>
+      </div>
+    </Card>
+  );
+}
+
+function PlanStage({setStage,data,update}) {
+  return (
+    <Card wide>
+      <Stepper stage="plan" solo={data.context==='solo'}/>
+      <Heading sub="Step 05 · Choose plan" title="Pick the plan that fits" desc="Start with a 14-day free trial of any paid plan. Cancel anytime."/>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12}}>
+        {TIERS.map(t=>{
+          const sel = data.plan===t.id;
+          return (
+            <button key={t.id} onClick={()=>update('plan',t.id)} style={{textAlign:'left',padding:'18px 16px',background:sel?`linear-gradient(180deg,${t.color}12,${C.s2})`:C.s2,border:`2px solid ${sel?t.color:C.border}`,borderRadius:14,cursor:'pointer',position:'relative',transition:'all .15s'}}>
+              {t.popular && <div style={{position:'absolute',top:-9,right:14,background:t.color,color:C.greenDark,fontSize:9,fontWeight:800,padding:'3px 8px',borderRadius:4,letterSpacing:'0.1em',textTransform:'uppercase'}}>Popular</div>}
+              <div style={{fontSize:11,color:t.color,fontWeight:800,letterSpacing:'0.16em',textTransform:'uppercase',marginBottom:5}}>{t.name}</div>
+              <div style={{display:'flex',alignItems:'baseline',gap:3,marginBottom:6}}>
+                <span style={{fontFamily:'var(--font-d)',fontSize:30,fontWeight:900,color:'#fff'}}>${t.price}</span>
+                <span style={{fontSize:12,color:C.txt2}}>{t.price===0?'forever':'/mo'}</span>
+              </div>
+              <div style={{fontSize:11.5,color:C.txt2,lineHeight:1.4,marginBottom:12,minHeight:30}}>{t.desc}</div>
+              <ul style={{listStyle:'none'}}>
+                {t.features.slice(0,4).map((f,i)=>(
+                  <li key={i} style={{fontSize:11.5,color:C.txt,padding:'3px 0',display:'flex',gap:6}}>
+                    <span style={{color:t.color,flexShrink:0}}>✓</span>{f}
+                  </li>
+                ))}
+              </ul>
+            </button>
+          );
+        })}
+      </div>
+      <div style={{marginTop:16,padding:14,background:'rgba(63,169,245,0.06)',border:`1px solid rgba(63,169,245,0.2)`,borderRadius:10,fontSize:12.5,color:C.txt2,lineHeight:1.5}}>
+        💡 <span style={{color:C.txt}}>14-day free trial</span> on Starter, Pro and Club. No card needed for Free. We'll only charge after your trial ends.
+      </div>
+      <div style={{display:'flex',gap:10,justifyContent:'space-between',marginTop:20}}>
+        <Btn variant="ghost" onClick={()=>setStage('team')}>← Back</Btn>
+        <Btn onClick={()=>setStage(data.plan==='free'?'done':'payment')} disabled={!data.plan}>{data.plan==='free'?'Finish setup →':'Continue to payment →'}</Btn>
+      </div>
+    </Card>
+  );
+}
+
+function PaymentStage({setStage,data,update}) {
+  const tier = TIERS.find(t=>t.id===data.plan);
+  return (
+    <Card wide>
+      <Stepper stage="payment" solo={data.context==='solo'}/>
+      <Heading sub="Step 06 · Secure checkout" title="Complete your subscription" desc="Powered by Stripe. Your card is verified now but charged after your 14-day trial."/>
+      <div style={{display:'grid',gridTemplateColumns:'1.6fr 1fr',gap:24}}>
+        {/* Form */}
+        <div>
+          <Field label="Card number"><input style={inp} placeholder="4242 4242 4242 4242" defaultValue="4242 4242 4242 4242"/></Field>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10}}>
+            <Field label="Expiry"><input style={inp} placeholder="MM/YY" defaultValue="12/27"/></Field>
+            <Field label="CVC"><input style={inp} placeholder="123" defaultValue="123"/></Field>
+            <Field label="Postcode"><input style={inp} placeholder="3144" defaultValue="3144"/></Field>
+          </div>
+          <Field label="Name on card"><input style={inp} placeholder="A. Mitchell" defaultValue={`${data.fname} ${data.lname}`}/></Field>
+          <Field label="Billing email"><input style={inp} placeholder="billing@..." defaultValue={data.email}/></Field>
+          <div style={{display:'flex',alignItems:'center',gap:8,marginTop:14,padding:'10px 12px',background:'rgba(46,212,122,0.06)',border:'1px solid rgba(46,212,122,0.18)',borderRadius:8,fontSize:12,color:C.txt2}}>
+            <span style={{fontSize:14}}>🔒</span>
+            <span>256-bit SSL · 3D Secure · PCI-compliant via Stripe</span>
+          </div>
+        </div>
+
+        {/* Summary */}
+        <div style={{background:C.s2,border:`1px solid ${C.border}`,borderRadius:12,padding:18}}>
+          <div style={{fontSize:11,fontWeight:700,color:C.txt3,letterSpacing:'0.14em',textTransform:'uppercase',marginBottom:12}}>Order summary</div>
+          <div style={{display:'flex',alignItems:'center',gap:10,paddingBottom:14,borderBottom:`1px solid ${C.border}`,marginBottom:14}}>
+            <div style={{width:36,height:36,borderRadius:8,background:`${tier.color}20`,border:`1px solid ${tier.color}40`,display:'flex',alignItems:'center',justifyContent:'center',color:tier.color,fontWeight:800,fontSize:11}}>{tier.name[0]}</div>
+            <div style={{flex:1}}>
+              <div style={{fontSize:14,fontWeight:700}}>{tier.name} plan</div>
+              <div style={{fontSize:11.5,color:C.txt2}}>Monthly billing</div>
+            </div>
+          </div>
+          <div style={{display:'flex',justifyContent:'space-between',padding:'4px 0',fontSize:13}}>
+            <span style={{color:C.txt2}}>Subtotal</span><span>${tier.price}.00</span>
+          </div>
+          <div style={{display:'flex',justifyContent:'space-between',padding:'4px 0',fontSize:13}}>
+            <span style={{color:C.txt2}}>14-day trial</span><span style={{color:C.goal,fontWeight:700}}>−${tier.price}.00</span>
+          </div>
+          <div style={{borderTop:`1px solid ${C.border}`,marginTop:8,paddingTop:8}}>
+            <div style={{display:'flex',justifyContent:'space-between',fontSize:14,fontWeight:800}}>
+              <span>Due today</span><span style={{color:C.lime}}>$0.00</span>
+            </div>
+            <div style={{fontSize:11,color:C.txt3,marginTop:4}}>Charged ${tier.price}.00 on May 15, 2026 unless cancelled.</div>
+          </div>
+        </div>
+      </div>
+      <div style={{display:'flex',gap:10,justifyContent:'space-between',marginTop:20}}>
+        <Btn variant="ghost" onClick={()=>setStage('plan')}>← Change plan</Btn>
+        <Btn onClick={()=>setStage('done')}>Start 14-day trial →</Btn>
+      </div>
+    </Card>
+  );
+}
+
+function DoneStage({data}) {
+  const tier = TIERS.find(t=>t.id===data.plan) || TIERS[0];
+  return (
+    <Card>
+      <div style={{textAlign:'center',padding:'10px 0 4px'}}>
+        <div style={{width:78,height:78,borderRadius:'50%',background:`linear-gradient(135deg,${C.lime},#68B42E)`,display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 22px',boxShadow:'0 12px 30px rgba(182,255,43,0.3)'}}>
+          <span style={{fontSize:40}}>✓</span>
+        </div>
+        <div style={{fontFamily:'var(--font-d)',fontSize:34,fontWeight:900,letterSpacing:'-0.01em',marginBottom:10,textTransform:'uppercase'}}>You're all set!</div>
+        <div style={{fontSize:14,color:C.txt2,lineHeight:1.6,marginBottom:24,maxWidth:380,margin:'0 auto 24px'}}>
+          Welcome to <span style={{color:C.txt,fontWeight:700}}>{data.context==='solo' ? (data.brandName||'TFB') : (data.clubName||'TFB')}</span>{tier.id!=='free' && <> on the <span style={{color:tier.color,fontWeight:700}}>{tier.name}</span> plan</>}.
+        </div>
+
+        <div style={{textAlign:'left',background:C.s2,border:`1px solid ${C.border}`,borderRadius:12,padding:'14px 16px',marginBottom:22}}>
+          <div style={{fontSize:11,fontWeight:700,color:C.lime,letterSpacing:'0.14em',textTransform:'uppercase',marginBottom:10}}>Next steps</div>
+          {(data.context==='solo' ? [
+            {t:'Invite your players',d:'Share a join link with players you coach'},
+            {t:'Build your first session',d:'Use the Session Builder with multi-section diagrams'},
+            {t:'Set your availability',d:'Block out time you\'re available to coach'},
+            {t:'Add your branding',d:'Customise your PDF and invite styling'},
+          ] : [
+            {t:'Invite your coaches & assistants',d:'Share an invite link from Settings → Roles'},
+            {t:'Add your roster',d:`${data.teamName||'Your team'} is ready — add players in Team Management`},
+            {t:'Build your first session',d:'Use the Session Builder with multi-section diagrams'},
+            {t:'Schedule your first match',d:'Add fixtures from the Fixtures & Results screen'},
+          ]).map((s,i)=>(
+            <div key={i} style={{display:'flex',gap:10,padding:'7px 0',borderTop:i?`1px dashed ${C.border}`:'none'}}>
+              <div style={{width:22,height:22,borderRadius:'50%',background:'rgba(182,255,43,0.12)',color:C.lime,display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:800,flexShrink:0}}>{i+1}</div>
+              <div>
+                <div style={{fontSize:13,fontWeight:700}}>{s.t}</div>
+                <div style={{fontSize:11.5,color:C.txt2}}>{s.d}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <Btn onClick={()=>{try{window.location.href='tfb-dashboard.html'}catch(e){}}} style={{width:'100%',marginBottom:8}}>Open dashboard →</Btn>
+        <button onClick={()=>{try{window.location.href='tfb-nav.html'}catch(e){}}} style={{background:'none',border:'none',color:C.txt2,fontSize:12.5,cursor:'pointer'}}>Browse all screens</button>
+      </div>
+    </Card>
+  );
+}
+
+// ── App ────────────────────────────────────────────────────────────────────
+function App() {
+  const [stage,setStage] = useState('login');
+  const [data,setData] = useState({
+    fname:'Alex',lname:'Mitchell',email:'alex@malverncity.com',password:'demopass123',phone:'',
+    role:'coach',context:'',
+    clubName:'Malvern City SC',country:'Australia',region:'Victoria',federation:'Football Victoria — NPL',
+    brandName:'',city:'',experience:'1-3',qualification:'',specialties:[],
+    teamName:'U16 Boys',ageGroup:'U16',level:'NPL',playerCount:'18',season:'2026',plan:'pro'
+  });
+  const update = (k,v) => setData(p=>({...p,[k]:v}));
+
+  return (
+    <div className="bg-pitch" style={{height:'100vh',width:'100vw',overflow:'auto',display:'flex',flexDirection:'column',alignItems:'center',padding:'32px 24px 56px'}}>
+      {/* Top bar */}
+      <div style={{width:'100%',maxWidth:960,display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:32}}>
+        <div style={{display:'flex',alignItems:'center',gap:10}}>
+          <Logo size={36}/>
+          <div>
+            <div style={{fontFamily:'var(--font-d)',fontSize:18,fontWeight:900,letterSpacing:'-0.02em',lineHeight:1}}>TFB</div>
+            <div style={{fontSize:9.5,fontWeight:600,color:C.txt2,letterSpacing:'0.18em',textTransform:'uppercase',marginTop:2}}>The Football Blueprint</div>
+          </div>
+        </div>
+        <div style={{display:'flex',gap:8}}>
+          <button onClick={()=>{try{window.location.href='tfb-nav.html'}catch(e){}}} style={{padding:'7px 14px',background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border2}`,borderRadius:8,fontSize:12,fontWeight:600,color:C.txt2,cursor:'pointer'}}>← All screens</button>
+          {stage==='login' && <button onClick={()=>setStage('signup')} style={{padding:'7px 14px',background:`${C.lime}14`,border:`1px solid ${C.lime}40`,borderRadius:8,fontSize:12,fontWeight:700,color:C.lime,cursor:'pointer'}}>Get started</button>}
+        </div>
+      </div>
+
+      {stage==='login' && <LoginStage setStage={setStage}/>}
+      {stage==='signup' && <SignupStage setStage={setStage} data={data} update={update}/>}
+      {stage==='role' && <RoleStage setStage={setStage} data={data} update={update}/>}
+      {stage==='context' && <ContextStage setStage={setStage} data={data} update={update}/>}
+      {stage==='solo' && <SoloStage setStage={setStage} data={data} update={update}/>}
+      {stage==='club' && <ClubStage setStage={setStage} data={data} update={update}/>}
+      {stage==='team' && <TeamStage setStage={setStage} data={data} update={update}/>}
+      {stage==='plan' && <PlanStage setStage={setStage} data={data} update={update}/>}
+      {stage==='payment' && <PaymentStage setStage={setStage} data={data} update={update}/>}
+      {stage==='done' && <DoneStage data={data}/>}
+
+      {/* Stage debugger */}
+      <div style={{position:'fixed',bottom:16,right:16,display:'flex',gap:4,padding:6,background:C.s1,border:`1px solid ${C.border}`,borderRadius:9}}>
+        {STAGES.map(s=>(
+          <button key={s} onClick={()=>setStage(s)} style={{padding:'5px 9px',background:stage===s?C.lime:'transparent',color:stage===s?C.greenDark:C.txt2,border:'none',borderRadius:5,fontSize:10,fontWeight:700,letterSpacing:'0.04em',cursor:'pointer',textTransform:'uppercase'}}>{s}</button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

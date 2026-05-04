@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TFB – Coaches Award</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="tfb-responsive.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--lime:#B6FF2B;--green:#0F3D2E;--green-dark:#0A2E20;--bg:#111418;--s1:#1C2128;--s2:#242B33;--s3:#2D3640;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);--txt:#F0F2F4;--txt2:rgba(240,242,244,0.5);--txt3:rgba(240,242,244,0.28);--goal:#2ED47A;--amber:#FFB020;--red:#E5533D;--sky:#3FA9F5;--font-d:'Barlow Condensed',sans-serif;--font-b:'Barlow',sans-serif;--hh:54px;
+--gold:#FFD700;--silver:#C0C0C0;--bronze:#CD7F32;}
+html,body,#root{height:100%;overflow:hidden}
+body{font-family:var(--font-b);background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font-family:var(--font-b);color:inherit}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:3px}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pop{0%{transform:scale(0.8);opacity:0}60%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.fade-in{animation:fadeIn .18s ease forwards}
+.pop{animation:pop .3s ease forwards}
+.gold-shimmer{background:linear-gradient(90deg,#FFD700,#FFF8DC,#FFD700,#FFF8DC);background-size:200% 100%;animation:shimmer 2s linear infinite;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+</style>
+</head>
+<body><div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useCallback} = React;
+const C={lime:'#B6FF2B',green:'#0F3D2E',greenDark:'#0A2E20',bg:'#111418',s1:'#1C2128',s2:'#242B33',s3:'#2D3640',border:'rgba(255,255,255,0.07)',border2:'rgba(255,255,255,0.13)',txt:'#F0F2F4',txt2:'rgba(240,242,244,0.5)',txt3:'rgba(240,242,244,0.28)',goal:'#2ED47A',amber:'#FFB020',red:'#E5533D',sky:'#3FA9F5',gold:'#FFD700',silver:'#C0C0C0',bronze:'#CD7F32'};
+
+const Ic=({d,size=16,color='currentColor',stroke=2,fill='none'})=>(<svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>{Array.isArray(d)?d.map((p,i)=><path key={i} d={p}/>):<path d={d}/> }</svg>);
+const P={back:'M15 18l-6-6 6-6',check:'M20 6L9 17l-5-5',award:'M12 15a7 7 0 1 0 0-14 7 7 0 0 0 0 14zm0 0v7M8.21 13.89L7 23l5-3 5 3-1.21-9.12',x:'M18 6L6 18M6 6l12 12',trophy:'M8 21h8M12 17v4M17 3H7L5 8c0 3.31 3.13 6 7 6s7-2.69 7-6L17 3z M5 8H2M19 8h3',star:'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',chevD:'M6 9l6 6 6-6',refresh:'M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15'};
+
+const PLAYERS=[
+  {id:1,name:'D. Kowalski',firstName:'Damian',pos:'ST',num:9,pts:0,votes:[]},
+  {id:2,name:'R. Al-Farsi',firstName:'Rami',pos:'AM',num:10,pts:0,votes:[]},
+  {id:3,name:'B. Tremblay',firstName:'Beau',pos:'CM',num:8,pts:0,votes:[]},
+  {id:4,name:'M. Osei',firstName:'Marcus',pos:'CB',num:5,pts:0,votes:[]},
+  {id:5,name:'A. Nguyen',firstName:'Alex',pos:'RB',num:2,pts:0,votes:[]},
+  {id:6,name:'O. Petersen',firstName:'Oscar',pos:'LW',num:11,pts:0,votes:[]},
+  {id:7,name:'J. Mitchell',firstName:'Jamie',pos:'GK',num:1,pts:0,votes:[]},
+  {id:8,name:'T. Kovacs',firstName:'Tamas',pos:'CB',num:6,pts:0,votes:[]},
+  {id:9,name:'C. Walsh',firstName:'Cian',pos:'CM',num:14,pts:0,votes:[]},
+  {id:10,name:'K. Mensah',firstName:'Kwame',pos:'RW',num:7,pts:0,votes:[]},
+  {id:11,name:'J. Rossi',firstName:'Jacopo',pos:'CM',num:13,pts:0,votes:[]},
+];
+
+const ROUNDS=[
+  {id:1,label:'Round 5',opp:'Bulleen Lions',date:'Sat 26 Apr',locked:true,
+    tallied:[{pid:2,pts:3},{pid:1,pts:2},{pid:3,pts:1},{pid:6,pts:0},{pid:4,pts:0}]},
+  {id:2,label:'Round 6',opp:'Avondale FC',date:'Sat 3 May',locked:true,
+    tallied:[{pid:3,pts:3},{pid:4,pts:2},{pid:7,pts:1}]},
+  {id:3,label:'Round 7',opp:'South Melbourne',date:'Sat 10 May',locked:false,
+    tallied:[]},
+];
+
+const POS_COLORS={GK:'#FFB020',CB:'#3FA9F5',LB:'#3FA9F5',RB:'#3FA9F5',CM:'#B6FF2B',AM:'#B6FF2B',LW:'#2ED47A',RW:'#2ED47A',ST:'#E5533D'};
+
+// ── Tally votes across all rounds ──────────────────────────────────────────
+function calcLeaderboard(rounds,curVotes){
+  const totals={};
+  PLAYERS.forEach(p=>{totals[p.id]={...p,pts:0,history:[]};});
+  rounds.filter(r=>r.locked).forEach(r=>{
+    r.tallied.forEach(({pid,pts})=>{
+      if(totals[pid]){totals[pid].pts+=pts;totals[pid].history.push({round:r.label,pts});}
+    });
+  });
+  // Add current round's votes (unsaved)
+  if(curVotes){
+    [3,2,1].forEach((pts,i)=>{const pid=curVotes[i];if(pid&&totals[pid])totals[pid].pts+=pts;});
+  }
+  return Object.values(totals).sort((a,b)=>b.pts-a.pts);
+}
+
+// ── 3-2-1 Voting Card ─────────────────────────────────────────────────────
+function VotingCard({round,players,onSubmit,voterName}){
+  const [votes,setVotes]=useState([null,null,null]); // [3pts, 2pts, 1pt]
+  const [submitted,setSubmitted]=useState(false);
+  const [revealStep,setRevealStep]=useState(-1);
+
+  const VOTE_LABELS=['3 Votes — Best on Ground','2 Votes — Outstanding','1 Vote — Solid Performance'];
+  const VOTE_COLORS=[C.gold,C.silver,C.bronze];
+  const VOTE_MEDALS=['🥇','🥈','🥉'];
+
+  const assign=(slotIdx,playerId)=>{
+    if(submitted) return;
+    setVotes(v=>{
+      const nv=[...v];
+      // If player already voted elsewhere, clear that slot
+      const existing=nv.indexOf(playerId);
+      if(existing>=0) nv[existing]=null;
+      nv[slotIdx]=playerId;
+      return nv;
+    });
+  };
+
+  const canSubmit=votes.every(v=>v!==null)&&new Set(votes).size===3;
+
+  const handleSubmit=()=>{
+    if(!canSubmit) return;
+    setSubmitted(true);
+    // Reveal animation
+    let step=-1;
+    const iv=setInterval(()=>{
+      step++;setRevealStep(step);
+      if(step>=2) clearInterval(iv);
+    },600);
+    setTimeout(()=>onSubmit(votes),2200);
+  };
+
+  if(submitted){
+    return(
+      <div className="fade-in" style={{background:C.s1,borderRadius:16,border:'1px solid rgba(255,215,0,0.3)',padding:'24px',textAlign:'center'}}>
+        <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:28,color:C.gold,letterSpacing:'0.03em',marginBottom:8}}>VOTES SUBMITTED</div>
+        <div style={{fontSize:13,color:C.txt2,marginBottom:20}}>{voterName} · {round.label} vs {round.opp}</div>
+        <div style={{display:'flex',flexDirection:'column',gap:10,maxWidth:320,margin:'0 auto'}}>
+          {votes.map((pid,i)=>{
+            const p=PLAYERS.find(pl=>pl.id===pid);
+            const vc=VOTE_COLORS[i];
+            const revealed=revealStep>=i;
+            return(
+              <div key={i} className={revealed?'pop':''} style={{display:'flex',alignItems:'center',gap:12,background:`${vc}10`,border:`1px solid ${vc}30`,borderRadius:12,padding:'12px 16px',opacity:revealed?1:0,transition:'opacity .3s'}}>
+                <span style={{fontSize:28}}>{VOTE_MEDALS[i]}</span>
+                <div style={{textAlign:'left',flex:1}}>
+                  <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:20,color:vc,lineHeight:1}}>{p?.name}</div>
+                  <div style={{fontSize:11,color:C.txt3}}>{p?.pos} · #{p?.num}</div>
+                </div>
+                <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:32,color:vc}}>{3-i}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  return(
+    <div style={{background:C.s1,borderRadius:16,border:`1px solid ${C.border2}`,overflow:'hidden'}}>
+      {/* Round header */}
+      <div style={{background:`linear-gradient(135deg,${C.greenDark},${C.green})`,padding:'16px 20px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+        <div>
+          <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:22,color:'#fff',letterSpacing:'0.03em'}}>{round.label} · vs {round.opp}</div>
+          <div style={{fontSize:11,color:'rgba(255,255,255,0.5)',marginTop:2}}>{round.date} · {voterName}</div>
+        </div>
+        <div style={{display:'flex',gap:6}}>
+          {votes.map((v,i)=>(
+            <div key={i} style={{width:32,height:32,borderRadius:'50%',background:v?`${VOTE_COLORS[i]}20`:'rgba(255,255,255,0.08)',border:`2px solid ${v?VOTE_COLORS[i]:C.border2}`,display:'flex',alignItems:'center',justifyContent:'center'}}>
+              {v?<span style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:14,color:VOTE_COLORS[i]}}>{3-i}</span>
+               :<span style={{fontSize:12,color:C.txt3}}>{3-i}</span>}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Vote slots */}
+      <div style={{padding:'16px 20px',display:'flex',flexDirection:'column',gap:12}}>
+        {VOTE_LABELS.map((label,slotIdx)=>{
+          const vc=VOTE_COLORS[slotIdx];
+          const assigned=votes[slotIdx];
+          const assignedPlayer=assigned?PLAYERS.find(p=>p.id===assigned):null;
+          return(
+            <div key={slotIdx} style={{border:`1px solid ${assigned?vc+'50':C.border}`,borderRadius:12,overflow:'hidden',transition:'border-color .2s'}}>
+              <div style={{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',background:assigned?`${vc}08`:'transparent'}}>
+                <div style={{width:36,height:36,borderRadius:'50%',background:`${vc}18`,border:`2px solid ${vc}40`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                  <span style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:18,color:vc}}>{3-slotIdx}</span>
+                </div>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:12,fontWeight:700,color:vc,textTransform:'uppercase',letterSpacing:'0.06em'}}>{label}</div>
+                  {assignedPlayer?(
+                    <div style={{fontSize:14,fontWeight:700,color:C.txt,marginTop:2}}>{assignedPlayer.name} <span style={{fontSize:11,color:C.txt3}}>#{assignedPlayer.num} · {assignedPlayer.pos}</span></div>
+                  ):(
+                    <div style={{fontSize:12,color:C.txt3,marginTop:2}}>Tap a player to assign</div>
+                  )}
+                </div>
+                {assignedPlayer&&(
+                  <button onClick={()=>assign(slotIdx,null)} style={{background:'transparent',border:'none',cursor:'pointer',color:C.txt3,display:'flex',padding:4}}>
+                    <Ic d={P.x} size={14} color="currentColor"/>
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Player grid */}
+      <div style={{padding:'0 20px 16px'}}>
+        <div style={{fontSize:10,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:8}}>Select Players</div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>
+          {players.map(p=>{
+            const voteSlot=votes.indexOf(p.id);
+            const isVoted=voteSlot>=0;
+            const vc=isVoted?VOTE_COLORS[voteSlot]:null;
+            const pc=POS_COLORS[p.pos]||C.lime;
+            // Next empty slot
+            const nextSlot=votes.findIndex(v=>v===null);
+            return(
+              <button key={p.id}
+                onClick={()=>nextSlot>=0||isVoted?assign(isVoted?votes.findIndex(v=>v===p.id):nextSlot,isVoted?null:p.id):null}
+                style={{display:'flex',flexDirection:'column',alignItems:'center',gap:4,padding:'10px 6px',background:isVoted?`${vc}15`:`${pc}08`,border:`1.5px solid ${isVoted?vc+'60':pc+'30'}`,borderRadius:10,cursor:'pointer',transition:'all .15s',position:'relative'}}
+                onMouseEnter={e=>{if(!isVoted)e.currentTarget.style.borderColor=pc+'80'}}
+                onMouseLeave={e=>{if(!isVoted)e.currentTarget.style.borderColor=pc+'30'}}>
+                {isVoted&&(
+                  <div style={{position:'absolute',top:-6,right:-6,width:20,height:20,borderRadius:'50%',background:vc,display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:900,color:'#000',fontFamily:'var(--font-d)',border:'2px solid rgba(0,0,0,0.3)'}}>{3-voteSlot}</div>
+                )}
+                <div style={{width:32,height:32,borderRadius:'50%',background:`linear-gradient(135deg,${pc}30,${pc}15)`,border:`1.5px solid ${pc}50`,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                  <span style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:14,color:pc}}>{p.num}</span>
+                </div>
+                <div style={{fontSize:10,fontWeight:700,color:isVoted?vc:C.txt2,textAlign:'center',lineHeight:1.2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',width:'100%'}}>{p.firstName}</div>
+                <div style={{fontSize:9,color:C.txt3}}>{p.pos}</div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Submit */}
+      <div style={{padding:'12px 20px',borderTop:`1px solid ${C.border}`}}>
+        <button onClick={handleSubmit} disabled={!canSubmit}
+          style={{width:'100%',padding:'12px',background:canSubmit?`linear-gradient(135deg,${C.gold},#e6a800)`:'rgba(255,255,255,0.07)',border:'none',borderRadius:10,fontSize:14,fontWeight:800,color:canSubmit?'#1a0f00':C.txt3,cursor:canSubmit?'pointer':'not-allowed',display:'flex',alignItems:'center',justifyContent:'center',gap:8,transition:'all .2s'}}>
+          🏆 Submit 3-2-1 Votes
+        </button>
+        {!canSubmit&&<div style={{fontSize:11,color:C.txt3,textAlign:'center',marginTop:6}}>Assign all 3 votes to different players to submit</div>}
+      </div>
+    </div>
+  );
+}
+
+// ── Leaderboard ───────────────────────────────────────────────────────────────
+function Leaderboard({players,rounds,activeVotes}){
+  const lb=calcLeaderboard(rounds,activeVotes);
+  const medalColors=[C.gold,C.silver,C.bronze];
+
+  return(
+    <div style={{background:C.s1,borderRadius:16,border:`1px solid ${C.border2}`,overflow:'hidden'}}>
+      <div style={{background:`linear-gradient(135deg,rgba(255,215,0,0.12),rgba(255,215,0,0.04))`,borderBottom:'1px solid rgba(255,215,0,0.2)',padding:'14px 18px',display:'flex',alignItems:'center',gap:10}}>
+        <Ic d={P.trophy} size={18} color={C.gold}/>
+        <div>
+          <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:18,color:C.gold,letterSpacing:'0.03em'}}>SEASON LEADERBOARD</div>
+          <div style={{fontSize:10,color:C.txt3}}>Coaches Award · {rounds.filter(r=>r.locked).length} rounds counted</div>
+        </div>
+      </div>
+      <div>
+        {lb.map((p,i)=>{
+          const medal=i<3?medalColors[i]:null;
+          const isTop=i===0;
+          return(
+            <div key={p.id} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 18px',borderBottom:`1px solid ${C.border}`,background:isTop?'rgba(255,215,0,0.04)':'transparent',transition:'background .12s'}} onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.02)'} onMouseLeave={e=>e.currentTarget.style.background=isTop?'rgba(255,215,0,0.04)':'transparent'}>
+              <div style={{width:24,textAlign:'center',flexShrink:0}}>
+                {medal?<span style={{fontSize:16}}>{i===0?'🥇':i===1?'🥈':'🥉'}</span>
+                :<span style={{fontFamily:'var(--font-d)',fontWeight:700,fontSize:14,color:C.txt3}}>{i+1}</span>}
+              </div>
+              <div style={{width:34,height:34,borderRadius:'50%',background:`${POS_COLORS[p.pos]||C.lime}18`,border:`1.5px solid ${POS_COLORS[p.pos]||C.lime}40`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                <span style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:14,color:POS_COLORS[p.pos]||C.lime}}>{p.num}</span>
+              </div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:13,fontWeight:700,color:isTop?C.gold:C.txt}}>{p.name}</div>
+                <div style={{fontSize:10,color:C.txt3}}>
+                  {p.history.length>0?p.history.map(h=>`${h.pts}pts`).join(', '):'No votes yet'}
+                </div>
+              </div>
+              {/* Vote breakdown dots */}
+              <div style={{display:'flex',gap:3,alignItems:'center'}}>
+                {p.history.map((h,hi)=>(
+                  <div key={hi} style={{width:20,height:20,borderRadius:'50%',background:h.pts===3?`${C.gold}25`:h.pts===2?'rgba(192,192,192,0.2)':'rgba(205,127,50,0.2)',border:`1px solid ${h.pts===3?C.gold:h.pts===2?C.silver:C.bronze}50`,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                    <span style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:10,color:h.pts===3?C.gold:h.pts===2?C.silver:C.bronze}}>{h.pts}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{minWidth:48,textAlign:'right'}}>
+                <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:26,color:medal||C.txt,lineHeight:1}}>{p.pts}</div>
+                <div style={{fontSize:9,color:C.txt3,textTransform:'uppercase'}}>pts</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── App ───────────────────────────────────────────────────────────────────────
+function App(){
+  const TWEAK_DEFAULTS=/*EDITMODE-BEGIN*/{"voter":"Coach Tim","activeRound":3}/*EDITMODE-END*/;
+  const [tweaks,setTweak]=window.useTweaks(TWEAK_DEFAULTS);
+
+  const [rounds,setRounds]=useState(ROUNDS);
+  const [activeTab,setActiveTab]=useState('vote');
+  const [submittedVotes,setSubmittedVotes]=useState(null);
+  const [activeRoundId,setActiveRoundId]=useState(tweaks.activeRound);
+
+  const activeRound=rounds.find(r=>r.id===activeRoundId)||rounds[rounds.length-1];
+  const prevRound=rounds.find(r=>r.id===activeRoundId-1);
+
+  const handleSubmit=(votes)=>{
+    setSubmittedVotes(votes);
+    setActiveTab('leaderboard');
+    // Add to round tallied
+    setRounds(prev=>prev.map(r=>r.id===activeRoundId?{
+      ...r,locked:true,
+      tallied:[
+        {pid:votes[0],pts:3},
+        {pid:votes[1],pts:2},
+        {pid:votes[2],pts:1},
+      ]
+    }:r));
+  };
+
+  const VOTERS=['Coach Tim','Marco (Asst.)','Lisa (Manager)'];
+
+  return(
+    <div style={{height:'100vh',display:'flex',flexDirection:'column',background:C.bg,overflow:'hidden'}}>
+      {/* Header */}
+      <header style={{height:'var(--hh)',background:`linear-gradient(90deg,${C.greenDark},${C.green})`,borderBottom:'1px solid rgba(255,215,0,0.18)',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 20px',flexShrink:0,zIndex:50}}>
+        <div style={{display:'flex',alignItems:'center',gap:12}}>
+          <button onClick={()=>{try{window.location.href='tfb-dashboard.html'}catch(e){}}} style={{display:'flex',alignItems:'center',gap:6,padding:'6px 10px',background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,color:'rgba(255,255,255,0.7)',fontSize:12,fontWeight:600,cursor:'pointer'}} onMouseEnter={e=>{e.currentTarget.style.background='rgba(182,255,43,0.12)';e.currentTarget.style.color='#B6FF2B'}} onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,0.07)';e.currentTarget.style.color='rgba(255,255,255,0.7)'}}>
+            <Ic d={P.back} size={14} color="currentColor"/> Dashboard
+          </button>
+          <div style={{width:1,height:24,background:'rgba(255,255,255,0.12)'}}/>
+          <svg width="28" height="28" viewBox="0 0 40 40" fill="none"><polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="#0F3D2E" stroke="#B6FF2B" strokeWidth="1.5"/><text x="20" y="26" textAnchor="middle" fill="#B6FF2B" fontFamily="Barlow Condensed" fontWeight="900" fontSize="13">TFB</text></svg>
+          <div>
+            <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:17,color:C.gold,letterSpacing:'0.04em',lineHeight:1}}>COACHES AWARD</div>
+            <div style={{fontSize:9.5,color:'rgba(255,215,0,0.55)',fontWeight:700,letterSpacing:'0.1em'}}>3-2-1 Brownlow Voting · Season 2025</div>
+          </div>
+        </div>
+        {/* Voter selector */}
+        <div style={{display:'flex',alignItems:'center',gap:10}}>
+          <span style={{fontSize:11,color:C.txt3}}>Voting as:</span>
+          <select value={tweaks.voter} onChange={e=>setTweak('voter',e.target.value)}
+            style={{background:C.s2,border:`1px solid ${C.border2}`,borderRadius:7,color:C.txt,fontSize:12,fontWeight:700,padding:'6px 10px',outline:'none'}}>
+            {VOTERS.map(v=><option key={v} value={v}>{v}</option>)}
+          </select>
+        </div>
+      </header>
+
+      {/* Tab bar */}
+      <div style={{background:C.s1,borderBottom:`1px solid ${C.border}`,padding:'0 20px',display:'flex',gap:0,flexShrink:0}}>
+        {[['vote','🗳 Vote'],['leaderboard','🏆 Leaderboard'],['history','📋 Round History']].map(([t,l])=>(
+          <button key={t} onClick={()=>setActiveTab(t)} style={{padding:'10px 18px',background:'transparent',border:'none',borderBottom:`2px solid ${activeTab===t?C.gold:'transparent'}`,color:activeTab===t?C.gold:C.txt2,fontSize:13,fontWeight:700,cursor:'pointer',transition:'all .15s'}}>{l}</button>
+        ))}
+      </div>
+
+      <div style={{flex:1,overflowY:'auto',padding:'20px'}}>
+        {/* Vote tab */}
+        {activeTab==='vote'&&(
+          <div style={{maxWidth:700,margin:'0 auto',display:'flex',flexDirection:'column',gap:16}}>
+            {/* Round selector */}
+            <div style={{display:'flex',gap:8}}>
+              {rounds.map(r=>(
+                <button key={r.id} onClick={()=>setActiveRoundId(r.id)}
+                  style={{flex:1,padding:'10px',background:activeRoundId===r.id?'rgba(255,215,0,0.1)':'transparent',border:`1px solid ${activeRoundId===r.id?'rgba(255,215,0,0.4)':C.border2}`,borderRadius:10,cursor:'pointer',transition:'all .12s',textAlign:'center'}}>
+                  <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:15,color:activeRoundId===r.id?C.gold:C.txt}}>{r.label}</div>
+                  <div style={{fontSize:10,color:C.txt3,marginTop:2}}>vs {r.opp}</div>
+                  {r.locked&&<div style={{fontSize:9,color:C.goal,marginTop:3,fontWeight:700}}>✓ VOTED</div>}
+                </button>
+              ))}
+            </div>
+            {activeRound.locked&&activeRound.tallied.length>0?(
+              <div className="fade-in" style={{background:C.s1,borderRadius:16,border:'1px solid rgba(255,215,0,0.25)',padding:'20px',textAlign:'center'}}>
+                <div style={{fontSize:13,color:C.txt2,marginBottom:16}}>You've already voted for <b style={{color:C.gold}}>{activeRound.label}</b></div>
+                <div style={{display:'flex',flexDirection:'column',gap:8,maxWidth:280,margin:'0 auto'}}>
+                  {activeRound.tallied.map((v,i)=>{
+                    const p=PLAYERS.find(pl=>pl.id===v.pid);
+                    const vc=[C.gold,C.silver,C.bronze][i]||C.txt2;
+                    return(
+                      <div key={i} style={{display:'flex',alignItems:'center',gap:12,background:`${vc}10`,border:`1px solid ${vc}30`,borderRadius:10,padding:'10px 14px'}}>
+                        <span style={{fontSize:22}}>{i===0?'🥇':i===1?'🥈':'🥉'}</span>
+                        <div style={{flex:1,textAlign:'left'}}>
+                          <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:18,color:vc}}>{p?.name}</div>
+                          <div style={{fontSize:10,color:C.txt3}}>{p?.pos}</div>
+                        </div>
+                        <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:24,color:vc}}>{v.pts}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ):(
+              <VotingCard round={activeRound} players={PLAYERS} onSubmit={handleSubmit} voterName={tweaks.voter}/>
+            )}
+          </div>
+        )}
+
+        {/* Leaderboard tab */}
+        {activeTab==='leaderboard'&&(
+          <div style={{maxWidth:600,margin:'0 auto'}}>
+            <Leaderboard players={PLAYERS} rounds={rounds} activeVotes={submittedVotes}/>
+          </div>
+        )}
+
+        {/* History tab */}
+        {activeTab==='history'&&(
+          <div style={{maxWidth:680,margin:'0 auto',display:'flex',flexDirection:'column',gap:14}}>
+            {rounds.filter(r=>r.locked&&r.tallied.length>0).map(r=>(
+              <div key={r.id} style={{background:C.s1,borderRadius:14,border:`1px solid ${C.border2}`,overflow:'hidden'}}>
+                <div style={{background:`linear-gradient(135deg,${C.greenDark},${C.green})`,padding:'12px 18px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                  <div>
+                    <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:18,color:'#fff'}}>{r.label} · vs {r.opp}</div>
+                    <div style={{fontSize:10,color:'rgba(255,255,255,0.5)',marginTop:1}}>{r.date}</div>
+                  </div>
+                  <span style={{fontSize:10,fontWeight:700,color:C.goal,background:'rgba(46,212,122,0.15)',border:'1px solid rgba(46,212,122,0.3)',borderRadius:5,padding:'2px 8px'}}>✓ LOCKED</span>
+                </div>
+                <div style={{padding:'12px 18px',display:'flex',gap:12}}>
+                  {r.tallied.map((v,i)=>{
+                    const p=PLAYERS.find(pl=>pl.id===v.pid);
+                    const vc=[C.gold,C.silver,C.bronze][i]||C.txt2;
+                    return(
+                      <div key={i} style={{flex:1,background:`${vc}10`,border:`1px solid ${vc}30`,borderRadius:10,padding:'12px',textAlign:'center'}}>
+                        <div style={{fontSize:22,marginBottom:4}}>{i===0?'🥇':i===1?'🥈':'🥉'}</div>
+                        <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:18,color:vc,lineHeight:1}}>{p?.name}</div>
+                        <div style={{fontSize:9.5,color:C.txt3,marginTop:2}}>{p?.pos} · #{p?.num}</div>
+                        <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:24,color:vc,marginTop:6}}>{v.pts}<span style={{fontSize:12,fontWeight:400,color:C.txt3}}> pts</span></div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <TweaksPanel>
+        <TweakSection label="Voting"/>
+        <TweakSelect label="Voter" value={tweaks.voter} options={['Coach Tim','Marco (Asst.)','Lisa (Manager)']} onChange={v=>setTweak('voter',v)}/>
+        <TweakNumber label="Active Round" value={tweaks.activeRound} min={1} max={rounds.length} onChange={v=>setTweak('activeRound',v)}/>
+      </TweaksPanel>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script></body></html>

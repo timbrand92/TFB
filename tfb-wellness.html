@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TFB – Wellness</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="tfb-responsive.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--lime:#B6FF2B;--green:#0F3D2E;--green-dark:#0A2E20;--bg:#111418;--s1:#1C2128;--s2:#242B33;--s3:#2D3640;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);--txt:#F0F2F4;--txt2:rgba(240,242,244,0.5);--txt3:rgba(240,242,244,0.28);--goal:#2ED47A;--amber:#FFB020;--red:#E5533D;--sky:#3FA9F5;--font-d:'Barlow Condensed',sans-serif;--font-b:'Barlow',sans-serif;--hh:54px;}
+html,body,#root{height:100%;overflow:hidden}body{font-family:var(--font-b);background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased}
+button,select,input,textarea{font-family:var(--font-b);color:inherit}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:3px}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+.fade-in{animation:fadeIn .18s ease forwards}
+.slide-in{animation:slideIn .2s ease forwards}
+/* Slider styling */
+input[type=range]{-webkit-appearance:none;width:100%;height:6px;border-radius:3px;background:rgba(255,255,255,0.1);outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#B6FF2B;cursor:pointer;border:2px solid rgba(255,255,255,0.3);transition:transform .15s}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.15)}
+</style>
+</head>
+<body><div id="root"></div>
+<script type="text/babel">
+const {useState,useRef,useCallback} = React;
+const C={lime:'#B6FF2B',green:'#0F3D2E',greenDark:'#0A2E20',bg:'#111418',s1:'#1C2128',s2:'#242B33',s3:'#2D3640',border:'rgba(255,255,255,0.07)',border2:'rgba(255,255,255,0.13)',txt:'#F0F2F4',txt2:'rgba(240,242,244,0.5)',txt3:'rgba(240,242,244,0.28)',goal:'#2ED47A',amber:'#FFB020',red:'#E5533D',sky:'#3FA9F5'};
+const Ic=({d,size=16,color='currentColor',stroke=2,fill='none'})=>(<svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>{Array.isArray(d)?d.map((p,i)=><path key={i} d={p}/>):<path d={d}/> }</svg>);
+const P={
+  back:'M15 18l-6-6 6-6',heart:'M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z',
+  alert:'M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01',
+  bell:'M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0',
+  download:'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3',
+  check:'M20 6L9 17l-5-5',x:'M18 6L6 18M6 6l12 12',
+  send:'M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z',
+  user:'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z',
+  chevD:'M6 9l6 6 6-6',trend:'M23 6l-9.5 9.5-5-5L1 18',
+  filter:'M22 3H2l8 9.46V19l4 2v-8.54L22 3',
+};
+
+const PLAYERS=[
+  {id:1,name:'J. Mitchell',pos:'GK',num:1,today:92,yesterday:88,week:[85,88,90,87,91,88,92],status:'good',notes:'',checkedIn:true,
+    breakdown:{physical:90,mental:88,sleep:94,soreness:92,energy:91,stress:85}},
+  {id:2,name:'A. Nguyen',pos:'RB',num:2,today:88,yesterday:85,week:[80,82,84,86,85,87,88],status:'good',notes:'',checkedIn:true,
+    breakdown:{physical:86,mental:90,sleep:88,soreness:85,energy:89,stress:82}},
+  {id:3,name:'M. Osei',pos:'CB',num:5,today:85,yesterday:86,week:[82,84,83,85,86,84,85],status:'good',notes:'',checkedIn:true,
+    breakdown:{physical:84,mental:86,sleep:82,soreness:88,energy:85,stress:87}},
+  {id:4,name:'T. Kovacs',pos:'CB',num:6,today:72,yesterday:80,week:[82,80,79,81,80,78,72],status:'watch',notes:'Slight knee soreness flagged',checkedIn:true,
+    breakdown:{physical:65,mental:78,sleep:74,soreness:62,energy:70,stress:75}},
+  {id:5,name:'L. Santos',pos:'LB',num:3,today:null,yesterday:60,week:[75,70,65,62,60,null,null],status:'injured',notes:'Hamstring strain — week 3 of recovery',checkedIn:false,
+    breakdown:{physical:40,mental:65,sleep:70,soreness:30,energy:55,stress:60}},
+  {id:6,name:'B. Tremblay',pos:'CM',num:8,today:90,yesterday:88,week:[85,87,88,90,88,89,90],status:'good',notes:'',checkedIn:true,
+    breakdown:{physical:92,mental:90,sleep:88,soreness:91,energy:93,stress:86}},
+  {id:7,name:'C. Walsh',pos:'CM',num:14,today:72,yesterday:70,week:[78,75,72,70,71,70,72],status:'watch',notes:'Low energy this week — check in',checkedIn:true,
+    breakdown:{physical:68,mental:70,sleep:65,soreness:75,energy:64,stress:72}},
+  {id:8,name:'R. Al-Farsi',pos:'AM',num:10,today:88,yesterday:90,week:[88,90,91,89,90,89,88],status:'good',notes:'',checkedIn:true,
+    breakdown:{physical:86,mental:92,sleep:90,soreness:88,energy:87,stress:84}},
+  {id:9,name:'O. Petersen',pos:'LW',num:11,today:82,yesterday:80,week:[76,78,79,80,80,81,82],status:'good',notes:'',checkedIn:true,
+    breakdown:{physical:80,mental:84,sleep:82,soreness:83,energy:81,stress:80}},
+  {id:10,name:'K. Mensah',pos:'RW',num:7,today:77,yesterday:75,week:[72,74,75,76,75,76,77],status:'good',notes:'',checkedIn:true,
+    breakdown:{physical:75,mental:80,sleep:76,soreness:78,energy:74,stress:79}},
+  {id:11,name:'D. Kowalski',pos:'ST',num:9,today:91,yesterday:89,week:[87,88,90,89,88,90,91],status:'good',notes:'',checkedIn:true,
+    breakdown:{physical:93,mental:90,sleep:89,soreness:92,energy:94,stress:88}},
+];
+
+const scoreColor=v=>!v?'#8A8F98':v>=80?C.goal:v>=65?C.amber:C.red;
+const teamAvg=Math.round(PLAYERS.filter(p=>p.today).reduce((s,p)=>s+(p.today||0),0)/PLAYERS.filter(p=>p.today).length);
+
+// ── Player Check-In Modal ─────────────────────────────────────────────────────
+function CheckInModal({player,onClose,onSubmit,isPlayerView=false}){
+  const [vals,setVals]=useState({physical:70,mental:70,sleep:70,soreness:70,energy:70,stress:70,notes:''});
+  const set=(k,v)=>setVals(x=>({...x,[k]:v}));
+  const overall=Math.round(Object.entries(vals).filter(([k])=>k!=='notes').reduce((s,[,v])=>s+v,0)/6);
+  const oc=scoreColor(overall);
+
+  const METRICS=[
+    {key:'physical',label:'Physical Readiness',desc:'How does your body feel?',low:'Sore',high:'Perfect',color:C.goal},
+    {key:'mental',label:'Mental Sharpness',desc:'Focus & concentration level',low:'Foggy',high:'Locked in',color:C.sky},
+    {key:'sleep',label:'Sleep Quality',desc:'Last night\'s sleep',low:'Poor',high:'Great',color:'#A78BFA'},
+    {key:'soreness',label:'Muscle Soreness',desc:'Soreness / stiffness',low:'Very sore',high:'None',color:C.amber},
+    {key:'energy',label:'Energy Level',desc:'Overall energy & drive',low:'Flat',high:'High',color:C.lime},
+    {key:'stress',label:'Stress Level',desc:'Life stress outside football (inverted)',low:'Very stressed',high:'Relaxed',color:'#F472B6'},
+  ];
+
+  return(
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:200,padding:16,backdropFilter:'blur(6px)'}} onClick={onClose}>
+      <div className="fade-in" style={{background:C.s1,border:`1px solid ${C.border2}`,borderRadius:18,width:'100%',maxWidth:520,maxHeight:'92vh',display:'flex',flexDirection:'column',boxShadow:'0 24px 80px rgba(0,0,0,0.8)',overflow:'hidden'}} onClick={e=>e.stopPropagation()}>
+        {/* Header */}
+        <div style={{padding:'16px 20px',borderBottom:`1px solid ${C.border}`,display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0,background:`linear-gradient(135deg,${C.greenDark},${C.green})`}}>
+          <div>
+            <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:18,color:C.lime,letterSpacing:'0.03em'}}>{isPlayerView?'My Wellness Check-In':`Check-In: ${player?.name||'Player'}`}</div>
+            <div style={{fontSize:11,color:'rgba(255,255,255,0.5)',marginTop:2}}>{new Date().toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'long'})}</div>
+          </div>
+          <div style={{textAlign:'center'}}>
+            <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:36,color:oc,lineHeight:1}}>{overall}</div>
+            <div style={{fontSize:9,color:'rgba(255,255,255,0.4)',letterSpacing:'0.08em'}}>SCORE</div>
+          </div>
+        </div>
+
+        {/* Sliders */}
+        <div style={{flex:1,overflowY:'auto',padding:'16px 20px',display:'flex',flexDirection:'column',gap:14}}>
+          {METRICS.map(({key,label,desc,low,high,color})=>(
+            <div key={key}>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:6}}>
+                <div>
+                  <div style={{fontSize:13,fontWeight:700,color:C.txt}}>{label}</div>
+                  <div style={{fontSize:10,color:C.txt3}}>{desc}</div>
+                </div>
+                <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:22,color,minWidth:36,textAlign:'right'}}>{vals[key]}</div>
+              </div>
+              <input type="range" min={0} max={100} step={5} value={vals[key]}
+                onChange={e=>set(key,+e.target.value)}
+                style={{background:`linear-gradient(to right,${color} 0%,${color} ${vals[key]}%,rgba(255,255,255,0.1) ${vals[key]}%,rgba(255,255,255,0.1) 100%)`}}/>
+              <div style={{display:'flex',justifyContent:'space-between',fontSize:9.5,color:C.txt3,marginTop:3}}>
+                <span>{low}</span><span>{high}</span>
+              </div>
+            </div>
+          ))}
+
+          {/* Notes */}
+          <div>
+            <div style={{fontSize:12,fontWeight:700,color:C.txt,marginBottom:6}}>Any notes or concerns? <span style={{color:C.txt3,fontWeight:400}}>(optional)</span></div>
+            <textarea value={vals.notes} onChange={e=>set('notes',e.target.value)} rows={3}
+              placeholder="Niggle, illness, personal concern…"
+              style={{width:'100%',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:9,color:C.txt,fontSize:13,padding:'10px 12px',resize:'none',outline:'none',lineHeight:1.6}}/>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{padding:'12px 20px',borderTop:`1px solid ${C.border}`,flexShrink:0,display:'flex',gap:10}}>
+          <button onClick={onClose} style={{flex:1,padding:'10px',background:'transparent',border:`1px solid ${C.border2}`,borderRadius:10,fontSize:13,fontWeight:600,color:C.txt2,cursor:'pointer'}}>Cancel</button>
+          <button onClick={()=>onSubmit({...vals,overall})} style={{flex:2,padding:'10px',background:`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:10,fontSize:13,fontWeight:800,color:C.green,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
+            <Ic d={P.check} size={14} color={C.green}/> Submit Check-In
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Export Modal ──────────────────────────────────────────────────────────────
+function ExportModal({onClose,players}){
+  const [scope,setScope]=useState('team');
+  const [format,setFormat]=useState('pdf');
+  const [period,setPeriod]=useState('today');
+  const [selPlayer,setSelPlayer]=useState(players[0]);
+
+  const doExport=()=>{
+    // Build printable HTML for team or individual
+    const isTeam=scope==='team';
+    const data=isTeam?players:[selPlayer];
+    const title=isTeam?'Team Wellness Report':`${selPlayer.name} — Wellness Report`;
+    const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"/>
+<title>${title}</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Barlow:wght@400;600;700&display=swap" rel="stylesheet"/>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Barlow',sans-serif;background:#fff;color:#111;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}@page{margin:16mm;size:A4}.page{max-width:760px;margin:0 auto;padding:24px}.header{background:linear-gradient(135deg,#0A2E20,#0F3D2E);border-radius:10px;padding:20px 24px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between}.ht{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:24px;color:#fff;letter-spacing:.03em}.hs{font-size:10px;color:rgba(182,255,43,.7);font-weight:700;letter-spacing:.1em;margin-top:3px;text-transform:uppercase}.score{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:48px;line-height:1}.table{width:100%;border-collapse:collapse;margin-bottom:20px}.table th{background:#f4f6f9;padding:8px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#555;border:1px solid #e0e4e8;text-align:left}.table td{padding:8px 12px;border:1px solid #e8ecf0;font-size:12px;vertical-align:middle}.bar-wrap{height:6px;background:#f0f2f4;border-radius:3px;overflow:hidden}.bar{height:100%;border-radius:3px}.good{color:#2ED47A}.watch{color:#FFB020}.injured{color:#E5533D}.footer{margin-top:16px;padding-top:12px;border-top:2px solid #B6FF2B;display:flex;justify-content:space-between;font-size:10px;color:#8A8F98}.fb{font-family:'Barlow Condensed',sans-serif;font-weight:800;color:#0F3D2E;font-size:13px;letter-spacing:.05em}</style>
+</head><body><div class="page">
+<div class="header"><div><div class="ht">The Football Blueprint</div><div class="hs">Malvern City FC · ${title}</div></div><div style="text-align:right;color:#fff"><div style="font-size:11px;opacity:.6">${new Date().toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div><div style="font-size:10px;opacity:.4;margin-top:4px">Period: ${period==='today'?'Today':period==='week'?'This Week':'This Month'}</div></div></div>
+${isTeam?`<table class="table"><thead><tr><th>#</th><th>Player</th><th>Pos</th><th>Score</th><th>Bar</th><th>Status</th><th>Notes</th></tr></thead><tbody>${data.map(p=>{const sc=p.today;const cl=!sc?'injured':sc>=80?'good':sc>=65?'watch':'injured';return`<tr><td><b>${p.num}</b></td><td>${p.name}</td><td>${p.pos}</td><td class="${cl}"><b>${sc||'–'}</b></td><td><div class="bar-wrap"><div class="bar" style="width:${sc||0}%;background:${!sc?'#8A8F98':sc>=80?'#2ED47A':sc>=65?'#FFB020':'#E5533D'}"></div></div></td><td class="${cl}">${p.status.toUpperCase()}</td><td style="color:#555;font-style:italic">${p.notes||''}</td></tr>`;}).join('')}</tbody></table>`
+:`<div style="margin-bottom:20px;background:#f8fafb;border-radius:10px;border:1px solid #e0e4e8;padding:20px">
+<div style="display:flex;align-items:center;gap:16;margin-bottom:16px"><div style="width:50px;height:50px;border-radius:50%;background:#0F3D2E;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:18px;color:#B6FF2B">${selPlayer.num}</div><div><div style="font-size:18px;font-weight:700">${selPlayer.name}</div><div style="color:#8A8F98;font-size:12px">${selPlayer.pos} · Status: ${selPlayer.status.toUpperCase()}</div></div><div style="margin-left:auto;font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:48px;color:${!selPlayer.today?'#8A8F98':selPlayer.today>=80?'#2ED47A':selPlayer.today>=65?'#FFB020':'#E5533D'}">${selPlayer.today||'–'}</div></div>
+${Object.entries(selPlayer.breakdown||{}).map(([k,v])=>`<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="text-transform:capitalize;font-weight:600">${k}</span><span style="font-weight:700;color:${v>=80?'#2ED47A':v>=65?'#FFB020':'#E5533D'}">${v}</span></div><div class="bar-wrap"><div class="bar" style="width:${v}%;background:${v>=80?'#2ED47A':v>=65?'#FFB020':'#E5533D'}"></div></div></div>`).join('')}
+</div>`}
+<div class="footer"><div><div class="fb">The Football Blueprint</div><div>thefootballblueprint.com.au</div></div><div style="text-align:right">Generated ${new Date().toLocaleDateString('en-AU')}</div></div>
+</div></body></html>`;
+    const w=window.open('','_blank');
+    if(w){w.document.write(html);w.document.close();setTimeout(()=>w.print(),800);}
+    onClose();
+  };
+
+  return(
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.8)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:200,padding:16,backdropFilter:'blur(4px)'}} onClick={onClose}>
+      <div className="fade-in" style={{background:C.s1,border:`1px solid ${C.border2}`,borderRadius:16,width:'100%',maxWidth:420,boxShadow:'0 24px 64px rgba(0,0,0,0.7)',overflow:'hidden'}} onClick={e=>e.stopPropagation()}>
+        <div style={{padding:'16px 20px',borderBottom:`1px solid ${C.border}`,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+          <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:18,color:C.lime}}>Export Wellness Data</div>
+          <button onClick={onClose} style={{background:'transparent',border:'none',cursor:'pointer',color:C.txt2,display:'flex'}}><Ic d={P.x} size={18} color="currentColor"/></button>
+        </div>
+        <div style={{padding:'16px 20px',display:'flex',flexDirection:'column',gap:14}}>
+          {/* Scope */}
+          <div>
+            <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:7}}>Report Scope</div>
+            <div style={{display:'flex',gap:6}}>
+              {['team','individual'].map(s=>(
+                <button key={s} onClick={()=>setScope(s)} style={{flex:1,padding:'9px',background:scope===s?`rgba(182,255,43,0.12)`:'transparent',border:`1px solid ${scope===s?'rgba(182,255,43,0.4)':C.border2}`,borderRadius:8,fontSize:13,fontWeight:700,color:scope===s?C.lime:C.txt2,cursor:'pointer',textTransform:'capitalize',transition:'all .12s'}}>
+                  {s==='team'?'👥 Full Team':'👤 Individual'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Player picker if individual */}
+          {scope==='individual'&&(
+            <div>
+              <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:7}}>Select Player</div>
+              <select value={selPlayer.id} onChange={e=>setSelPlayer(players.find(p=>p.id===+e.target.value))}
+                style={{width:'100%',padding:'9px 10px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:8,color:C.txt,fontSize:13,outline:'none'}}>
+                {players.map(p=><option key={p.id} value={p.id}>{p.name} — #{p.num} {p.pos}</option>)}
+              </select>
+            </div>
+          )}
+
+          {/* Period */}
+          <div>
+            <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:7}}>Period</div>
+            <div style={{display:'flex',gap:6}}>
+              {[['today',"Today"],['week',"This Week"],['month',"This Month"]].map(([v,l])=>(
+                <button key={v} onClick={()=>setPeriod(v)} style={{flex:1,padding:'8px',background:period===v?'rgba(63,169,245,0.12)':'transparent',border:`1px solid ${period===v?'rgba(63,169,245,0.4)':C.border2}`,borderRadius:7,fontSize:11,fontWeight:700,color:period===v?C.sky:C.txt2,cursor:'pointer',transition:'all .12s'}}>{l}</button>
+              ))}
+            </div>
+          </div>
+
+          {/* Format */}
+          <div>
+            <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:7}}>Format</div>
+            <div style={{display:'flex',gap:6}}>
+              {[['pdf','PDF / Print'],['csv','CSV Export']].map(([v,l])=>(
+                <button key={v} onClick={()=>setFormat(v)} style={{flex:1,padding:'8px',background:format===v?'rgba(46,212,122,0.1)':'transparent',border:`1px solid ${format===v?'rgba(46,212,122,0.35)':C.border2}`,borderRadius:7,fontSize:11,fontWeight:700,color:format===v?C.goal:C.txt2,cursor:'pointer',transition:'all .12s'}}>{l}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div style={{padding:'12px 20px',borderTop:`1px solid ${C.border}`}}>
+          <button onClick={doExport} style={{width:'100%',padding:'11px',background:`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:10,fontSize:14,fontWeight:800,color:C.green,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+            <Ic d={P.download} size={15} color={C.green}/> Export {format.toUpperCase()}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Player Detail Panel ───────────────────────────────────────────────────────
+function PlayerDetailPanel({player,onClose,isPlayerView}){
+  if(!player) return null;
+  const sc=scoreColor(player.today||0);
+  const bk=player.breakdown||{};
+  const BKLABELS={physical:'Physical',mental:'Mental',sleep:'Sleep',soreness:'Soreness',energy:'Energy',stress:'Stress'};
+
+  return(
+    <div className="slide-in" style={{width:300,background:C.s1,borderLeft:`1px solid ${C.border}`,display:'flex',flexDirection:'column',flexShrink:0,overflow:'hidden'}}>
+      {/* Player header */}
+      <div style={{background:`linear-gradient(135deg,${C.greenDark},${C.green})`,padding:'14px 16px',borderBottom:'1px solid rgba(182,255,43,0.15)',flexShrink:0}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+          <div style={{display:'flex',alignItems:'center',gap:10}}>
+            <div style={{width:40,height:40,borderRadius:'50%',background:`${sc}18`,border:`2px solid ${sc}50`,display:'flex',alignItems:'center',justifyContent:'center'}}>
+              <span style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:16,color:sc}}>{player.num}</span>
+            </div>
+            <div>
+              <div style={{fontSize:15,fontWeight:700,color:'#fff'}}>{player.name}</div>
+              <div style={{fontSize:11,color:'rgba(255,255,255,0.5)'}}>{player.pos} · {player.status.toUpperCase()}</div>
+            </div>
+          </div>
+          {player.today&&<div style={{textAlign:'center'}}>
+            <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:38,color:sc,lineHeight:1}}>{player.today}</div>
+            <div style={{fontSize:9,color:'rgba(255,255,255,0.4)',letterSpacing:'0.08em'}}>TODAY</div>
+          </div>}
+        </div>
+        {/* 7-day bar chart */}
+        <div style={{display:'flex',alignItems:'flex-end',gap:4,height:40}}>
+          {player.week.map((v,i)=>v?(
+            <div key={i} style={{flex:1,height:`${(v/100)*38}px`,background:i===6?scoreColor(v):`${scoreColor(v)}55`,borderRadius:'3px 3px 0 0',transition:'height .3s ease'}}/>
+          ):<div key={i} style={{flex:1,height:3,background:'rgba(255,255,255,0.07)',borderRadius:2}}/>)}
+        </div>
+        <div style={{display:'flex',gap:4,marginTop:3}}>
+          {['M','T','W','T','F','S','T'].map((d,i)=>(
+            <div key={i} style={{flex:1,textAlign:'center',fontSize:8,color:i===6?C.lime:C.txt3}}>{d}</div>
+          ))}
+        </div>
+      </div>
+
+      {/* Breakdown */}
+      <div style={{flex:1,overflowY:'auto',padding:'14px'}}>
+        <div style={{fontSize:10,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:10}}>Today's Breakdown</div>
+        {Object.entries(bk).map(([k,v])=>{
+          const bc=scoreColor(v);
+          return(
+            <div key={k} style={{marginBottom:10}}>
+              <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
+                <span style={{fontSize:12,color:C.txt2}}>{BKLABELS[k]||k}</span>
+                <span style={{fontSize:12,fontWeight:700,color:bc}}>{v}</span>
+              </div>
+              <div style={{height:4,background:'rgba(255,255,255,0.07)',borderRadius:2,overflow:'hidden'}}>
+                <div style={{height:'100%',width:`${v}%`,background:bc,borderRadius:2,transition:'width .4s ease'}}/>
+              </div>
+            </div>
+          );
+        })}
+
+        {player.notes&&(
+          <div style={{marginTop:12,background:'rgba(255,176,32,0.08)',border:'1px solid rgba(255,176,32,0.25)',borderRadius:8,padding:'10px 12px'}}>
+            <div style={{fontSize:10,fontWeight:700,color:C.amber,marginBottom:4,textTransform:'uppercase',letterSpacing:'0.08em'}}>Player Note</div>
+            <p style={{fontSize:12,color:C.txt2,lineHeight:1.5}}>{player.notes}</p>
+          </div>
+        )}
+
+        {/* Trend */}
+        <div style={{marginTop:14,borderTop:`1px solid ${C.border}`,paddingTop:12}}>
+          <div style={{fontSize:10,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:8}}>7-Day Trend</div>
+          <div style={{display:'flex',justifyContent:'space-between',fontSize:12}}>
+            <span style={{color:C.txt3}}>Low: <b style={{color:C.red}}>{Math.min(...player.week.filter(Boolean))}</b></span>
+            <span style={{color:C.txt3}}>Avg: <b style={{color:C.amber}}>{Math.round(player.week.filter(Boolean).reduce((s,v)=>s+v,0)/player.week.filter(Boolean).length)}</b></span>
+            <span style={{color:C.txt3}}>High: <b style={{color:C.goal}}>{Math.max(...player.week.filter(Boolean))}</b></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── App ───────────────────────────────────────────────────────────────────────
+function App(){
+  const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{"view":"coach","colorMode":"dark"}/*EDITMODE-END*/;
+  const [tweaks,setTweak]=window.useTweaks(TWEAK_DEFAULTS);
+
+  const isPlayerView=tweaks.view==='player';
+  const [players,setPlayers]=useState(PLAYERS);
+  const [selected,setSelected]=useState(null);
+  const [showCheckin,setShowCheckin]=useState(false);
+  const [checkinPlayer,setCheckinPlayer]=useState(null);
+  const [showExport,setShowExport]=useState(false);
+  const [mainTab,setMainTab]=useState('today');
+  const [checkInSuccess,setCheckInSuccess]=useState(false);
+
+  const needsAttention=players.filter(p=>p.status!=='good');
+  const notSubmitted=players.filter(p=>!p.today&&p.status!=='injured');
+  const teamAvgCalc=Math.round(players.filter(p=>p.today).reduce((s,p)=>s+(p.today||0),0)/players.filter(p=>p.today).length);
+
+  const openCheckin=(p)=>{setCheckinPlayer(p||{name:'Your',id:-1});setShowCheckin(true);};
+  const handleSubmit=(data)=>{
+    if(checkinPlayer?.id>0){
+      setPlayers(prev=>prev.map(p=>p.id===checkinPlayer.id?{...p,today:data.overall,breakdown:data,status:data.overall>=80?'good':data.overall>=65?'watch':'concern',notes:data.notes||p.notes,checkedIn:true}:p));
+    }
+    setShowCheckin(false);setCheckInSuccess(true);
+    setTimeout(()=>setCheckInSuccess(false),3000);
+  };
+
+  // Player view — simplified personal check-in
+  if(isPlayerView){
+    const myPlayer=players.find(p=>p.id===9)||players[0];
+    return(
+      <div style={{height:'100vh',display:'flex',flexDirection:'column',background:C.bg,overflow:'hidden'}}>
+        {/* Header */}
+        <header style={{height:'var(--hh)',background:`linear-gradient(90deg,${C.greenDark},${C.green})`,borderBottom:'1px solid rgba(182,255,43,0.18)',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 20px',flexShrink:0}}>
+          <div style={{display:'flex',alignItems:'center',gap:12}}>
+            <button onClick={()=>{try{window.location.href='tfb-dashboard.html'}catch(e){}}} style={{display:'flex',alignItems:'center',gap:6,padding:'6px 10px',background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,color:'rgba(255,255,255,0.7)',fontSize:12,fontWeight:600,cursor:'pointer'}} onMouseEnter={e=>{e.currentTarget.style.background='rgba(182,255,43,0.12)';e.currentTarget.style.color='#B6FF2B'}} onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,0.07)';e.currentTarget.style.color='rgba(255,255,255,0.7)'}}>
+              <Ic d={P.back} size={14} color="currentColor"/> Dashboard
+            </button>
+            <div style={{width:1,height:24,background:'rgba(255,255,255,0.12)'}}/>
+            <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:17,color:'#fff',letterSpacing:'0.04em'}}>MY WELLNESS</div>
+          </div>
+          <button onClick={()=>openCheckin(myPlayer)} style={{display:'flex',alignItems:'center',gap:6,padding:'7px 14px',background:`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:8,fontSize:12,fontWeight:800,color:C.green,cursor:'pointer'}}>
+            ✅ Submit Check-In
+          </button>
+        </header>
+        <div style={{flex:1,overflowY:'auto',padding:'20px'}}>
+          {/* Personal score */}
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:14,marginBottom:20}}>
+            <div style={{background:`linear-gradient(135deg,${C.greenDark},${C.green})`,borderRadius:12,padding:'20px',border:'1px solid rgba(182,255,43,0.2)',textAlign:'center'}}>
+              <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:52,color:scoreColor(myPlayer.today||0),lineHeight:1}}>{myPlayer.today||'–'}</div>
+              <div style={{fontSize:11,color:'rgba(255,255,255,0.5)',marginTop:6,textTransform:'uppercase',letterSpacing:'0.06em'}}>Today's Score</div>
+            </div>
+            <div style={{background:C.s1,borderRadius:12,padding:'20px',border:`1px solid ${C.border}`,textAlign:'center'}}>
+              <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:36,color:C.sky,lineHeight:1}}>{Math.round(myPlayer.week.filter(Boolean).reduce((s,v)=>s+v,0)/myPlayer.week.filter(Boolean).length)}</div>
+              <div style={{fontSize:11,color:C.txt3,marginTop:6,textTransform:'uppercase',letterSpacing:'0.06em'}}>7-Day Avg</div>
+            </div>
+            <div style={{background:C.s1,borderRadius:12,padding:'20px',border:`1px solid ${C.border}`,textAlign:'center'}}>
+              <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:36,color:myPlayer.checkedIn?C.goal:C.amber,lineHeight:1}}>{myPlayer.checkedIn?'✓':'–'}</div>
+              <div style={{fontSize:11,color:C.txt3,marginTop:6,textTransform:'uppercase',letterSpacing:'0.06em'}}>{myPlayer.checkedIn?'Checked In':'Not Submitted'}</div>
+            </div>
+          </div>
+
+          {/* Breakdown */}
+          <div style={{background:C.s1,borderRadius:12,padding:'18px',border:`1px solid ${C.border}`,marginBottom:16}}>
+            <div style={{fontSize:12,fontWeight:700,color:C.txt,marginBottom:14}}>Today's Breakdown</div>
+            <div style={{display:'flex',flexDirection:'column',gap:10}}>
+              {Object.entries(myPlayer.breakdown||{}).map(([k,v])=>{
+                const bc=scoreColor(v);
+                const labels={physical:'Physical Readiness',mental:'Mental Sharpness',sleep:'Sleep Quality',soreness:'Muscle Soreness',energy:'Energy Level',stress:'Stress Level'};
+                return(
+                  <div key={k} style={{display:'flex',alignItems:'center',gap:12}}>
+                    <span style={{fontSize:12,color:C.txt2,width:160,flexShrink:0}}>{labels[k]||k}</span>
+                    <div style={{flex:1,height:5,background:'rgba(255,255,255,0.07)',borderRadius:3,overflow:'hidden'}}>
+                      <div style={{height:'100%',width:`${v}%`,background:bc,borderRadius:3}}/>
+                    </div>
+                    <span style={{fontSize:12,fontWeight:700,color:bc,minWidth:28,textAlign:'right'}}>{v}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 7-day trend */}
+          <div style={{background:C.s1,borderRadius:12,padding:'18px',border:`1px solid ${C.border}`}}>
+            <div style={{fontSize:12,fontWeight:700,color:C.txt,marginBottom:14}}>7-Day Trend</div>
+            <div style={{display:'flex',alignItems:'flex-end',gap:6,height:80}}>
+              {myPlayer.week.map((v,i)=>v?(
+                <div key={i} style={{flex:1,height:`${(v/100)*76}px`,background:i===6?scoreColor(v):`${scoreColor(v)}55`,borderRadius:'3px 3px 0 0'}}/>
+              ):<div key={i} style={{flex:1,height:3,background:'rgba(255,255,255,0.06)',borderRadius:2}}/>)}
+            </div>
+            <div style={{display:'flex',gap:6,marginTop:5}}>
+              {['Mon','Tue','Wed','Thu','Fri','Sat','Today'].map((d,i)=>(
+                <div key={i} style={{flex:1,textAlign:'center',fontSize:9,color:i===6?C.lime:C.txt3}}>{d}</div>
+              ))}
+            </div>
+          </div>
+        </div>
+        {showCheckin&&<CheckInModal player={checkinPlayer} onClose={()=>setShowCheckin(false)} onSubmit={handleSubmit} isPlayerView/>}
+        <TweaksPanel>
+          <TweakSection label="View Mode"/>
+          <TweakRadio label="Role" value={tweaks.view} options={['coach','player']} onChange={v=>setTweak('view',v)}/>
+        </TweaksPanel>
+      </div>
+    );
+  }
+
+  // Coach view
+  return(
+    <div style={{height:'100vh',display:'flex',flexDirection:'column',background:C.bg,overflow:'hidden'}}>
+      {/* Header */}
+      <header style={{height:'var(--hh)',background:`linear-gradient(90deg,${C.greenDark},${C.green})`,borderBottom:'1px solid rgba(182,255,43,0.18)',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 20px',flexShrink:0,zIndex:50}}>
+        <div style={{display:'flex',alignItems:'center',gap:12}}>
+          <button onClick={()=>{try{window.location.href='tfb-dashboard.html'}catch(e){}}} style={{display:'flex',alignItems:'center',gap:6,padding:'6px 10px',background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,color:'rgba(255,255,255,0.7)',fontSize:12,fontWeight:600,cursor:'pointer'}} onMouseEnter={e=>{e.currentTarget.style.background='rgba(182,255,43,0.12)';e.currentTarget.style.color='#B6FF2B'}} onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,0.07)';e.currentTarget.style.color='rgba(255,255,255,0.7)'}}>
+            <Ic d={P.back} size={14} color="currentColor"/> Dashboard
+          </button>
+          <div style={{width:1,height:24,background:'rgba(255,255,255,0.12)'}}/>
+          <svg width="28" height="28" viewBox="0 0 40 40" fill="none"><polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="#0F3D2E" stroke="#B6FF2B" strokeWidth="1.5"/><text x="20" y="26" textAnchor="middle" fill="#B6FF2B" fontFamily="Barlow Condensed" fontWeight="900" fontSize="13">TFB</text></svg>
+          <div>
+            <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:17,color:'#fff',letterSpacing:'0.04em',lineHeight:1}}>WELLNESS</div>
+            <div style={{fontSize:9.5,color:'rgba(182,255,43,0.65)',fontWeight:700,letterSpacing:'0.1em'}}>Team Health Dashboard</div>
+          </div>
+        </div>
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          {checkInSuccess&&<div className="fade-in" style={{display:'flex',alignItems:'center',gap:5,padding:'5px 10px',background:'rgba(46,212,122,0.15)',border:'1px solid rgba(46,212,122,0.35)',borderRadius:7,fontSize:11,fontWeight:700,color:C.goal}}>
+            <Ic d={P.check} size={12} color={C.goal}/> Check-in saved
+          </div>}
+          <button onClick={()=>setShowExport(true)} style={{display:'flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.15)',borderRadius:8,fontSize:12,fontWeight:700,color:'rgba(255,255,255,0.8)',cursor:'pointer',transition:'all .15s'}} onMouseEnter={e=>{e.currentTarget.style.background='rgba(255,255,255,0.12)'}} onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,0.07)'}}>
+            <Ic d={P.download} size={13} color="currentColor"/> Export
+          </button>
+          <button onClick={()=>openCheckin(null)} style={{display:'flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(46,212,122,0.12)',border:'1px solid rgba(46,212,122,0.3)',borderRadius:8,fontSize:12,fontWeight:700,color:C.goal,cursor:'pointer'}}>
+            <Ic d={P.send} size={13} color={C.goal}/> Send Check-in
+          </button>
+        </div>
+      </header>
+
+      {/* Tab bar */}
+      <div style={{background:C.s1,borderBottom:`1px solid ${C.border}`,padding:'0 20px',display:'flex',gap:0,flexShrink:0}}>
+        {[['today','Today'],['heatmap','Heatmap'],['checkins','Check-ins']].map(([t,l])=>(
+          <button key={t} onClick={()=>setMainTab(t)} style={{padding:'10px 18px',background:'transparent',border:'none',borderBottom:`2px solid ${mainTab===t?C.lime:'transparent'}`,color:mainTab===t?C.lime:C.txt2,fontSize:13,fontWeight:700,cursor:'pointer',transition:'all .15s'}}>{l}</button>
+        ))}
+      </div>
+
+      <div style={{flex:1,display:'flex',overflow:'hidden'}}>
+        {/* Main content */}
+        <div style={{flex:1,overflowY:'auto',padding:'20px'}}>
+
+          {mainTab==='today'&&(
+            <>
+              {/* Summary stats */}
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:14,marginBottom:20}}>
+                <div style={{background:`linear-gradient(135deg,${C.greenDark},${C.green})`,borderRadius:12,padding:'16px',border:'1px solid rgba(182,255,43,0.2)'}}>
+                  <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:44,color:scoreColor(teamAvgCalc),lineHeight:1}}>{teamAvgCalc}</div>
+                  <div style={{fontSize:10,color:'rgba(255,255,255,0.4)',fontWeight:700,marginTop:4,textTransform:'uppercase',letterSpacing:'0.06em'}}>Team Avg · Today</div>
+                  <div style={{height:4,background:'rgba(255,255,255,0.1)',borderRadius:2,marginTop:10,overflow:'hidden'}}>
+                    <div style={{height:'100%',width:`${teamAvgCalc}%`,background:scoreColor(teamAvgCalc),borderRadius:2}}/>
+                  </div>
+                </div>
+                {[
+                  {label:'Submitted',value:`${players.filter(p=>p.today).length}/${players.length}`,color:C.goal},
+                  {label:'Watch',value:players.filter(p=>p.status==='watch').length,color:C.amber},
+                  {label:'Injured',value:players.filter(p=>p.status==='injured').length,color:C.red},
+                ].map(({label,value,color})=>(
+                  <div key={label} style={{background:C.s1,borderRadius:12,padding:'16px',border:`1px solid ${C.border}`}}>
+                    <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:36,color,lineHeight:1}}>{value}</div>
+                    <div style={{fontSize:10,color:C.txt3,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.06em',marginTop:6}}>{label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Attention alerts */}
+              {needsAttention.length>0&&(
+                <div style={{background:'rgba(255,176,32,0.06)',border:'1px solid rgba(255,176,32,0.2)',borderRadius:12,padding:'12px 16px',marginBottom:16}}>
+                  <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:8}}><Ic d={P.alert} size={14} color={C.amber}/><span style={{fontSize:12,fontWeight:700,color:C.amber}}>Players needing attention</span></div>
+                  {needsAttention.map(p=>(
+                    <div key={p.id} style={{display:'flex',alignItems:'center',gap:10,padding:'4px 0',fontSize:12}}>
+                      <span style={{fontWeight:700,color:C.txt,minWidth:100}}>{p.name}</span>
+                      <span style={{fontSize:10,fontWeight:700,color:p.status==='injured'?C.red:C.amber,background:`${p.status==='injured'?C.red:C.amber}12`,border:`1px solid ${p.status==='injured'?C.red:C.amber}30`,borderRadius:4,padding:'1px 7px',textTransform:'uppercase'}}>{p.status}</span>
+                      {p.today&&<span style={{color:scoreColor(p.today),fontWeight:700}}>{p.today}/100</span>}
+                      {p.notes&&<span style={{color:C.txt3,fontStyle:'italic'}}>{p.notes}</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Player grid */}
+              <div style={{background:C.s1,borderRadius:12,border:`1px solid ${C.border}`,overflow:'hidden'}}>
+                <div style={{padding:'10px 14px',borderBottom:`1px solid ${C.border}`,fontSize:12,fontWeight:700,color:C.txt}}>Today's Wellness Scores</div>
+                {players.map(p=>{
+                  const sc=scoreColor(p.today||0);
+                  const isSel=selected?.id===p.id;
+                  return(
+                    <div key={p.id} onClick={()=>setSelected(isSel?null:p)}
+                      style={{display:'flex',alignItems:'center',gap:10,padding:'9px 14px',borderBottom:`1px solid ${C.border}`,cursor:'pointer',background:isSel?'rgba(182,255,43,0.04)':'transparent',transition:'background .12s'}}
+                      onMouseEnter={e=>{if(!isSel)e.currentTarget.style.background='rgba(255,255,255,0.02)'}}
+                      onMouseLeave={e=>{if(!isSel)e.currentTarget.style.background='transparent'}}>
+                      <div style={{width:32,height:32,borderRadius:'50%',background:`${p.status==='injured'?C.red:sc}14`,border:`1.5px solid ${p.status==='injured'?C.red:sc}40`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                        <span style={{fontSize:10,fontWeight:900,color:p.status==='injured'?C.red:sc,fontFamily:'var(--font-d)'}}>{p.num}</span>
+                      </div>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:12.5,fontWeight:600,color:isSel?C.lime:C.txt,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{p.name}</div>
+                        <div style={{fontSize:10,color:C.txt3}}>{p.pos}</div>
+                      </div>
+                      {p.today?(
+                        <div style={{display:'flex',alignItems:'center',gap:8,minWidth:120}}>
+                          <div style={{flex:1,height:4,background:'rgba(255,255,255,0.07)',borderRadius:2,overflow:'hidden'}}>
+                            <div style={{height:'100%',width:`${p.today}%`,background:sc,borderRadius:2}}/>
+                          </div>
+                          <span style={{fontSize:13,fontWeight:800,color:sc,minWidth:28,textAlign:'right'}}>{p.today}</span>
+                        </div>
+                      ):(
+                        <div style={{display:'flex',alignItems:'center',gap:8}}>
+                          <span style={{fontSize:10,color:C.txt3,fontStyle:'italic'}}>Not submitted</span>
+                          <button onClick={e=>{e.stopPropagation();openCheckin(p)}} style={{padding:'3px 8px',background:'rgba(182,255,43,0.1)',border:'1px solid rgba(182,255,43,0.3)',borderRadius:5,fontSize:10,fontWeight:700,color:C.lime,cursor:'pointer'}}>
+                            Enter
+                          </button>
+                        </div>
+                      )}
+                      {/* trend indicator */}
+                      {p.today&&p.yesterday&&(
+                        <div style={{fontSize:10,color:p.today>p.yesterday?C.goal:p.today<p.yesterday?C.red:C.txt3,fontWeight:700,minWidth:24,textAlign:'right'}}>
+                          {p.today>p.yesterday?'↑':p.today<p.yesterday?'↓':'→'}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+
+          {mainTab==='heatmap'&&(
+            <div style={{background:C.s1,borderRadius:12,border:`1px solid ${C.border}`,padding:'16px'}}>
+              <div style={{fontSize:12,fontWeight:700,color:C.txt,marginBottom:14}}>Team Wellness Heatmap — 7 Days</div>
+              <div style={{overflowX:'auto'}}>
+                <div style={{display:'grid',gridTemplateColumns:'90px repeat(7,1fr)',gap:3,minWidth:500}}>
+                  <div/>
+                  {['Mon','Tue','Wed','Thu','Fri','Sat','Today'].map(d=>(
+                    <div key={d} style={{textAlign:'center',fontSize:9,color:C.txt3,fontWeight:700,padding:'3px 0'}}>{d}</div>
+                  ))}
+                  {players.map(p=>[
+                    <div key={`n-${p.id}`} style={{fontSize:10,color:C.txt2,display:'flex',alignItems:'center',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',paddingRight:6,fontWeight:600}}>{p.name}</div>,
+                    ...p.week.map((v,i)=>(
+                      <div key={i} style={{height:26,borderRadius:5,background:v?`${scoreColor(v)}${Math.round((v/100)*99).toString(16).padStart(2,'0')}`:'rgba(255,255,255,0.04)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'default',transition:'transform .1s'}}
+                        onMouseEnter={e=>e.currentTarget.style.transform='scale(1.05)'}
+                        onMouseLeave={e=>e.currentTarget.style.transform='scale(1)'}>
+                        {v&&<span style={{fontSize:9,fontWeight:700,color:'rgba(0,0,0,0.55)'}}>{v}</span>}
+                      </div>
+                    ))
+                  ])}
+                </div>
+              </div>
+              <div style={{marginTop:12,display:'flex',gap:12,alignItems:'center',fontSize:10,color:C.txt3,flexWrap:'wrap'}}>
+                <div style={{width:12,height:8,borderRadius:2,background:C.goal,flexShrink:0}}/><span>Good (80+)</span>
+                <div style={{width:12,height:8,borderRadius:2,background:C.amber,flexShrink:0}}/><span>Watch (65–79)</span>
+                <div style={{width:12,height:8,borderRadius:2,background:C.red,flexShrink:0}}/><span>Concern (&lt;65)</span>
+                <div style={{width:12,height:8,borderRadius:2,background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',flexShrink:0}}/><span>Not submitted</span>
+              </div>
+            </div>
+          )}
+
+          {mainTab==='checkins'&&(
+            <div style={{background:C.s1,borderRadius:12,border:`1px solid ${C.border}`,overflow:'hidden'}}>
+              <div style={{padding:'12px 16px',borderBottom:`1px solid ${C.border}`,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                <div style={{fontSize:12,fontWeight:700,color:C.txt}}>Manual Check-In Entry</div>
+                <div style={{fontSize:11,color:C.txt3}}>{players.filter(p=>p.checkedIn).length}/{players.length} submitted today</div>
+              </div>
+              {players.map(p=>(
+                <div key={p.id} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 16px',borderBottom:`1px solid ${C.border}`}}>
+                  <div style={{width:32,height:32,borderRadius:'50%',background:`${scoreColor(p.today||0)}14`,border:`1.5px solid ${scoreColor(p.today||0)}40`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                    <span style={{fontSize:10,fontWeight:900,color:scoreColor(p.today||0),fontFamily:'var(--font-d)'}}>{p.num}</span>
+                  </div>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:13,fontWeight:600,color:C.txt}}>{p.name}</div>
+                    <div style={{fontSize:10,color:C.txt3}}>{p.pos}</div>
+                  </div>
+                  {p.checkedIn?(
+                    <div style={{display:'flex',alignItems:'center',gap:8}}>
+                      <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:20,color:scoreColor(p.today||0)}}>{p.today||'–'}</div>
+                      <span style={{fontSize:10,color:C.goal,background:'rgba(46,212,122,0.1)',border:'1px solid rgba(46,212,122,0.25)',borderRadius:5,padding:'2px 7px',fontWeight:700}}>✓ In</span>
+                    </div>
+                  ):(
+                    <button onClick={()=>openCheckin(p)} style={{display:'flex',alignItems:'center',gap:5,padding:'6px 12px',background:'rgba(182,255,43,0.1)',border:'1px solid rgba(182,255,43,0.3)',borderRadius:7,fontSize:12,fontWeight:700,color:C.lime,cursor:'pointer',transition:'all .12s'}} onMouseEnter={e=>{e.currentTarget.style.background='rgba(182,255,43,0.18)'}} onMouseLeave={e=>{e.currentTarget.style.background='rgba(182,255,43,0.1)'}}>
+                      + Enter Score
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Right detail panel */}
+        {selected&&<PlayerDetailPanel player={selected} onClose={()=>setSelected(null)}/>}
+      </div>
+
+      {showCheckin&&<CheckInModal player={checkinPlayer} onClose={()=>setShowCheckin(false)} onSubmit={handleSubmit}/>}
+      {showExport&&<ExportModal onClose={()=>setShowExport(false)} players={players}/>}
+
+      <TweaksPanel>
+        <TweakSection label="View Mode"/>
+        <TweakRadio label="Role" value={tweaks.view} options={['coach','player']} onChange={v=>setTweak('view',v)}/>
+        <TweakSection label="Theme"/>
+        <TweakRadio label="Mode" value={tweaks.colorMode} options={['dark','light']} onChange={v=>setTweak('colorMode',v)}/>
+      </TweaksPanel>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script></body></html>

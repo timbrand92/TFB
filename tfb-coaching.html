@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TFB – Coaching Hub</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="tfb-responsive.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --lime:#B6FF2B;--green:#0F3D2E;--green-dark:#0A2E20;
+  --bg:#111418;--s1:#1C2128;--s2:#242B33;--s3:#2D3640;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --txt:#F0F2F4;--txt2:rgba(240,242,244,0.5);--txt3:rgba(240,242,244,0.28);
+  --goal:#2ED47A;--amber:#FFB020;--red:#E5533D;--sky:#3FA9F5;
+  --font-d:'Barlow Condensed',sans-serif;--font-b:'Barlow',sans-serif;--hh:54px;
+}
+html,body,#root{height:100%;overflow:hidden}
+body{font-family:var(--font-b);background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font-family:var(--font-b);color:inherit}
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:3px}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn .2s ease forwards}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useCallback} = React;
+
+const C={
+  lime:'#B6FF2B',green:'#0F3D2E',greenDark:'#0A2E20',
+  bg:'#111418',s1:'#1C2128',s2:'#242B33',s3:'#2D3640',
+  border:'rgba(255,255,255,0.07)',border2:'rgba(255,255,255,0.13)',
+  txt:'#F0F2F4',txt2:'rgba(240,242,244,0.5)',txt3:'rgba(240,242,244,0.28)',
+  goal:'#2ED47A',amber:'#FFB020',red:'#E5533D',sky:'#3FA9F5',
+};
+
+const Ic=({d,size=16,color='currentColor',stroke=2,fill='none'})=>(
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>
+    {Array.isArray(d)?d.map((p,i)=><path key={i} d={p}/>):<path d={d}/>}
+  </svg>
+);
+const P={
+  back:'M15 18l-6-6 6-6',plus:'M12 5v14M5 12h14',x:'M18 6L6 18M6 6l12 12',
+  check:'M20 6L9 17l-5-5',edit:'M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z',
+  users:'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm8 4a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zm3 8v-2a4 4 0 0 0-3-3.87',
+  video:'M23 7l-7 5 7 5V7zM1 5h15a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H1V5z',
+  award:'M12 15a7 7 0 1 0 0-14 7 7 0 0 0 0 14zm0 0v6m-3-3h6',
+  note:'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8',
+  calendar:'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z',
+  chevR:'M9 18l6-6-6-6',chevD:'M6 9l6 6 6-6',
+  play:'M5 3l14 9-14 9V3z',
+  trash:'M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6',
+  star:['M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z'],
+  flag:'M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7',
+  trending:'M23 6l-9.5 9.5-5-5L1 18',
+  target:'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zm0-6a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0-2a2 2 0 1 0 0-4 2 2 0 0 0 0 4',
+  link:'M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71',
+};
+
+// ── Data ─────────────────────────────────────────────────────────────────────
+const MEETINGS=[
+  {id:1,title:'Pre-Season Planning Meeting',date:'15 Jan 2025',type:'planning',attendees:['Tim Brand','Sarah Chen','James O\'Brien','Lisa Park'],notes:'Discussed season objectives, training blocks, and squad targets. Agreed on pressing system as primary style.',status:'completed',actions:[{text:'Submit training plan to TD',done:true},{text:'Book pre-season pitch time',done:true},{text:'Create player targets doc',done:false}]},
+  {id:2,title:'Half-Season Review',date:'28 Mar 2025',type:'review',attendees:['Tim Brand','TD — Marcus Wilson'],notes:'Reviewed U18 Men performance. Strong tactically, need physical improvement in second halves.',status:'completed',actions:[{text:'Physical conditioning focus weeks 8-10',done:true},{text:'Video review session with players',done:false},{text:'Parent communication update',done:true}]},
+  {id:3,title:'Coaching Staff Sync',date:'1 May 2025',type:'sync',attendees:['Tim Brand','James Walsh (Asst)','Kelly Chan (Manager)'],notes:'Match prep for Round 7. Confirmed lineup changes due to Santos injury.',status:'upcoming',actions:[{text:'Finalise lineup',done:false},{text:'Send availability request',done:true}]},
+  {id:4,title:'TD Development Check-In',date:'15 May 2025',type:'review',attendees:['Tim Brand','Marcus Wilson (TD)'],notes:'',status:'upcoming',actions:[]},
+];
+
+const VIDEOS=[
+  {id:1,title:'Pressing Triggers — Training Clip',date:'28 Apr 2025',duration:'4:32',tags:['Tactical','Pressing'],thumbnail:'tactic',notes:'Great examples of coordinated press. Share with players before Round 8.',rating:5},
+  {id:2,title:'Round 6 — Hume City Full Match',date:'26 Apr 2025',duration:'87:14',tags:['Match','Analysis'],thumbnail:'match',notes:'Review defensive shape in second half — too deep from 60min onwards.',rating:4},
+  {id:3,title:'Set Piece Routine — Corner Variation B',date:'22 Apr 2025',duration:'2:15',tags:['Technical','Set Pieces'],thumbnail:'tactic',notes:'Near post flick-on. Practice needed before Round 8.',rating:4},
+  {id:4,title:'Player Highlight — D. Kowalski Week 15',date:'20 Apr 2025',duration:'3:48',tags:['Technical','Player'],thumbnail:'player',notes:'8 goals this season. Great movement in the box.',rating:5},
+  {id:5,title:'Opposition — Bulleen Lions Preview',date:'1 May 2025',duration:'12:30',tags:['Tactical','Opposition'],thumbnail:'match',notes:'Their #7 is dangerous on the left. High press vulnerable.',rating:3},
+];
+
+const AWARD_CRITERIA=[
+  {id:1,code:'A1',title:'Coaching Philosophy',desc:'Document your coaching philosophy and methodology',category:'Foundation',completed:true,date:'Mar 2025'},
+  {id:2,code:'A2',title:'Session Planning',desc:'Plan and deliver 10 structured training sessions',category:'Foundation',completed:true,date:'Apr 2025'},
+  {id:3,code:'A3',title:'Player Development',desc:'Create and review IDPs for all squad members',category:'Foundation',completed:false,progress:70},
+  {id:4,code:'B1',title:'Tactical Analysis',desc:'Conduct video analysis sessions with team',category:'Advanced',completed:false,progress:40},
+  {id:5,code:'B2',title:'Match Preparation',desc:'Submit 5 detailed match plans to TD',category:'Advanced',completed:true,date:'May 2025'},
+  {id:6,code:'B3',title:'Communication',desc:'Hold parent/player meetings each term',category:'Advanced',completed:false,progress:50},
+  {id:7,code:'C1',title:'Mentoring',desc:'Mentor an assistant coach for one full season',category:'Leadership',completed:false,progress:30},
+  {id:8,code:'C2',title:'Club Contribution',desc:'Contribute to club-wide coaching initiatives',category:'Leadership',completed:false,progress:20},
+];
+
+// ── Header ─────────────────────────────────────────────────────────────────
+function Header({onBack}){
+  return(
+    <header style={{height:'var(--hh)',background:`linear-gradient(90deg,${C.greenDark},${C.green})`,borderBottom:'1px solid rgba(182,255,43,0.18)',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 20px',flexShrink:0,boxShadow:'0 2px 12px rgba(0,0,0,0.3)',zIndex:50}}>
+      <div style={{display:'flex',alignItems:'center',gap:12}}>
+        <button onClick={onBack} style={{display:'flex',alignItems:'center',gap:6,padding:'6px 10px',background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,color:'rgba(255,255,255,0.7)',fontSize:12,fontWeight:600,cursor:'pointer',transition:'all .15s'}}
+          onMouseEnter={e=>{e.currentTarget.style.background='rgba(182,255,43,0.12)';e.currentTarget.style.color='#B6FF2B'}}
+          onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,0.07)';e.currentTarget.style.color='rgba(255,255,255,0.7)'}}>
+          <Ic d={P.back} size={14} color="currentColor"/> Dashboard
+        </button>
+        <div style={{width:1,height:24,background:'rgba(255,255,255,0.12)'}}/>
+        <div style={{display:'flex',alignItems:'center',gap:10}}>
+          <svg width="28" height="28" viewBox="0 0 40 40" fill="none">
+            <polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="#0F3D2E" stroke="#B6FF2B" strokeWidth="1.5"/>
+            <text x="20" y="26" textAnchor="middle" fill="#B6FF2B" fontFamily="Barlow Condensed" fontWeight="900" fontSize="13">TFB</text>
+          </svg>
+          <div>
+            <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:17,color:'#fff',letterSpacing:'0.04em',lineHeight:1}}>COACHING HUB</div>
+            <div style={{fontSize:9.5,color:'rgba(182,255,43,0.65)',fontWeight:700,letterSpacing:'0.1em'}}>Tim Brand · Head Coach · Malvern City</div>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+// ── Meetings Tab ──────────────────────────────────────────────────────────────
+function MeetingsTab(){
+  const [selected,setSelected]=useState(MEETINGS[0]);
+  const [editingNotes,setEditingNotes]=useState(false);
+  const [notes,setNotes]=useState(selected.notes);
+
+  const typeColors={planning:C.sky,review:C.amber,sync:C.goal,development:C.lime};
+  const statusColors={completed:C.goal,upcoming:C.amber};
+
+  React.useEffect(()=>{setNotes(selected.notes);},[selected.id]);
+
+  return(
+    <div style={{display:'grid',gridTemplateColumns:'320px 1fr',gap:16,height:'100%',overflow:'hidden'}}>
+      {/* Meeting list */}
+      <div style={{display:'flex',flexDirection:'column',gap:0,background:C.s1,borderRadius:12,border:`1px solid ${C.border}`,overflow:'hidden'}}>
+        <div style={{padding:'12px 14px',borderBottom:`1px solid ${C.border}`,display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
+          <span style={{fontSize:13,fontWeight:700,color:C.txt,display:'flex',alignItems:'center',gap:6}}><Ic d={P.users} size={14} color={C.lime}/> Meetings</span>
+          <button style={{display:'flex',alignItems:'center',gap:4,padding:'4px 10px',background:'rgba(182,255,43,0.1)',border:'1px solid rgba(182,255,43,0.25)',borderRadius:6,fontSize:11,fontWeight:700,color:C.lime,cursor:'pointer'}}>
+            <Ic d={P.plus} size={12} color={C.lime}/> New
+          </button>
+        </div>
+        <div style={{flex:1,overflowY:'auto'}}>
+          {MEETINGS.map(m=>{
+            const tc=typeColors[m.type]||C.lime;
+            const sc=statusColors[m.status]||C.txt3;
+            const isSelected=selected.id===m.id;
+            return(
+              <div key={m.id} onClick={()=>setSelected(m)}
+                style={{padding:'12px 14px',borderBottom:`1px solid ${C.border}`,cursor:'pointer',background:isSelected?'rgba(182,255,43,0.06)':'transparent',borderLeft:`3px solid ${isSelected?C.lime:'transparent'}`,transition:'all .12s'}}
+                onMouseEnter={e=>{if(!isSelected)e.currentTarget.style.background='rgba(255,255,255,0.02)'}}
+                onMouseLeave={e=>{if(!isSelected)e.currentTarget.style.background='transparent'}}>
+                <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:6,marginBottom:4}}>
+                  <span style={{fontSize:13,fontWeight:700,color:isSelected?C.lime:C.txt,lineHeight:1.3}}>{m.title}</span>
+                  <span style={{fontSize:9,fontWeight:700,color:sc,background:`${sc}15`,border:`1px solid ${sc}30`,borderRadius:4,padding:'2px 6px',flexShrink:0,textTransform:'uppercase',letterSpacing:'0.04em'}}>{m.status}</span>
+                </div>
+                <div style={{fontSize:11,color:C.txt3}}>{m.date}</div>
+                <div style={{display:'flex',alignItems:'center',gap:5,marginTop:4}}>
+                  <span style={{fontSize:9.5,color:tc,background:`${tc}15`,border:`1px solid ${tc}25`,borderRadius:3,padding:'1px 6px',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.04em'}}>{m.type}</span>
+                  <span style={{fontSize:10,color:C.txt3}}>{m.attendees.length} attendees</span>
+                  {m.actions.length>0&&<span style={{fontSize:10,color:m.actions.some(a=>!a.done)?C.amber:C.goal}}>{m.actions.filter(a=>a.done).length}/{m.actions.length} actions</span>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Meeting detail */}
+      <div style={{background:C.s1,borderRadius:12,border:`1px solid ${C.border}`,display:'flex',flexDirection:'column',overflow:'hidden'}}>
+        <div style={{padding:'14px 18px',borderBottom:`1px solid ${C.border}`,flexShrink:0,background:`${typeColors[selected.type]||C.lime}08`}}>
+          <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:10}}>
+            <div>
+              <h2 style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:20,color:C.txt,letterSpacing:'0.02em',marginBottom:4}}>{selected.title}</h2>
+              <div style={{display:'flex',alignItems:'center',gap:10,fontSize:12,color:C.txt2,flexWrap:'wrap'}}>
+                <span><Ic d={P.calendar} size={12} color={C.txt3}/> {selected.date}</span>
+                <span style={{color:C.txt3}}>·</span>
+                <span style={{display:'flex',gap:4}}>
+                  {selected.attendees.map((a,i)=>(
+                    <span key={i} style={{background:C.s2,border:`1px solid ${C.border2}`,borderRadius:5,padding:'1px 7px',fontSize:10,fontWeight:600,color:C.txt2}}>{a}</span>
+                  ))}
+                </span>
+              </div>
+            </div>
+            <button onClick={()=>setEditingNotes(!editingNotes)}
+              style={{display:'flex',alignItems:'center',gap:5,padding:'5px 12px',background:editingNotes?`linear-gradient(135deg,${C.lime},#68B42E)`:'rgba(255,255,255,0.07)',border:`1px solid ${editingNotes?'transparent':C.border2}`,borderRadius:7,fontSize:11,fontWeight:700,color:editingNotes?C.green:C.txt2,cursor:'pointer',flexShrink:0,transition:'all .15s'}}>
+              {editingNotes?<><Ic d={P.check} size={12} color={C.green}/> Save</>:<><Ic d={P.edit} size={12} color="currentColor"/> Edit</>}
+            </button>
+          </div>
+        </div>
+        <div style={{flex:1,overflowY:'auto',padding:'16px 18px',display:'flex',gap:16}}>
+          {/* Notes */}
+          <div style={{flex:1,display:'flex',flexDirection:'column',gap:12}}>
+            <div>
+              <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:8}}>Meeting Notes</div>
+              {editingNotes?(
+                <textarea value={notes} onChange={e=>setNotes(e.target.value)}
+                  style={{width:'100%',height:160,background:C.s2,border:`1px solid rgba(182,255,43,0.3)`,borderRadius:9,color:C.txt,fontSize:13,lineHeight:1.7,padding:'10px 12px',resize:'none',outline:'none'}}/>
+              ):(
+                <div style={{fontSize:13,color:notes?C.txt2:C.txt3,lineHeight:1.7,fontStyle:notes?'normal':'italic'}}>
+                  {notes||'No notes recorded. Click Edit to add notes.'}
+                </div>
+              )}
+            </div>
+            {/* Attendees */}
+            <div>
+              <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:8}}>Attendees</div>
+              <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+                {selected.attendees.map((a,i)=>(
+                  <div key={i} style={{display:'flex',alignItems:'center',gap:6,background:C.s2,border:`1px solid ${C.border2}`,borderRadius:8,padding:'5px 10px'}}>
+                    <div style={{width:22,height:22,borderRadius:'50%',background:'rgba(182,255,43,0.12)',border:'1px solid rgba(182,255,43,0.25)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                      <span style={{fontSize:9,fontWeight:900,color:C.lime,fontFamily:'var(--font-d)'}}>{a.split(' ').map(x=>x[0]).join('').slice(0,2)}</span>
+                    </div>
+                    <span style={{fontSize:12,fontWeight:600,color:C.txt}}>{a}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          {/* Action items */}
+          <div style={{width:260,flexShrink:0}}>
+            <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:8,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+              Action Items
+              <span style={{fontSize:10,color:selected.actions.filter(a=>a.done).length===selected.actions.length&&selected.actions.length>0?C.goal:C.amber,fontWeight:700}}>
+                {selected.actions.filter(a=>a.done).length}/{selected.actions.length}
+              </span>
+            </div>
+            {selected.actions.length===0&&<div style={{fontSize:12,color:C.txt3,fontStyle:'italic'}}>No actions recorded</div>}
+            <div style={{display:'flex',flexDirection:'column',gap:6}}>
+              {selected.actions.map((action,i)=>(
+                <div key={i} style={{display:'flex',alignItems:'flex-start',gap:8,padding:'8px 10px',background:action.done?'rgba(46,212,122,0.04)':C.s2,border:`1px solid ${action.done?'rgba(46,212,122,0.15)':C.border}`,borderRadius:8}}>
+                  <div style={{width:18,height:18,borderRadius:'50%',background:action.done?`${C.goal}20`:'rgba(255,255,255,0.05)',border:`1.5px solid ${action.done?C.goal:'rgba(255,255,255,0.15)'}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,marginTop:1}}>
+                    {action.done&&<Ic d={P.check} size={10} color={C.goal}/>}
+                  </div>
+                  <span style={{fontSize:12,color:action.done?C.txt3:C.txt,textDecoration:action.done?'line-through':'none',lineHeight:1.4}}>{action.text}</span>
+                </div>
+              ))}
+            </div>
+            <button style={{width:'100%',marginTop:10,display:'flex',alignItems:'center',justifyContent:'center',gap:5,padding:'7px',background:'rgba(255,255,255,0.04)',border:`1px dashed ${C.border2}`,borderRadius:8,fontSize:11,fontWeight:600,color:C.txt3,cursor:'pointer',transition:'all .15s'}}
+              onMouseEnter={e=>{e.currentTarget.style.borderColor='rgba(182,255,43,0.3)';e.currentTarget.style.color=C.lime}}
+              onMouseLeave={e=>{e.currentTarget.style.borderColor=C.border2;e.currentTarget.style.color=C.txt3}}>
+              <Ic d={P.plus} size={12} color="currentColor"/> Add Action Item
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Video Analysis Tab ────────────────────────────────────────────────────────
+function VideoTab(){
+  const [selected,setSelected]=useState(VIDEOS[0]);
+  const tagColors={'Tactical':C.lime,'Technical':C.sky,'Physical':C.amber,'Match':C.red,'Player':C.goal,'Analysis':C.txt2,'Set Pieces':C.sky,'Opposition':C.amber};
+
+  const ThumbnailIcon=({type,size=40})=>{
+    const icons={match:P.play,tactic:P.target,player:P.users};
+    const colors={match:C.red,tactic:C.lime,player:C.goal};
+    return(
+      <div style={{width:size,height:size,borderRadius:8,background:`${colors[type]||C.lime}15`,border:`1px solid ${colors[type]||C.lime}30`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+        <Ic d={icons[type]||P.play} size={size*0.45} color={colors[type]||C.lime}/>
+      </div>
+    );
+  };
+
+  return(
+    <div style={{display:'grid',gridTemplateColumns:'340px 1fr',gap:16,height:'100%',overflow:'hidden'}}>
+      {/* Video list */}
+      <div style={{background:C.s1,borderRadius:12,border:`1px solid ${C.border}`,display:'flex',flexDirection:'column',overflow:'hidden'}}>
+        <div style={{padding:'12px 14px',borderBottom:`1px solid ${C.border}`,display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
+          <span style={{fontSize:13,fontWeight:700,color:C.txt,display:'flex',alignItems:'center',gap:6}}><Ic d={P.video} size={14} color={C.lime}/> Video Library</span>
+          <button style={{display:'flex',alignItems:'center',gap:4,padding:'4px 10px',background:'rgba(182,255,43,0.1)',border:'1px solid rgba(182,255,43,0.25)',borderRadius:6,fontSize:11,fontWeight:700,color:C.lime,cursor:'pointer'}}>
+            <Ic d={P.plus} size={12} color={C.lime}/> Upload
+          </button>
+        </div>
+        <div style={{flex:1,overflowY:'auto'}}>
+          {VIDEOS.map(v=>{
+            const isSelected=selected.id===v.id;
+            return(
+              <div key={v.id} onClick={()=>setSelected(v)}
+                style={{display:'flex',gap:10,padding:'10px 12px',borderBottom:`1px solid ${C.border}`,cursor:'pointer',background:isSelected?'rgba(182,255,43,0.05)':'transparent',borderLeft:`3px solid ${isSelected?C.lime:'transparent'}`,transition:'all .12s'}}
+                onMouseEnter={e=>{if(!isSelected)e.currentTarget.style.background='rgba(255,255,255,0.02)'}}
+                onMouseLeave={e=>{if(!isSelected)e.currentTarget.style.background='transparent'}}>
+                <ThumbnailIcon type={v.thumbnail} size={38}/>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:12.5,fontWeight:700,color:isSelected?C.lime:C.txt,lineHeight:1.3,marginBottom:3,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{v.title}</div>
+                  <div style={{fontSize:10,color:C.txt3,marginBottom:3}}>{v.date} · {v.duration}</div>
+                  <div style={{display:'flex',gap:3,flexWrap:'wrap'}}>
+                    {v.tags.map(t=>(
+                      <span key={t} style={{fontSize:8.5,fontWeight:700,color:tagColors[t]||C.txt2,background:`${tagColors[t]||C.txt2}12`,border:`1px solid ${tagColors[t]||C.txt2}25`,borderRadius:3,padding:'1px 5px'}}>{t}</span>
+                    ))}
+                  </div>
+                </div>
+                <div style={{display:'flex',gap:1,flexShrink:0,alignSelf:'flex-start',marginTop:1}}>
+                  {[1,2,3,4,5].map(s=>(
+                    <span key={s} style={{fontSize:8,color:s<=v.rating?C.amber:C.txt3}}>★</span>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Video detail */}
+      <div style={{background:C.s1,borderRadius:12,border:`1px solid ${C.border}`,display:'flex',flexDirection:'column',overflow:'hidden'}}>
+        {/* Video player placeholder */}
+        <div style={{background:'#000',position:'relative',paddingBottom:'42%',flexShrink:0}}>
+          <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:12,background:'linear-gradient(135deg,#0A1628,#111418)'}}>
+            <div style={{width:60,height:60,borderRadius:'50%',background:'rgba(182,255,43,0.12)',border:'2px solid rgba(182,255,43,0.3)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',transition:'all .15s'}}
+              onMouseEnter={e=>{e.currentTarget.style.background='rgba(182,255,43,0.2)';e.currentTarget.style.transform='scale(1.08)'}}
+              onMouseLeave={e=>{e.currentTarget.style.background='rgba(182,255,43,0.12)';e.currentTarget.style.transform='scale(1)'}}>
+              <Ic d={P.play} size={24} color={C.lime} fill="rgba(182,255,43,0.4)"/>
+            </div>
+            <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:16,color:'rgba(255,255,255,0.6)',letterSpacing:'0.05em'}}>{selected.title}</div>
+            <div style={{fontSize:11,color:'rgba(255,255,255,0.3)'}}>{selected.duration}</div>
+          </div>
+          {/* Fake progress bar */}
+          <div style={{position:'absolute',bottom:0,left:0,right:0,height:3,background:'rgba(255,255,255,0.1)'}}>
+            <div style={{height:'100%',width:'35%',background:C.lime}}/>
+          </div>
+        </div>
+        {/* Video info */}
+        <div style={{flex:1,overflowY:'auto',padding:'14px 16px'}}>
+          <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:10,marginBottom:12}}>
+            <div>
+              <h3 style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:18,color:C.txt,letterSpacing:'0.02em',marginBottom:4}}>{selected.title}</h3>
+              <div style={{display:'flex',gap:8,alignItems:'center',fontSize:11,color:C.txt3,flexWrap:'wrap'}}>
+                <span>{selected.date}</span>
+                <span>·</span>
+                <span>{selected.duration}</span>
+                <span>·</span>
+                <div style={{display:'flex',gap:1}}>
+                  {[1,2,3,4,5].map(s=>(
+                    <span key={s} style={{fontSize:13,color:s<=selected.rating?C.amber:C.txt3}}>★</span>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div style={{display:'flex',gap:6}}>
+              <button style={{padding:'5px 12px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:7,fontSize:11,fontWeight:700,color:C.txt2,cursor:'pointer',display:'flex',alignItems:'center',gap:5,transition:'all .15s'}}
+                onMouseEnter={e=>{e.currentTarget.style.borderColor='rgba(182,255,43,0.3)';e.currentTarget.style.color=C.lime}}
+                onMouseLeave={e=>{e.currentTarget.style.borderColor=C.border2;e.currentTarget.style.color=C.txt2}}>
+                <Ic d={P.link} size={12} color="currentColor"/> Share
+              </button>
+            </div>
+          </div>
+          {/* Tags */}
+          <div style={{display:'flex',gap:6,marginBottom:12,flexWrap:'wrap'}}>
+            {selected.tags.map(t=>(
+              <span key={t} style={{fontSize:10,fontWeight:700,color:tagColors[t]||C.txt2,background:`${tagColors[t]||C.txt2}15`,border:`1px solid ${tagColors[t]||C.txt2}30`,borderRadius:5,padding:'3px 9px'}}>{t}</span>
+            ))}
+          </div>
+          {/* Notes */}
+          <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:7}}>Analysis Notes</div>
+          <p style={{fontSize:13,color:C.txt2,lineHeight:1.7}}>{selected.notes}</p>
+          {/* Timestamps section */}
+          <div style={{marginTop:14,fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:8}}>Key Moments</div>
+          {[
+            {time:'0:45',note:'Press trigger from GK'},
+            {time:'2:10',note:'Excellent coordinated press — win ball'},
+            {time:'3:15',note:'Recovery run model'},
+          ].map((ts,i)=>(
+            <div key={i} style={{display:'flex',gap:10,padding:'6px 0',borderBottom:`1px solid ${C.border}`}}>
+              <span style={{fontFamily:'var(--font-d)',fontWeight:800,fontSize:13,color:C.lime,minWidth:36}}>{ts.time}</span>
+              <span style={{fontSize:12,color:C.txt2}}>{ts.note}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Coaches Award Tab ─────────────────────────────────────────────────────────
+function AwardTab(){
+  const categories=['Foundation','Advanced','Leadership'];
+  const catColors={Foundation:C.sky,Advanced:C.lime,Leadership:C.amber};
+
+  const totalItems=AWARD_CRITERIA.length;
+  const completed=AWARD_CRITERIA.filter(a=>a.completed).length;
+  const pct=Math.round((completed/totalItems)*100);
+
+  return(
+    <div style={{display:'grid',gridTemplateColumns:'1fr 300px',gap:16,height:'100%',overflow:'hidden'}}>
+      {/* Criteria list */}
+      <div style={{overflowY:'auto',display:'flex',flexDirection:'column',gap:12}}>
+        {/* Overall progress */}
+        <div style={{background:`linear-gradient(135deg,${C.greenDark},${C.green})`,borderRadius:12,padding:'16px 20px',border:'1px solid rgba(182,255,43,0.18)',flexShrink:0}}>
+          <div style={{display:'flex',alignItems:'center',gap:16}}>
+            <div>
+              <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:40,color:C.lime,lineHeight:1}}>{pct}%</div>
+              <div style={{fontSize:11,color:'rgba(255,255,255,0.5)',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.06em',marginTop:4}}>Award Progress</div>
+            </div>
+            <div style={{flex:1}}>
+              <div style={{height:8,background:'rgba(255,255,255,0.1)',borderRadius:4,overflow:'hidden',marginBottom:6}}>
+                <div style={{height:'100%',width:`${pct}%`,background:`linear-gradient(90deg,${C.lime},#68B42E)`,borderRadius:4,transition:'width .5s ease'}}/>
+              </div>
+              <div style={{fontSize:12,color:'rgba(255,255,255,0.4)'}}>{completed} of {totalItems} criteria achieved</div>
+            </div>
+            <div style={{textAlign:'center',flexShrink:0}}>
+              <div style={{width:56,height:56,borderRadius:'50%',background:'rgba(182,255,43,0.12)',border:'2px solid rgba(182,255,43,0.3)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                <Ic d={P.award} size={24} color={C.lime}/>
+              </div>
+              <div style={{fontSize:9.5,color:'rgba(255,255,255,0.4)',marginTop:5,fontWeight:600}}>TFB COACHES<br/>AWARD</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Criteria by category */}
+        {categories.map(cat=>{
+          const items=AWARD_CRITERIA.filter(a=>a.category===cat);
+          const catDone=items.filter(a=>a.completed).length;
+          const cc=catColors[cat]||C.lime;
+          return(
+            <div key={cat}>
+              <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8}}>
+                <span style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:16,color:cc,letterSpacing:'0.04em'}}>{cat}</span>
+                <span style={{fontSize:11,color:C.txt3,fontWeight:600}}>{catDone}/{items.length}</span>
+                <div style={{flex:1,height:2,background:'rgba(255,255,255,0.06)',borderRadius:1,overflow:'hidden'}}>
+                  <div style={{height:'100%',width:`${(catDone/items.length)*100}%`,background:cc,borderRadius:1}}/>
+                </div>
+              </div>
+              <div style={{display:'flex',flexDirection:'column',gap:8}}>
+                {items.map(item=>(
+                  <div key={item.id} style={{background:item.completed?'rgba(46,212,122,0.04)':C.s1,borderRadius:10,padding:'12px 14px',border:`1px solid ${item.completed?'rgba(46,212,122,0.2)':C.border}`,display:'flex',gap:12,alignItems:'flex-start'}}>
+                    <div style={{width:28,height:28,borderRadius:'50%',background:item.completed?`${C.goal}20`:`${cc}12`,border:`2px solid ${item.completed?C.goal:`${cc}35`}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,marginTop:1}}>
+                      {item.completed?<Ic d={P.check} size={13} color={C.goal}/>:<span style={{fontSize:9,fontWeight:900,color:cc,fontFamily:'var(--font-d)'}}>{item.code}</span>}
+                    </div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:13.5,fontWeight:700,color:item.completed?C.txt2:C.txt,marginBottom:3,textDecoration:item.completed?'line-through':'none'}}>{item.title}</div>
+                      <div style={{fontSize:11.5,color:C.txt3,lineHeight:1.4,marginBottom:item.progress?6:0}}>{item.desc}</div>
+                      {item.completed&&item.date&&<div style={{fontSize:10,color:C.goal,fontWeight:600}}>✓ Completed {item.date}</div>}
+                      {!item.completed&&item.progress!==undefined&&(
+                        <div style={{display:'flex',alignItems:'center',gap:8}}>
+                          <div style={{flex:1,height:4,background:'rgba(255,255,255,0.07)',borderRadius:2,overflow:'hidden'}}>
+                            <div style={{height:'100%',width:`${item.progress}%`,background:cc,borderRadius:2,transition:'width .4s ease'}}/>
+                          </div>
+                          <span style={{fontSize:10,fontWeight:700,color:cc,minWidth:28,textAlign:'right'}}>{item.progress}%</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Right: Award info + next steps */}
+      <div style={{display:'flex',flexDirection:'column',gap:14,overflowY:'auto'}}>
+        <div style={{background:C.s1,borderRadius:12,border:`1px solid ${C.border}`,padding:'16px',flexShrink:0}}>
+          <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:10}}>About the Award</div>
+          <p style={{fontSize:12.5,color:C.txt2,lineHeight:1.6}}>
+            The TFB Coaches Award recognises coaches who demonstrate excellence across three pillars: <b style={{color:C.sky}}>Foundation</b>, <b style={{color:C.lime}}>Advanced</b>, and <b style={{color:C.amber}}>Leadership</b>.
+          </p>
+          <div style={{marginTop:12,display:'flex',flexDirection:'column',gap:6}}>
+            {categories.map(cat=>{
+              const cc=catColors[cat];
+              const items=AWARD_CRITERIA.filter(a=>a.category===cat);
+              const done=items.filter(a=>a.completed).length;
+              return(
+                <div key={cat} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'6px 10px',background:C.s2,borderRadius:7,border:`1px solid ${C.border}`}}>
+                  <span style={{fontSize:12,fontWeight:700,color:cc}}>{cat}</span>
+                  <span style={{fontSize:12,color:done===items.length?C.goal:C.txt2,fontWeight:600}}>{done}/{items.length}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        {/* Next steps */}
+        <div style={{background:C.s1,borderRadius:12,border:`1px solid ${C.border}`,padding:'16px'}}>
+          <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:10}}>Next Steps</div>
+          {AWARD_CRITERIA.filter(a=>!a.completed).slice(0,3).map((item,i)=>(
+            <div key={i} style={{padding:'8px 0',borderBottom:`1px solid ${C.border}`,display:'flex',gap:8,alignItems:'flex-start'}}>
+              <div style={{width:5,height:5,borderRadius:'50%',background:catColors[item.category]||C.lime,marginTop:5,flexShrink:0}}/>
+              <div>
+                <div style={{fontSize:12,fontWeight:700,color:C.txt}}>{item.title}</div>
+                <div style={{fontSize:10,color:C.txt3,marginTop:2}}>{item.category} · {item.progress||0}% done</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        {/* Resources */}
+        <div style={{background:C.s1,borderRadius:12,border:`1px solid ${C.border}`,padding:'16px'}}>
+          <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:10}}>Resources</div>
+          {['TFB Coaching Manual 2025','FFA Coaching Framework','Session Planning Templates','Video Analysis Guide'].map((r,i)=>(
+            <button key={i} style={{width:'100%',display:'flex',alignItems:'center',gap:8,padding:'7px 0',background:'transparent',border:'none',borderBottom:`1px solid ${C.border}`,cursor:'pointer',textAlign:'left',transition:'color .12s',color:C.txt2,fontSize:12}}
+              onMouseEnter={e=>e.currentTarget.style.color=C.lime}
+              onMouseLeave={e=>e.currentTarget.style.color=C.txt2}>
+              <Ic d={P.link} size={12} color="currentColor"/>
+              {r}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── App ───────────────────────────────────────────────────────────────────────
+function App(){
+  const TWEAK_DEFAULTS=/*EDITMODE-BEGIN*/{
+    "tab": "award"
+  }/*EDITMODE-END*/;
+  const [tweaks,setTweak]=window.useTweaks(TWEAK_DEFAULTS);
+  const [tab,setTab]=useState(tweaks.tab||'meetings');
+
+  const TABS=[
+    {id:'meetings',label:'Meetings',icon:P.users},
+    {id:'video',label:'Video Analysis',icon:P.video},
+    {id:'award',label:'Coaches Award',icon:P.award},
+  ];
+
+  return(
+    <div style={{height:'100vh',display:'flex',flexDirection:'column',background:C.bg,overflow:'hidden'}}>
+      <Header onBack={()=>{try{window.location.href='tfb-dashboard.html'}catch(e){}}}/>
+
+      {/* Tab bar */}
+      <div style={{background:C.s1,borderBottom:`1px solid ${C.border}`,padding:'0 20px',display:'flex',alignItems:'center',gap:0,flexShrink:0}}>
+        {TABS.map(t=>(
+          <button key={t.id} onClick={()=>{setTab(t.id);setTweak('tab',t.id);}}
+            style={{display:'flex',alignItems:'center',gap:7,padding:'12px 18px',background:'transparent',border:'none',borderBottom:`2px solid ${tab===t.id?C.lime:'transparent'}`,color:tab===t.id?C.lime:C.txt2,fontSize:13,fontWeight:700,cursor:'pointer',letterSpacing:'0.03em',transition:'color .15s,border-color .15s'}}>
+            <Ic d={t.icon} size={14} color="currentColor"/>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      <div style={{flex:1,overflow:'hidden',padding:'16px 20px',display:'flex',flexDirection:'column'}}>
+        {tab==='meetings'&&<MeetingsTab/>}
+        {tab==='video'&&<VideoTab/>}
+        {tab==='award'&&<AwardTab/>}
+      </div>
+
+      <TweaksPanel>
+        <TweakSection label="View"/>
+        <TweakSelect label="Default Tab" value={tab} options={['meetings','video','award']} onChange={v=>{setTab(v);setTweak('tab',v);}}/>
+      </TweaksPanel>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

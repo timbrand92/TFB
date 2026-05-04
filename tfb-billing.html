@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TFB – Billing & Subscription</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="tfb-plan.js"></script>
+<script type="text/babel" src="tfb-responsive.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --lime:#B6FF2B;--green:#0F3D2E;--green-dark:#0A2E20;
+  --bg:#0C0F14;--s1:#15191F;--s2:#1C2128;--s3:#242B33;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --txt:#F0F2F4;--txt2:rgba(240,242,244,0.55);--txt3:rgba(240,242,244,0.3);
+  --goal:#2ED47A;--amber:#FFB020;--red:#E5533D;--sky:#3FA9F5;--purple:#9B7FE8;--stripe:#635BFF;
+  --font-d:'Barlow Condensed',sans-serif;--font-b:'Barlow',sans-serif;
+}
+html,body,#root{min-height:100%}
+body{font-family:var(--font-b);background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+button,input{font-family:var(--font-b);color:inherit;cursor:pointer}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:4px}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+.fade-up{animation:fadeUp .3s ease forwards}
+.fade-in{animation:fadeIn .2s ease forwards}
+.spin{animation:spin 1s linear infinite}
+.plan-card{transition:transform .18s,box-shadow .18s}
+.plan-card:hover{transform:translateY(-3px);box-shadow:0 16px 48px rgba(0,0,0,0.5)}
+@media(max-width:900px){.plans-grid{grid-template-columns:repeat(2,1fr)!important}}
+@media(max-width:520px){.plans-grid{grid-template-columns:1fr!important}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useRef,useCallback} = React;
+
+const C={
+  lime:'#B6FF2B',green:'#0F3D2E',greenDark:'#0A2E20',
+  bg:'#0C0F14',s1:'#15191F',s2:'#1C2128',s3:'#242B33',
+  border:'rgba(255,255,255,0.07)',border2:'rgba(255,255,255,0.13)',
+  txt:'#F0F2F4',txt2:'rgba(240,242,244,0.55)',txt3:'rgba(240,242,244,0.3)',
+  goal:'#2ED47A',amber:'#FFB020',red:'#E5533D',sky:'#3FA9F5',purple:'#9B7FE8',stripe:'#635BFF',
+};
+
+const Ic=({d,size=16,color='currentColor',stroke=2,fill='none',style={}})=>{
+  const paths=Array.isArray(d)?d.map((p,i)=><path key={i} d={p}/>):<path d={d}/>;
+  return(<svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0,...style}}>{paths}</svg>);
+};
+
+const P={
+  back:'M15 18l-6-6 6-6',
+  check:'M20 6L9 17l-5-5',
+  x:'M18 6L6 18M6 6l12 12',
+  credit:'M21 4H3a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 6H3',
+  shield:'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z',
+  star:'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',
+  download:'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3',
+  chevD:'M6 9l6 6 6-6',
+  alert:'M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01',
+  refresh:'M1 4v6h6M23 20v-6h-6M20.49 9A9 9 0 1 0 5.64 5.64L1 10M22.36 14l-4.64 4.36A9 9 0 0 1 3.51 15',
+};
+
+// ── Plan data ─────────────────────────────────────────────────────────────────
+const PLANS = [
+  {
+    id:'free', name:'Free', price:0, priceYearly:0, color:'#8A8F98', badge:null,
+    tagline:'Get started, no card needed',
+    features:[
+      {f:'Up to 15 players',inc:true},{f:'Squad list & basic roster',inc:true},
+      {f:'Fixtures & results',inc:true},{f:'Team chat',inc:true},
+      {f:'1 team',inc:true},{f:'Basic dashboard',inc:true},
+      {f:'Session planning',inc:false},{f:'Wellness tracking',inc:false},
+      {f:'Player development (IDP)',inc:false},{f:'Tactics board & gameday',inc:false},
+      {f:'Block planner',inc:false},{f:'Dribl sync',inc:false},
+    ]
+  },
+  {
+    id:'starter', name:'Starter', price:29, priceYearly:24, color:'#3FA9F5', badge:null,
+    tagline:'Everything a growing team needs',
+    features:[
+      {f:'Up to 30 players',inc:true},{f:'Session planning & builder',inc:true},
+      {f:'Block planner (6-week)',inc:true},{f:'Wellness tracking',inc:true},
+      {f:'Attendance & RSVP',inc:true},{f:'Team chat + announcements',inc:true},
+      {f:'Meetings & minutes',inc:true},{f:'Coaches award voting',inc:true},
+      {f:'Dribl sync',inc:true},{f:'Player development (IDP)',inc:false},
+      {f:'Tactics board & gameday',inc:false},{f:'Video analysis',inc:false},
+    ]
+  },
+  {
+    id:'pro', name:'Pro', price:79, priceYearly:65, color:'#B6FF2B', badge:'Most Popular',
+    tagline:'Full coaching toolkit, nothing held back',
+    features:[
+      {f:'Unlimited players',inc:true},{f:'Everything in Starter',inc:true},
+      {f:'Player development (IDP)',inc:true},{f:'Tactics board & gameday',inc:true},
+      {f:'FM-style match tactics',inc:true},{f:'Wellness heatmap',inc:true},
+      {f:'Parent portal',inc:true},{f:'Custom club branding',inc:true},
+      {f:'Data export (CSV/PDF)',inc:true},{f:'Advanced analytics',inc:true},
+      {f:'Multi-team view',inc:false},{f:'Recruitment tools',inc:false},
+    ]
+  },
+  {
+    id:'club', name:'Club', price:199, priceYearly:165, color:'#9B7FE8', badge:'Enterprise',
+    tagline:'Run your entire club from one place',
+    features:[
+      {f:'Unlimited teams & players',inc:true},{f:'Everything in Pro',inc:true},
+      {f:'Club overview dashboard',inc:true},{f:'Multi-team analytics',inc:true},
+      {f:'Recruitment & EOI tools',inc:true},{f:'Pathway tracking',inc:true},
+      {f:'Priority support',inc:true},{f:'Dedicated onboarding',inc:true},
+      {f:'SSO / custom domain',inc:true},{f:'API access',inc:true},
+      {f:'White-label option',inc:true},{f:'SLA guarantee',inc:true},
+    ]
+  },
+];
+
+const INVOICES = [
+  {id:'INV-2026-005',date:'1 May 2026',amount:79,status:'paid',desc:'Pro Plan — Monthly'},
+  {id:'INV-2026-004',date:'1 Apr 2026',amount:79,status:'paid',desc:'Pro Plan — Monthly'},
+  {id:'INV-2026-003',date:'1 Mar 2026',amount:79,status:'paid',desc:'Pro Plan — Monthly'},
+  {id:'INV-2026-002',date:'1 Feb 2026',amount:79,status:'paid',desc:'Pro Plan — Monthly'},
+  {id:'INV-2026-001',date:'1 Jan 2026',amount:0,status:'trial',desc:'14-day free trial'},
+];
+
+// ── Stripe Redirect Screen ────────────────────────────────────────────────────
+function StripeRedirect({reason, onBack}){
+  const [progress, setProgress] = useState(0);
+  useEffect(()=>{
+    const t = setInterval(()=> setProgress(p => Math.min(p+2, 95)), 40);
+    return ()=>clearInterval(t);
+  },[]);
+  const msgs = {
+    portal: {title:'Opening Stripe Portal', sub:'Manage payment method, download invoices, cancel subscription'},
+    checkout: {title:'Preparing Checkout', sub:'Securely handling your subscription change'},
+    cancel: {title:'Opening Cancellation Flow', sub:'Your data will be preserved until the period end'},
+  };
+  const m = msgs[reason] || msgs.portal;
+  return (
+    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:24,background:C.bg}}>
+      <div className="fade-up" style={{textAlign:'center',maxWidth:400}}>
+        {/* Stripe logo */}
+        <div style={{width:72,height:72,borderRadius:18,background:C.stripe,display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 24px',boxShadow:`0 0 0 12px ${C.stripe}20`}}>
+          <span style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:28,color:'#fff',letterSpacing:'-1px'}}>S</span>
+        </div>
+        <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:26,color:C.txt,letterSpacing:'0.02em',marginBottom:8,textTransform:'uppercase'}}>{m.title}</div>
+        <div style={{fontSize:13,color:C.txt2,marginBottom:28,lineHeight:1.6}}>{m.sub}</div>
+        {/* Progress bar */}
+        <div style={{height:3,background:'rgba(255,255,255,0.08)',borderRadius:3,overflow:'hidden',marginBottom:20}}>
+          <div style={{height:'100%',width:`${progress}%`,background:`linear-gradient(90deg,${C.stripe},#9B7FE8)`,borderRadius:3,transition:'width .1s linear'}}/>
+        </div>
+        <div style={{fontSize:12,color:C.txt3,marginBottom:24}}>Redirecting to <b style={{color:'rgba(99,91,255,0.8)'}}>billing.stripe.com</b></div>
+        <div style={{padding:'12px 16px',background:C.s1,border:`1px solid ${C.border}`,borderRadius:10,marginBottom:20,display:'flex',alignItems:'center',gap:10}}>
+          <Ic d={P.shield} size={14} color={C.goal}/>
+          <span style={{fontSize:11.5,color:C.txt2}}>256-bit SSL · PCI DSS compliant · Your card details never touch our servers</span>
+        </div>
+        <button onClick={onBack} style={{padding:'9px 20px',background:'rgba(255,255,255,0.06)',border:`1px solid ${C.border2}`,borderRadius:9,fontSize:12,fontWeight:600,color:C.txt2,cursor:'pointer'}}>← Back to TFB</button>
+      </div>
+    </div>
+  );
+}
+
+// ── Checkout Modal ────────────────────────────────────────────────────────────
+function CheckoutModal({plan, currentPlan, billing, onClose, onConfirm}){
+  const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState('confirm'); // confirm | processing | done
+  const isUpgrade = (window.TFBPlan?.planIndex(plan.id)||0) > (window.TFBPlan?.planIndex(currentPlan)||0);
+  const isDowngrade = !isUpgrade && plan.id !== currentPlan;
+  const price = billing==='yearly' ? plan.priceYearly : plan.price;
+  const saving = plan.price - plan.priceYearly;
+
+  const handleConfirm = () => {
+    setStep('processing');
+    setTimeout(()=>{
+      setStep('done');
+      window.TFBPlan?.setPlan(plan.id);
+    }, 2200);
+  };
+
+  if(step==='processing') return (
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',backdropFilter:'blur(8px)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:400}}>
+      <div style={{textAlign:'center'}}>
+        <div className="spin" style={{width:48,height:48,border:`3px solid rgba(99,91,255,0.2)`,borderTopColor:C.stripe,borderRadius:'50%',margin:'0 auto 20px'}}/>
+        <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:22,color:C.txt,letterSpacing:'0.04em'}}>PROCESSING…</div>
+        <div style={{fontSize:12,color:C.txt3,marginTop:8}}>Updating your subscription via Stripe</div>
+      </div>
+    </div>
+  );
+
+  if(step==='done') return (
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',backdropFilter:'blur(8px)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:400,padding:24}}>
+      <div className="fade-up" style={{background:C.s1,border:`1px solid ${plan.color}40`,borderRadius:20,maxWidth:400,width:'100%',padding:'32px 28px',textAlign:'center',boxShadow:`0 0 60px ${plan.color}15`}}>
+        <div style={{width:64,height:64,borderRadius:'50%',background:`${plan.color}20`,border:`2px solid ${plan.color}50`,display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 20px',fontSize:28}}>✓</div>
+        <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:26,color:plan.color,letterSpacing:'0.03em',marginBottom:8}}>YOU'RE ON {plan.name.toUpperCase()}!</div>
+        <div style={{fontSize:13,color:C.txt2,marginBottom:24,lineHeight:1.6}}>
+          {isUpgrade ? `Your plan has been upgraded. New features are available right now.` : `Your plan has been changed to ${plan.name}.`}
+        </div>
+        <button onClick={()=>{onConfirm(plan.id);onClose();}} style={{width:'100%',padding:'12px',background:`linear-gradient(135deg,${plan.color},${plan.color}cc)`,border:'none',borderRadius:10,fontSize:14,fontWeight:800,color:plan.id==='pro'?C.green:'#fff',cursor:'pointer'}}>Continue to Dashboard →</button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.82)',backdropFilter:'blur(6px)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:400,padding:20}}>
+      <div className="fade-up" onClick={e=>e.stopPropagation()} style={{background:C.s1,border:`1px solid ${C.border2}`,borderRadius:18,maxWidth:460,width:'100%',overflow:'hidden',boxShadow:'0 32px 80px rgba(0,0,0,0.7)'}}>
+        {/* Header */}
+        <div style={{padding:'18px 22px',borderBottom:`1px solid ${C.border}`,display:'flex',alignItems:'center',justifyContent:'space-between',background:`${plan.color}08`}}>
+          <div>
+            <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:20,color:plan.color,letterSpacing:'0.04em'}}>{isDowngrade?'DOWNGRADE TO':'UPGRADE TO'} {plan.name.toUpperCase()}</div>
+            <div style={{fontSize:12,color:C.txt2,marginTop:2}}>{isDowngrade ? 'Takes effect at end of billing period' : 'Prorated — effective immediately'}</div>
+          </div>
+          <button onClick={onClose} style={{width:32,height:32,borderRadius:8,background:'rgba(255,255,255,0.06)',border:`1px solid ${C.border}`,display:'flex',alignItems:'center',justifyContent:'center',padding:0}}>
+            <Ic d={P.x} size={16} color={C.txt2}/>
+          </button>
+        </div>
+
+        <div style={{padding:'20px 22px'}}>
+          {/* Price summary */}
+          <div style={{background:C.s2,borderRadius:12,padding:'16px',marginBottom:16,border:`1px solid ${C.border}`}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
+              <div>
+                <div style={{fontSize:11,color:C.txt3,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:4}}>{billing==='yearly'?'Annual billing (save '+saving*12+'/yr)':'Monthly billing'}</div>
+                <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:36,color:plan.color,lineHeight:1}}>
+                  ${price}<span style={{fontSize:16,color:C.txt2,fontWeight:600}}>/mo</span>
+                </div>
+                {billing==='yearly' && <div style={{fontSize:11,color:C.goal,marginTop:4,fontWeight:600}}>Billed annually · Save ${saving*12}/year</div>}
+              </div>
+              <div style={{textAlign:'right'}}>
+                <div style={{fontSize:11,color:C.txt3,marginBottom:4}}>Current plan</div>
+                <div style={{fontFamily:'var(--font-d)',fontWeight:700,fontSize:16,color:C.txt2,textDecoration:'line-through'}}>{currentPlan}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Stripe badge */}
+          <div style={{display:'flex',alignItems:'center',gap:8,padding:'10px 14px',background:'rgba(99,91,255,0.08)',border:'1px solid rgba(99,91,255,0.2)',borderRadius:9,marginBottom:16}}>
+            <Ic d={P.shield} size={14} color={C.stripe}/>
+            <span style={{fontSize:11.5,color:'rgba(99,91,255,0.9)',fontWeight:600}}>Payment processed securely by Stripe · PCI DSS Level 1</span>
+          </div>
+
+          {isDowngrade && (
+            <div style={{display:'flex',gap:8,padding:'10px 14px',background:'rgba(255,176,32,0.07)',border:'1px solid rgba(255,176,32,0.25)',borderRadius:9,marginBottom:16}}>
+              <Ic d={P.alert} size={14} color={C.amber} style={{flexShrink:0,marginTop:1}}/>
+              <div style={{fontSize:12,color:C.amber,lineHeight:1.5}}>Some features may become unavailable. Your data is always preserved.</div>
+            </div>
+          )}
+
+          <div style={{display:'flex',gap:10}}>
+            <button onClick={onClose} style={{flex:1,padding:'11px',background:'transparent',border:`1px solid ${C.border2}`,borderRadius:10,fontSize:13,fontWeight:700,color:C.txt2,cursor:'pointer'}}>Cancel</button>
+            <button onClick={handleConfirm} style={{flex:2,padding:'11px',background:`linear-gradient(135deg,${plan.color},${plan.color}cc)`,border:'none',borderRadius:10,fontSize:13,fontWeight:800,color:plan.id==='pro'?C.green:'#fff',cursor:'pointer'}}>
+              {isUpgrade ? `Upgrade to ${plan.name} →` : `Change to ${plan.name} →`}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Cancel Confirmation Modal ────────────────────────────────────────────────
+function CancelModal({onClose, onConfirm, nextBilling}){
+  const [reason, setReason] = useState('');
+  const [confirmed, setConfirmed] = useState(false);
+  const reasons = ['Too expensive','Switching to another tool','Not using it enough','Missing a feature I need','Team/club disbanded','Other'];
+  return (
+    <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.88)',backdropFilter:'blur(8px)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:400,padding:20}}>
+      <div className="fade-up" onClick={e=>e.stopPropagation()} style={{background:C.s1,border:'1px solid rgba(229,83,61,0.3)',borderRadius:18,maxWidth:460,width:'100%',overflow:'hidden',boxShadow:'0 32px 80px rgba(0,0,0,0.7)'}}>
+        <div style={{padding:'18px 22px',borderBottom:`1px solid ${C.border}`,background:'rgba(229,83,61,0.06)'}}>
+          <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:20,color:C.red,letterSpacing:'0.04em'}}>CANCEL SUBSCRIPTION</div>
+          <div style={{fontSize:12,color:C.txt2,marginTop:3}}>Access continues until {nextBilling}</div>
+        </div>
+        <div style={{padding:'20px 22px',display:'flex',flexDirection:'column',gap:14}}>
+          <div style={{fontSize:13,color:C.txt2,lineHeight:1.6}}>Before you go — your data stays safe. You can resubscribe anytime and pick up where you left off.</div>
+          <div>
+            <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8}}>Reason for cancelling</div>
+            <div style={{display:'flex',flexDirection:'column',gap:5}}>
+              {reasons.map(r=>(
+                <button key={r} onClick={()=>setReason(r)} style={{display:'flex',alignItems:'center',gap:10,padding:'9px 12px',background:reason===r?'rgba(229,83,61,0.1)':'transparent',border:`1px solid ${reason===r?'rgba(229,83,61,0.4)':C.border}`,borderRadius:8,fontSize:12.5,color:reason===r?C.red:C.txt2,textAlign:'left',cursor:'pointer',transition:'all .15s'}}>
+                  <div style={{width:14,height:14,borderRadius:'50%',border:`2px solid ${reason===r?C.red:C.txt3}`,background:reason===r?C.red:'transparent',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                    {reason===r && <div style={{width:6,height:6,borderRadius:'50%',background:'#fff'}}/>}
+                  </div>
+                  {r}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div style={{display:'flex',gap:10}}>
+            <button onClick={onClose} style={{flex:1,padding:'11px',background:`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:10,fontSize:13,fontWeight:800,color:C.green,cursor:'pointer'}}>Keep my subscription</button>
+            <button disabled={!reason} onClick={()=>{onConfirm();onClose();}} style={{flex:1,padding:'11px',background:reason?'rgba(229,83,61,0.1)':'rgba(255,255,255,0.04)',border:`1px solid ${reason?'rgba(229,83,61,0.4)':C.border}`,borderRadius:10,fontSize:13,fontWeight:700,color:reason?C.red:C.txt3,cursor:reason?'pointer':'not-allowed'}}>Confirm cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Plan Card ─────────────────────────────────────────────────────────────────
+function PlanCard({plan, currentPlanId, billing, onSelect}){
+  const isCurrent = plan.id === currentPlanId;
+  const price = billing==='yearly' ? plan.priceYearly : plan.price;
+  return (
+    <div className="plan-card" style={{
+      background: isCurrent ? `linear-gradient(135deg,${plan.color}15,${C.s2})` : C.s2,
+      border:`2px solid ${isCurrent?plan.color:`${plan.color}30`}`,
+      borderRadius:16,padding:'20px',position:'relative',
+      boxShadow: isCurrent ? `0 0 0 1px ${plan.color}30, 0 8px 32px rgba(0,0,0,0.3)` : '0 2px 12px rgba(0,0,0,0.2)',
+    }}>
+      {plan.badge && (
+        <div style={{position:'absolute',top:-1,right:16,padding:'3px 10px',background:plan.color,borderRadius:'0 0 8px 8px',fontSize:9.5,fontWeight:800,color:plan.id==='pro'?C.green:'#fff',letterSpacing:'0.1em',textTransform:'uppercase'}}>{plan.badge}</div>
+      )}
+      {isCurrent && (
+        <div style={{position:'absolute',top:14,left:16,padding:'2px 8px',background:`${plan.color}25`,border:`1px solid ${plan.color}50`,borderRadius:5,fontSize:9,fontWeight:800,color:plan.color,letterSpacing:'0.1em',textTransform:'uppercase'}}>Current</div>
+      )}
+
+      <div style={{marginBottom:14,paddingTop:isCurrent?12:0}}>
+        <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:22,color:plan.color,letterSpacing:'0.04em',lineHeight:1,marginBottom:3}}>{plan.name.toUpperCase()}</div>
+        <div style={{fontSize:11.5,color:C.txt3,marginBottom:10}}>{plan.tagline}</div>
+        <div style={{display:'flex',alignItems:'baseline',gap:4}}>
+          <span style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:plan.price===0?28:32,color:C.txt,lineHeight:1}}>
+            {plan.price===0 ? 'Free' : `$${price}`}
+          </span>
+          {plan.price>0 && <span style={{fontSize:12,color:C.txt3,fontWeight:600}}>/mo</span>}
+        </div>
+        {billing==='yearly' && plan.price>0 && (
+          <div style={{fontSize:10.5,color:C.goal,fontWeight:700,marginTop:3}}>Save ${(plan.price - plan.priceYearly)*12}/yr</div>
+        )}
+      </div>
+
+      <div style={{display:'flex',flexDirection:'column',gap:5,marginBottom:16}}>
+        {plan.features.map(({f,inc})=>(
+          <div key={f} style={{display:'flex',alignItems:'flex-start',gap:7,opacity:inc?1:0.38}}>
+            <div style={{flexShrink:0,marginTop:1}}>
+              {inc
+                ? <Ic d={P.check} size={12} color={plan.color} stroke={2.5}/>
+                : <span style={{width:12,height:12,display:'flex',alignItems:'center',justifyContent:'center',color:C.txt3,fontSize:14,lineHeight:1}}>–</span>
+              }
+            </div>
+            <span style={{fontSize:11,color:inc?C.txt:C.txt3,lineHeight:1.4,minWidth:0}}>{f}</span>
+          </div>
+        ))}
+      </div>
+
+      <button onClick={()=>!isCurrent&&onSelect(plan)}
+        style={{width:'100%',padding:'10px',background:isCurrent?'rgba(255,255,255,0.06)':`linear-gradient(135deg,${plan.color},${plan.color}bb)`,border:isCurrent?`1px solid ${C.border}`:'none',borderRadius:9,fontSize:13,fontWeight:800,color:isCurrent?C.txt3:plan.id==='pro'?C.green:'#fff',cursor:isCurrent?'not-allowed':'pointer',transition:'opacity .15s'}}
+        onMouseEnter={e=>{if(!isCurrent)e.currentTarget.style.opacity='0.88'}}
+        onMouseLeave={e=>{if(!isCurrent)e.currentTarget.style.opacity='1'}}>
+        {isCurrent ? 'Current plan' : plan.price===0 ? 'Downgrade to Free' : plan.price < (PLANS.find(p=>p.id===currentPlanId)||{}).price ? `Downgrade to ${plan.name}` : `Upgrade to ${plan.name} →`}
+      </button>
+    </div>
+  );
+}
+
+// ── Main App ──────────────────────────────────────────────────────────────────
+function App(){
+  const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+    "currentPlan": "club",
+    "accountState": "active"
+  }/*EDITMODE-END*/;
+  const [tweaks,setTweak] = window.useTweaks(TWEAK_DEFAULTS);
+
+  const [currentPlan, setCurrentPlan] = useState(()=>{
+    try{ return localStorage.getItem('tfb_plan')||tweaks.currentPlan||'pro'; }catch(e){ return 'pro'; }
+  });
+  const [billing, setBilling] = useState('monthly');
+  const [checkoutPlan, setCheckoutPlan] = useState(null);
+  const [showCancel, setShowCancel] = useState(false);
+  const [stripeRedirect, setStripeRedirect] = useState(null);
+  const [showInvoices, setShowInvoices] = useState(false);
+
+  const planData = PLANS.find(p=>p.id===currentPlan)||PLANS[2];
+  const isTrial = tweaks.accountState === 'trial';
+  const isCancelled = tweaks.accountState === 'cancelled';
+
+  useEffect(()=>{
+    const handler = e => setCurrentPlan(e.detail.plan);
+    window.addEventListener('tfb_plan_changed', handler);
+    return ()=>window.removeEventListener('tfb_plan_changed', handler);
+  },[]);
+
+  if(stripeRedirect) return <StripeRedirect reason={stripeRedirect} onBack={()=>setStripeRedirect(null)}/>;
+
+  return (
+    <div style={{minHeight:'100vh',background:C.bg}}>
+      {/* Header */}
+      <header style={{background:`linear-gradient(90deg,${C.greenDark},${C.green})`,borderBottom:'1px solid rgba(182,255,43,0.18)',padding:'0 28px',height:54,display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',top:0,zIndex:50}}>
+        <div style={{display:'flex',alignItems:'center',gap:14}}>
+          <button onClick={()=>{try{window.location.href='tfb-settings.html';}catch(e){}}} style={{display:'flex',alignItems:'center',gap:6,padding:'6px 11px',background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.12)',borderRadius:8,fontSize:12,fontWeight:600,color:'rgba(255,255,255,0.7)',cursor:'pointer',transition:'all .15s'}} onMouseEnter={e=>{e.currentTarget.style.background='rgba(182,255,43,0.12)';e.currentTarget.style.color='#B6FF2B'}} onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,0.07)';e.currentTarget.style.color='rgba(255,255,255,0.7)'}}>
+            <Ic d={P.back} size={13} color="currentColor"/> Settings
+          </button>
+          <div style={{width:1,height:22,background:'rgba(255,255,255,0.12)'}}/>
+          <svg width="26" height="26" viewBox="0 0 40 40" fill="none"><polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="#0F3D2E" stroke="#B6FF2B" strokeWidth="1.5"/><text x="20" y="26" textAnchor="middle" fill="#B6FF2B" fontFamily="Barlow Condensed" fontWeight="900" fontSize="13">TFB</text></svg>
+          <div>
+            <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:16,color:'#fff',letterSpacing:'0.05em',lineHeight:1}}>BILLING & SUBSCRIPTION</div>
+            <div style={{fontSize:9,color:'rgba(182,255,43,0.6)',fontWeight:700,letterSpacing:'0.12em'}}>MALVERN CITY FC</div>
+          </div>
+        </div>
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          <div style={{padding:'4px 10px',background:'rgba(99,91,255,0.12)',border:'1px solid rgba(99,91,255,0.25)',borderRadius:7,fontSize:11,fontWeight:700,color:'rgba(99,91,255,0.9)',display:'flex',alignItems:'center',gap:5}}>
+            <Ic d={P.shield} size={12} color={C.stripe}/> Powered by Stripe
+          </div>
+        </div>
+      </header>
+
+      <div style={{maxWidth:1140,margin:'0 auto',padding:'28px 24px 64px'}}>
+
+        {/* Trial banner */}
+        {isTrial && (
+          <div className="fade-up" style={{background:'linear-gradient(135deg,rgba(255,176,32,0.12),rgba(255,176,32,0.06))',border:'1px solid rgba(255,176,32,0.3)',borderRadius:12,padding:'14px 18px',marginBottom:20,display:'flex',alignItems:'center',gap:14}}>
+            <span style={{fontSize:22}}>⏱</span>
+            <div style={{flex:1}}>
+              <div style={{fontSize:13,fontWeight:700,color:C.amber,marginBottom:2}}>7 days left on your free trial</div>
+              <div style={{fontSize:12,color:C.txt2}}>Your Pro features stay active until 11 May 2026. Add a card to keep them after that.</div>
+            </div>
+            <button onClick={()=>setStripeRedirect('checkout')} style={{padding:'9px 16px',background:`linear-gradient(135deg,${C.amber},#E08C00)`,border:'none',borderRadius:9,fontSize:12,fontWeight:800,color:'#fff',cursor:'pointer',flexShrink:0}}>Add payment method →</button>
+          </div>
+        )}
+
+        {/* Cancelled banner */}
+        {isCancelled && (
+          <div style={{background:'rgba(229,83,61,0.08)',border:'1px solid rgba(229,83,61,0.28)',borderRadius:12,padding:'14px 18px',marginBottom:20,display:'flex',alignItems:'center',gap:14}}>
+            <span style={{fontSize:22}}>⚠️</span>
+            <div style={{flex:1}}>
+              <div style={{fontSize:13,fontWeight:700,color:C.red,marginBottom:2}}>Subscription cancelled</div>
+              <div style={{fontSize:12,color:C.txt2}}>Access continues until 1 June 2026. Resubscribe anytime to keep your data and resume.</div>
+            </div>
+            <button onClick={()=>setCheckoutPlan(PLANS.find(p=>p.id==='pro'))} style={{padding:'9px 16px',background:`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:9,fontSize:12,fontWeight:800,color:C.green,cursor:'pointer',flexShrink:0}}>Resubscribe →</button>
+          </div>
+        )}
+
+        {/* Current plan status */}
+        <div className="fade-up" style={{background:`linear-gradient(135deg,${planData.color}18,#1C2128)`,border:`1px solid ${planData.color}60`,borderRadius:16,padding:'20px 24px',marginBottom:24,display:'flex',alignItems:'center',gap:16,flexWrap:'wrap',boxShadow:`0 0 0 1px ${planData.color}15, 0 4px 24px rgba(0,0,0,0.3)`}}>
+          <div style={{width:52,height:52,borderRadius:14,background:`${planData.color}20`,border:`2px solid ${planData.color}40`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+            <span style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:20,color:planData.color}}>{planData.name[0]}</span>
+          </div>
+          <div style={{flex:1,minWidth:200}}>
+            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
+              <span style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:22,color:planData.color,letterSpacing:'0.03em'}}>{planData.name.toUpperCase()} PLAN</span>
+              <span style={{fontSize:10,fontWeight:800,color:isCancelled?C.red:C.goal,background:isCancelled?'rgba(229,83,61,0.12)':'rgba(46,212,122,0.12)',border:`1px solid ${isCancelled?'rgba(229,83,61,0.3)':'rgba(46,212,122,0.3)'}`,borderRadius:5,padding:'2px 8px',letterSpacing:'0.1em',textTransform:'uppercase'}}>{isCancelled?'CANCELLED':isTrial?'TRIAL':'ACTIVE'}</span>
+            </div>
+            <div style={{fontSize:12.5,color:C.txt2}}>
+              ${billing==='yearly'?planData.priceYearly:planData.price}/mo · {billing==='yearly'?'Annual':'Monthly'} billing · Next charge: <b style={{color:C.txt}}>1 June 2026</b>
+            </div>
+            <div style={{fontSize:12,color:C.txt2,marginTop:3}}>
+              Visa •••• 4242 · Expires 12/27
+            </div>
+          </div>
+          <div style={{display:'flex',gap:8,flexShrink:0,flexWrap:'wrap'}}>
+            <button onClick={()=>setStripeRedirect('portal')} style={{padding:'9px 16px',background:C.stripe,border:'none',borderRadius:9,fontSize:12.5,fontWeight:700,color:'#fff',cursor:'pointer',display:'flex',alignItems:'center',gap:6}}>
+              <Ic d={P.credit} size={13} color="#fff"/> Manage in Stripe ↗
+            </button>
+            <button onClick={()=>setShowInvoices(v=>!v)} style={{padding:'9px 14px',background:'rgba(255,255,255,0.06)',border:`1px solid ${C.border2}`,borderRadius:9,fontSize:12,fontWeight:600,color:C.txt2,cursor:'pointer',display:'flex',alignItems:'center',gap:5}}>
+              <Ic d={P.download} size={13} color={C.txt2}/> Invoices
+            </button>
+          </div>
+        </div>
+
+        {/* Invoices collapse */}
+        {showInvoices && (
+          <div className="fade-up" style={{background:C.s1,border:`1px solid ${C.border}`,borderRadius:14,overflow:'hidden',marginBottom:24}}>
+            <div style={{padding:'12px 20px',borderBottom:`1px solid ${C.border}`,display:'flex',justifyContent:'space-between',alignItems:'center',background:'rgba(255,255,255,0.02)'}}>
+              <div style={{fontSize:13,fontWeight:700,color:C.txt}}>Invoices & Receipts</div>
+              <button onClick={()=>setStripeRedirect('portal')} style={{padding:'5px 11px',background:'transparent',border:`1px solid ${C.border2}`,borderRadius:7,fontSize:11,fontWeight:600,color:C.txt2,cursor:'pointer'}}>View all in Stripe ↗</button>
+            </div>
+            <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
+              <thead>
+                <tr style={{background:'rgba(0,0,0,0.2)'}}>
+                  {['Date','Description','Invoice #','Amount','Status',''].map(h=>(
+                    <th key={h} style={{textAlign:h===''||h==='Amount'?'right':'left',padding:'9px 16px',fontSize:10,color:C.txt3,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',whiteSpace:'nowrap'}}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {INVOICES.map(inv=>(
+                  <tr key={inv.id} style={{borderTop:`1px solid ${C.border}`}}>
+                    <td style={{padding:'11px 16px',color:C.txt2,fontSize:12}}>{inv.date}</td>
+                    <td style={{padding:'11px 16px',color:C.txt,fontSize:12.5,fontWeight:500}}>{inv.desc}</td>
+                    <td style={{padding:'11px 16px',color:C.txt3,fontFamily:'monospace',fontSize:11}}>{inv.id}</td>
+                    <td style={{padding:'11px 16px',textAlign:'right',color:C.txt,fontWeight:700}}>{inv.amount===0?'—':`$${inv.amount}.00`}</td>
+                    <td style={{padding:'11px 16px',textAlign:'center'}}>
+                      <span style={{fontSize:10,fontWeight:800,letterSpacing:'0.1em',textTransform:'uppercase',color:inv.status==='paid'?C.goal:C.amber,background:inv.status==='paid'?'rgba(46,212,122,0.1)':'rgba(255,176,32,0.1)',padding:'3px 8px',borderRadius:5}}>{inv.status}</span>
+                    </td>
+                    <td style={{padding:'11px 16px',textAlign:'right'}}>
+                      {inv.amount>0 && <button style={{padding:'4px 10px',background:'transparent',border:`1px solid ${C.border2}`,borderRadius:6,fontSize:11,color:C.txt3,cursor:'pointer',display:'inline-flex',alignItems:'center',gap:4}} onMouseEnter={e=>{e.currentTarget.style.borderColor='rgba(182,255,43,0.3)';e.currentTarget.style.color=C.lime}} onMouseLeave={e=>{e.currentTarget.style.borderColor=C.border2;e.currentTarget.style.color=C.txt3}}>
+                        <Ic d={P.download} size={10} color="currentColor"/> PDF
+                      </button>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Billing toggle */}
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20,flexWrap:'wrap',gap:10}}>
+          <div>
+            <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:22,color:C.txt,letterSpacing:'0.02em'}}>CHOOSE YOUR PLAN</div>
+            <div style={{fontSize:12,color:C.txt2,marginTop:2}}>Upgrade or downgrade anytime. Prorated billing, no lock-ins.</div>
+          </div>
+          <div style={{display:'flex',background:C.s2,borderRadius:10,padding:3,border:`1px solid ${C.border}`,flexShrink:0}}>
+            {['monthly','yearly'].map(b=>(
+              <button key={b} onClick={()=>setBilling(b)} style={{padding:'7px 16px',background:billing===b?C.s1:'transparent',border:billing===b?`1px solid ${C.border2}`:'1px solid transparent',borderRadius:8,fontSize:12,fontWeight:700,color:billing===b?C.txt:C.txt3,cursor:'pointer',transition:'all .15s',display:'flex',alignItems:'center',gap:6}}>
+                {b==='yearly'?<>Yearly <span style={{fontSize:9,fontWeight:800,color:C.goal,background:'rgba(46,212,122,0.15)',border:'1px solid rgba(46,212,122,0.3)',borderRadius:4,padding:'1px 5px'}}>SAVE 18%</span></>:b.charAt(0).toUpperCase()+b.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Plan cards grid */}
+        <div className="plans-grid" style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:14,marginBottom:28}}>
+          {PLANS.map(plan=>(
+            <PlanCard key={plan.id} plan={plan} currentPlanId={currentPlan} billing={billing} onSelect={setCheckoutPlan}/>
+          ))}
+        </div>
+
+        {/* Danger zone */}
+        {!isCancelled && currentPlan !== 'free' && (
+          <div style={{background:'rgba(229,83,61,0.05)',border:'1px solid rgba(229,83,61,0.2)',borderRadius:12,padding:'16px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:14,flexWrap:'wrap'}}>
+            <div>
+              <div style={{fontSize:11,fontWeight:800,color:C.red,letterSpacing:'0.14em',textTransform:'uppercase',marginBottom:3}}>Danger zone</div>
+              <div style={{fontSize:13,color:C.txt,marginBottom:2}}>Cancel subscription</div>
+              <div style={{fontSize:11.5,color:C.txt2}}>Access continues until 1 June 2026. All data preserved.</div>
+            </div>
+            <button onClick={()=>setShowCancel(true)} style={{padding:'9px 16px',background:'transparent',border:'1px solid rgba(229,83,61,0.4)',borderRadius:9,fontSize:12,fontWeight:700,color:C.red,cursor:'pointer',flexShrink:0,transition:'all .15s'}} onMouseEnter={e=>e.currentTarget.style.background='rgba(229,83,61,0.1)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+              Cancel subscription
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Modals */}
+      {checkoutPlan && <CheckoutModal plan={checkoutPlan} currentPlan={planData.name} billing={billing} onClose={()=>setCheckoutPlan(null)} onConfirm={id=>{setCurrentPlan(id);try{localStorage.setItem('tfb_plan',id);}catch(e){}}}/>}
+      {showCancel && <CancelModal onClose={()=>setShowCancel(false)} onConfirm={()=>{setTweak('accountState','cancelled');}} nextBilling="1 June 2026"/>}
+
+      {/* Tweaks */}
+      <TweaksPanel>
+        <TweakSection label="Account State"/>
+        <TweakSelect label="Current Plan" value={tweaks.currentPlan} options={['free','starter','pro','club']} onChange={v=>{setTweak('currentPlan',v);setCurrentPlan(v);try{localStorage.setItem('tfb_plan',v);}catch(e){}}}/>
+        <TweakSelect label="Account State" value={tweaks.accountState} options={['active','trial','cancelled']} onChange={v=>setTweak('accountState',v)}/>
+      </TweaksPanel>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

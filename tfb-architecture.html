@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TFB – Architecture & Integrations</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="tfb-responsive.jsx"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--lime:#B6FF2B;--green:#0F3D2E;--green-dark:#0A2E20;--bg:#111418;--s1:#1C2128;--s2:#242B33;--s3:#2A3139;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.14);--txt:#F0F2F4;--txt2:rgba(240,242,244,0.55);--txt3:rgba(240,242,244,0.32);--goal:#2ED47A;--amber:#FFB020;--red:#E5533D;--sky:#3FA9F5;--purple:#9B7FE8;--font-d:'Barlow Condensed',sans-serif;--font-b:'Barlow',sans-serif;--mono:'JetBrains Mono',monospace}
+html,body,#root{height:100%}
+body{font-family:var(--font-b);background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased;overflow:auto}
+button{font-family:var(--font-b);color:inherit;cursor:pointer}
+.mono{font-family:var(--mono)}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:6px}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn .25s ease forwards}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.pulse{animation:pulse 2s ease-in-out infinite}
+@keyframes flow{0%{stroke-dashoffset:24}100%{stroke-dashoffset:0}}
+.flow-line{stroke-dasharray:6 6;animation:flow 1.5s linear infinite}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState} = React;
+const C={lime:'#B6FF2B',green:'#0F3D2E',greenDark:'#0A2E20',bg:'#111418',s1:'#1C2128',s2:'#242B33',s3:'#2A3139',border:'rgba(255,255,255,0.07)',border2:'rgba(255,255,255,0.14)',txt:'#F0F2F4',txt2:'rgba(240,242,244,0.55)',txt3:'rgba(240,242,244,0.32)',goal:'#2ED47A',amber:'#FFB020',red:'#E5533D',sky:'#3FA9F5',purple:'#9B7FE8'};
+
+// ── Firestore Schema ──────────────────────────────────────────────────────
+const FIRESTORE_SCHEMA = [
+  {col:'clubs',icon:'🏢',color:C.lime,desc:'Top-level club entity. Owned by Club Admin.',fields:[
+    ['id','string','auto'],['name','string','Malvern City SC'],['logo','url','/clubs/{id}/logo.png'],
+    ['primaryColor','color','#0F3D2E (custom branding)'],['accentColor','color','#B6FF2B'],
+    ['subscriptionTier','enum','free | starter | pro | club'],['subscriptionStatus','enum','active | trialing | past_due | canceled'],
+    ['stripeCustomerId','string','cus_xxx'],['ownerUid','ref','users/{uid}'],['createdAt','timestamp',''],
+  ]},
+  {col:'clubs/{cid}/teams',icon:'👥',color:C.goal,desc:'Teams within a club. Each has age group + level.',fields:[
+    ['id','string','auto'],['name','string','U16 Boys'],['ageGroup','string','U16'],['level','string','NPL Victoria'],
+    ['coaches','ref[]','users/{uid}[]'],['players','ref[]','players/{pid}[]'],['season','string','2026'],
+  ]},
+  {col:'clubs/{cid}/teams/{tid}/players',icon:'⚽',color:C.amber,desc:'Player profiles linked to user accounts (or standalone for parents).',fields:[
+    ['id','string','auto'],['name','string','Liam Carter'],['number','number','7'],['position','string','LW'],
+    ['userId','ref','users/{uid} (nullable)'],['parentIds','ref[]','users/{uid}[]'],
+    ['photo','url',''],['dob','date',''],['stats','map','{goals,assists,attendance}'],
+  ]},
+  {col:'clubs/{cid}/teams/{tid}/sessions',icon:'📋',color:C.sky,desc:'Training sessions with multiple drill sections, each with their own visual diagram.',fields:[
+    ['id','string','auto'],['name','string','Session 5 - Pressing Triggers'],['date','timestamp',''],['duration','number','90 (mins)'],
+    ['sections','array','[{name,duration,pillar,elements,lines,notes}]'],
+    ['totalPillars','map','{technical:25,tactical:35,physical:30,psych:10}'],
+    ['createdBy','ref','users/{uid}'],['publishedAt','timestamp','null until published'],
+  ]},
+  {col:'clubs/{cid}/teams/{tid}/sessions/{sid}/availability',icon:'🔔',color:C.red,desc:'Each player RSVPs per session. One doc per player.',fields:[
+    ['playerId','ref','players/{pid}'],['status','enum','available | unavailable | maybe | pending'],
+    ['respondedAt','timestamp',''],['note','string','Optional reason'],['respondedBy','ref','users/{uid} (player or parent)'],
+  ]},
+  {col:'clubs/{cid}/teams/{tid}/matches',icon:'🏟',color:C.red,desc:'Match fixtures and results.',fields:[
+    ['id','string','auto'],['opponent','string','Bentleigh Greens'],['date','timestamp',''],['venue','string',''],
+    ['homeAway','enum','home | away'],['result','map','{ourScore,theirScore,events:[{type,player,minute}]}'],
+    ['lineup','map','{formation,startingXI,subs}'],['notes','string',''],
+  ]},
+  {col:'users',icon:'👤',color:C.purple,desc:'All user accounts — coaches, players, parents.',fields:[
+    ['uid','string','firebase auth uid'],['email','string',''],['name','string',''],['photoURL','url',''],
+    ['roles','map','{[clubId]:{role,teamIds[]}}'],
+    ['notificationPrefs','map','{rsvpReminders,matchReminders,...}'],
+  ]},
+  {col:'invites',icon:'✉️',color:C.amber,desc:'Pending invitations sent via email/link.',fields:[
+    ['id','string','auto (used in URL)'],['email','string',''],['clubId','ref',''],['teamId','ref','nullable'],
+    ['role','enum','coach | player | parent | manager'],['invitedBy','ref','users/{uid}'],
+    ['status','enum','pending | accepted | expired'],['expiresAt','timestamp','7 days'],
+  ]},
+];
+
+// Stripe products / pricing tiers
+const STRIPE_TIERS = [
+  {id:'free',name:'Free',price:'$0',period:'forever',color:'#8A8F98',
+    features:['1 team','Basic dashboard','5 sessions/mo','No PDF export','TFB branding only'],
+    limits:{teams:1,playersPerTeam:25,sessionsPerMonth:5,storageGb:0.5,pdfExport:false,customBranding:false,videoAnalysis:false}},
+  {id:'starter',name:'Starter',price:'$29',period:'/mo',color:C.sky,
+    features:['Up to 3 teams','Full dashboard','Unlimited sessions','PDF export','Email support'],
+    limits:{teams:3,playersPerTeam:50,sessionsPerMonth:'∞',storageGb:5,pdfExport:true,customBranding:false,videoAnalysis:false}},
+  {id:'pro',name:'Pro',price:'$79',period:'/mo',color:C.lime,popular:true,
+    features:['Up to 10 teams','Custom club branding','Video analysis','Priority support','API access'],
+    limits:{teams:10,playersPerTeam:50,sessionsPerMonth:'∞',storageGb:50,pdfExport:true,customBranding:true,videoAnalysis:true}},
+  {id:'club',name:'Club',price:'$199',period:'/mo',color:C.purple,
+    features:['Unlimited teams','Multi-club hierarchy','SSO & advanced security','Dedicated success manager','Custom integrations'],
+    limits:{teams:'∞',playersPerTeam:'∞',sessionsPerMonth:'∞',storageGb:500,pdfExport:true,customBranding:true,videoAnalysis:true}},
+];
+
+// Check matrix
+const FEATURE_MATRIX = [
+  ['Custom club branding (logo + colours)','—','—','✓','✓'],
+  ['PDF session export with TFB or club branding','—','✓','✓','✓'],
+  ['Video upload & analysis','—','—','✓','✓'],
+  ['Multi-team Technical Director view','—','✓','✓','✓'],
+  ['Block + Yearly Planner','—','✓','✓','✓'],
+  ['Coaching Hub (meetings, awards)','—','✓','✓','✓'],
+  ['Stripe billing & invoicing','—','✓','✓','✓'],
+  ['Single Sign-On (SSO)','—','—','—','✓'],
+];
+
+// Settings sub-pages
+const SETTINGS_PAGES = [
+  {id:'profile',label:'Profile',icon:'👤',desc:'Name, email, avatar, password',scope:'user'},
+  {id:'notifications',label:'Notifications',icon:'🔔',desc:'Email, push, SMS preferences per event type',scope:'user'},
+  {id:'club',label:'Club Settings',icon:'🏢',desc:'Name, logo, address, contact',scope:'admin'},
+  {id:'branding',label:'Branding',icon:'🎨',desc:'Custom colours, logo upload (Pro+)',scope:'admin',gated:'pro'},
+  {id:'teams',label:'Teams',icon:'👥',desc:'Manage teams, age groups, seasons',scope:'admin'},
+  {id:'roles',label:'Roles & Permissions',icon:'🔑',desc:'Invite users, assign roles',scope:'admin'},
+  {id:'subscription',label:'Subscription',icon:'💳',desc:'Plan, billing, invoices via Stripe',scope:'admin',stripe:true},
+  {id:'integrations',label:'Integrations',icon:'🔗',desc:'Calendar sync, video providers',scope:'admin',gated:'pro'},
+  {id:'data',label:'Data & Privacy',icon:'🛡',desc:'Export, GDPR, account deletion',scope:'user'},
+];
+
+// ── Components ─────────────────────────────────────────────────────────────
+const Section = ({title,subtitle,children,id}) => (
+  <section id={id} style={{marginBottom:48}}>
+    <div style={{marginBottom:16,paddingBottom:10,borderBottom:`1px solid ${C.border}`}}>
+      <div style={{fontFamily:C.fontD,fontSize:11,fontWeight:700,color:C.lime,letterSpacing:'0.18em',textTransform:'uppercase',marginBottom:6}}>{subtitle}</div>
+      <h2 style={{fontFamily:'var(--font-d)',fontSize:30,fontWeight:900,letterSpacing:'-0.01em',lineHeight:1.05,textTransform:'uppercase'}}>{title}</h2>
+    </div>
+    {children}
+  </section>
+);
+
+// Schema collection card
+const CollectionCard = ({col}) => {
+  const [open,setOpen] = useState(false);
+  return (
+    <div style={{background:C.s1,border:`1px solid ${C.border}`,borderRadius:12,overflow:'hidden',transition:'border-color .15s'}}
+      onMouseEnter={e=>e.currentTarget.style.borderColor=`${col.color}40`}
+      onMouseLeave={e=>e.currentTarget.style.borderColor=C.border}>
+      <button onClick={()=>setOpen(!open)} style={{width:'100%',display:'flex',alignItems:'center',gap:14,padding:'16px 18px',background:'transparent',border:'none',textAlign:'left'}}>
+        <div style={{width:40,height:40,borderRadius:10,background:`${col.color}15`,border:`1px solid ${col.color}30`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,flexShrink:0}}>{col.icon}</div>
+        <div style={{flex:1,minWidth:0}}>
+          <div className="mono" style={{fontSize:13,fontWeight:600,color:col.color,marginBottom:3,wordBreak:'break-all'}}>{col.col}</div>
+          <div style={{fontSize:12.5,color:C.txt2,lineHeight:1.4}}>{col.desc}</div>
+        </div>
+        <div style={{fontSize:18,color:C.txt3,transform:open?'rotate(90deg)':'rotate(0)',transition:'transform .2s'}}>›</div>
+      </button>
+      {open && (
+        <div className="fade-in" style={{borderTop:`1px solid ${C.border}`,background:'#0E1115',padding:'12px 18px'}}>
+          <div style={{display:'grid',gridTemplateColumns:'140px 90px 1fr',gap:10,fontSize:11,color:C.txt3,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.08em',paddingBottom:8,borderBottom:`1px solid ${C.border}`,marginBottom:8}}>
+            <div>Field</div><div>Type</div><div>Example</div>
+          </div>
+          {col.fields.map((f,i)=>(
+            <div key={i} style={{display:'grid',gridTemplateColumns:'140px 90px 1fr',gap:10,padding:'5px 0',fontSize:12.5,borderBottom:i<col.fields.length-1?`1px dashed ${C.border}`:'none'}}>
+              <div className="mono" style={{color:C.txt,fontWeight:600}}>{f[0]}</div>
+              <div className="mono" style={{color:col.color,fontSize:11}}>{f[1]}</div>
+              <div className="mono" style={{color:C.txt2,fontSize:11.5,wordBreak:'break-word'}}>{f[2]}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Save flow diagram
+const SaveFlow = () => (
+  <div style={{background:C.s1,border:`1px solid ${C.border}`,borderRadius:14,padding:20}}>
+    <div style={{fontSize:13,fontWeight:700,color:C.txt,marginBottom:16,letterSpacing:'0.04em',textTransform:'uppercase'}}>Save flow — Session Builder → Firestore</div>
+    <svg viewBox="0 0 800 240" style={{width:'100%',height:'auto'}}>
+      {/* User action */}
+      <rect x="10" y="80" width="130" height="80" rx="10" fill={C.s2} stroke={C.lime} strokeWidth="1.5"/>
+      <text x="75" y="110" textAnchor="middle" fill={C.lime} fontSize="11" fontWeight="700" fontFamily="var(--font-d)" letterSpacing="0.1em">USER ACTION</text>
+      <text x="75" y="130" textAnchor="middle" fill="#fff" fontSize="13" fontWeight="700">Click Save</text>
+      <text x="75" y="146" textAnchor="middle" fill={C.txt2} fontSize="10">in Session Builder</text>
+
+      {/* React */}
+      <rect x="180" y="80" width="130" height="80" rx="10" fill={C.s2} stroke={C.sky} strokeWidth="1.5"/>
+      <text x="245" y="110" textAnchor="middle" fill={C.sky} fontSize="11" fontWeight="700" fontFamily="var(--font-d)" letterSpacing="0.1em">CLIENT</text>
+      <text x="245" y="130" textAnchor="middle" fill="#fff" fontSize="13" fontWeight="700">React state</text>
+      <text x="245" y="146" textAnchor="middle" fill={C.txt2} fontSize="10">{'{sections, elements}'}</text>
+
+      {/* Firebase SDK */}
+      <rect x="350" y="80" width="130" height="80" rx="10" fill={C.s2} stroke={C.amber} strokeWidth="1.5"/>
+      <text x="415" y="110" textAnchor="middle" fill={C.amber} fontSize="11" fontWeight="700" fontFamily="var(--font-d)" letterSpacing="0.1em">FIREBASE SDK</text>
+      <text x="415" y="130" textAnchor="middle" fill="#fff" fontSize="13" fontWeight="700">setDoc()</text>
+      <text x="415" y="146" textAnchor="middle" fill={C.txt2} fontSize="10">w/ security rules</text>
+
+      {/* Firestore */}
+      <rect x="520" y="80" width="130" height="80" rx="10" fill={C.s2} stroke={C.goal} strokeWidth="1.5"/>
+      <text x="585" y="110" textAnchor="middle" fill={C.goal} fontSize="11" fontWeight="700" fontFamily="var(--font-d)" letterSpacing="0.1em">FIRESTORE</text>
+      <text x="585" y="130" textAnchor="middle" fill="#fff" fontSize="13" fontWeight="700">sessions/{'{sid}'}</text>
+      <text x="585" y="146" textAnchor="middle" fill={C.txt2} fontSize="10">document written</text>
+
+      {/* Listeners */}
+      <rect x="660" y="20" width="130" height="60" rx="10" fill={C.s2} stroke={C.purple} strokeWidth="1.5"/>
+      <text x="725" y="44" textAnchor="middle" fill={C.purple} fontSize="11" fontWeight="700" fontFamily="var(--font-d)" letterSpacing="0.1em">REALTIME</text>
+      <text x="725" y="62" textAnchor="middle" fill="#fff" fontSize="12" fontWeight="700">All clients update</text>
+
+      <rect x="660" y="160" width="130" height="60" rx="10" fill={C.s2} stroke={C.red} strokeWidth="1.5"/>
+      <text x="725" y="184" textAnchor="middle" fill={C.red} fontSize="11" fontWeight="700" fontFamily="var(--font-d)" letterSpacing="0.1em">TRIGGERS</text>
+      <text x="725" y="202" textAnchor="middle" fill="#fff" fontSize="12" fontWeight="700">Cloud Functions fire</text>
+
+      {/* Arrows */}
+      {[[140,120,180,120],[310,120,350,120],[480,120,520,120],[650,110,660,60],[650,130,660,180]].map((a,i)=>(
+        <line key={i} x1={a[0]} y1={a[1]} x2={a[2]} y2={a[3]} stroke={C.border2} strokeWidth="1.5" markerEnd="url(#arr)" className="flow-line"/>
+      ))}
+      <defs><marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8" fill={C.border2}/></marker></defs>
+    </svg>
+
+    {/* Code snippet */}
+    <div style={{marginTop:16,background:'#0A0D11',border:`1px solid ${C.border}`,borderRadius:8,padding:14,fontSize:12,lineHeight:1.6}} className="mono">
+      <div style={{color:C.txt3,marginBottom:6,fontSize:10,letterSpacing:'0.08em',textTransform:'uppercase'}}>// services/sessions.ts</div>
+      <div><span style={{color:C.purple}}>const</span> <span style={{color:C.lime}}>saveSession</span> = <span style={{color:C.purple}}>async</span> (<span style={{color:C.amber}}>session</span>) {'=> {'}</div>
+      <div style={{paddingLeft:16}}>  <span style={{color:C.purple}}>const</span> ref = doc(db, <span style={{color:C.goal}}>`clubs/${'{clubId}'}/teams/${'{teamId}'}/sessions/${'{session.id}'}`</span>);</div>
+      <div style={{paddingLeft:16}}>  <span style={{color:C.purple}}>await</span> setDoc(ref, {'{...'}session, updatedAt: serverTimestamp(){'}'}, {'{merge:'} <span style={{color:C.sky}}>true</span>{'}'});</div>
+      <div style={{paddingLeft:16}}>  <span style={{color:C.txt3}}>{'// each section.elements + section.lines is JSON-safe'}</span></div>
+      <div>{'}'};</div>
+    </div>
+  </div>
+);
+
+// Stripe tier card
+const TierCard = ({t}) => (
+  <div style={{background:t.popular?`linear-gradient(180deg,${t.color}10,${C.s1})`:C.s1,border:`${t.popular?2:1}px solid ${t.popular?t.color+'60':C.border}`,borderRadius:14,padding:20,position:'relative'}}>
+    {t.popular && <div style={{position:'absolute',top:-10,left:18,background:t.color,color:'#0A0D11',fontSize:10,fontWeight:800,padding:'3px 10px',borderRadius:5,letterSpacing:'0.1em',textTransform:'uppercase'}}>Most Popular</div>}
+    <div style={{fontSize:11,color:t.color,fontWeight:700,letterSpacing:'0.16em',textTransform:'uppercase',marginBottom:6}}>{t.name}</div>
+    <div style={{display:'flex',alignItems:'baseline',gap:4,marginBottom:14}}>
+      <div style={{fontFamily:'var(--font-d)',fontSize:36,fontWeight:900,color:'#fff',lineHeight:1}}>{t.price}</div>
+      <div style={{fontSize:13,color:C.txt2}}>{t.period}</div>
+    </div>
+    <ul style={{listStyle:'none',marginBottom:16}}>
+      {t.features.map((f,i)=>(
+        <li key={i} style={{fontSize:12.5,color:C.txt,padding:'6px 0',display:'flex',alignItems:'flex-start',gap:8,borderBottom:i<t.features.length-1?`1px dashed ${C.border}`:'none'}}>
+          <span style={{color:t.color,marginTop:1,fontSize:14,flexShrink:0}}>✓</span>{f}
+        </li>
+      ))}
+    </ul>
+    <div style={{paddingTop:12,borderTop:`1px solid ${C.border}`,fontSize:10.5,color:C.txt3,lineHeight:1.6,fontFamily:'var(--mono)'}}>
+      stripe price_id:<br/>price_{t.id}_2026
+    </div>
+  </div>
+);
+
+// ── App ────────────────────────────────────────────────────────────────────
+function App() {
+  const nav=(p)=>{try{window.location.href=p}catch(e){}};
+  return (
+    <div style={{minHeight:'100vh',padding:'0 32px 64px'}}>
+      {/* Header */}
+      <header style={{display:'flex',alignItems:'center',gap:16,padding:'24px 0 22px',borderBottom:`1px solid ${C.border}`,marginBottom:32,position:'sticky',top:0,background:C.bg,zIndex:10}}>
+        <button onClick={()=>nav('tfb-nav.html')} style={{display:'flex',alignItems:'center',gap:6,padding:'7px 12px',background:'transparent',border:`1px solid ${C.border2}`,borderRadius:8,fontSize:12,fontWeight:600,color:C.txt2}}>← Back to Hub</button>
+        <div style={{flex:1}}>
+          <div style={{fontFamily:'var(--font-d)',fontSize:11,fontWeight:700,color:C.lime,letterSpacing:'0.18em',textTransform:'uppercase',marginBottom:3}}>TFB Architecture</div>
+          <div style={{fontFamily:'var(--font-d)',fontSize:26,fontWeight:900,color:'#fff',letterSpacing:'-0.01em'}}>Data Model & Integrations</div>
+        </div>
+        <div style={{display:'flex',gap:6}}>
+          {['#firestore','#flow','#stripe','#settings'].map((h,i)=>(
+            <a key={i} href={h} style={{padding:'7px 14px',background:'rgba(182,255,43,0.07)',border:'1px solid rgba(182,255,43,0.18)',borderRadius:8,fontSize:12,fontWeight:700,color:C.lime,textDecoration:'none'}}>{['Schema','Save Flow','Stripe','Settings'][i]}</a>
+          ))}
+        </div>
+      </header>
+
+      {/* Firestore Schema */}
+      <Section id="firestore" title="Firestore Data Model" subtitle="Section 01 · Database">
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(420px,1fr))',gap:14,marginBottom:20}}>
+          {FIRESTORE_SCHEMA.map(c=><CollectionCard key={c.col} col={c}/>)}
+        </div>
+        <div style={{background:`linear-gradient(135deg,${C.greenDark}40,${C.s1})`,border:`1px solid ${C.lime}30`,borderRadius:12,padding:18}}>
+          <div style={{fontSize:11,color:C.lime,fontWeight:700,letterSpacing:'0.16em',textTransform:'uppercase',marginBottom:8}}>💡 Multi-tenant by club</div>
+          <div style={{fontSize:13.5,color:C.txt,lineHeight:1.6}}>Every business document lives under <span className="mono" style={{color:C.lime,background:'rgba(182,255,43,0.1)',padding:'1px 6px',borderRadius:3}}>clubs/{'{clubId}'}/</span> — security rules check the user's <span className="mono" style={{color:C.lime,background:'rgba(182,255,43,0.1)',padding:'1px 6px',borderRadius:3}}>users/{'{uid}'}.roles[clubId]</span> map. Switching clubs = switching the path prefix; nothing else changes.</div>
+        </div>
+      </Section>
+
+      {/* Save Flow */}
+      <Section id="flow" title="Save Flow & Real-time Sync" subtitle="Section 02 · Architecture">
+        <SaveFlow/>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12,marginTop:16}}>
+          {[
+            {t:'Optimistic UI',d:'Updates apply instantly to local state. If the write fails, rollback + toast.',c:C.lime},
+            {t:'Offline support',d:'Firestore SDK queues writes when offline; syncs automatically on reconnect.',c:C.sky},
+            {t:'Conflict resolution',d:'Last-write-wins with serverTimestamp; sub-section edits use array-by-id merge.',c:C.amber},
+          ].map((x,i)=>(
+            <div key={i} style={{background:C.s1,border:`1px solid ${C.border}`,borderRadius:10,padding:14}}>
+              <div style={{fontSize:11,color:x.c,fontWeight:700,letterSpacing:'0.14em',textTransform:'uppercase',marginBottom:5}}>{x.t}</div>
+              <div style={{fontSize:12.5,color:C.txt2,lineHeight:1.5}}>{x.d}</div>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      {/* Stripe Subscription Tiers */}
+      <Section id="stripe" title="Stripe Subscription Plans" subtitle="Section 03 · Billing">
+        <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:14,marginBottom:24}}>
+          {STRIPE_TIERS.map(t=><TierCard key={t.id} t={t}/>)}
+        </div>
+
+        {/* Stripe flow */}
+        <div style={{background:C.s1,border:`1px solid ${C.border}`,borderRadius:14,padding:20,marginBottom:18}}>
+          <div style={{fontSize:13,fontWeight:700,color:C.txt,marginBottom:14,letterSpacing:'0.04em',textTransform:'uppercase'}}>Subscription flow — Stripe Checkout + Webhook</div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:10,fontSize:12}}>
+            {[
+              {step:'01',title:'User clicks Upgrade',d:'Settings → Subscription → Upgrade',color:C.lime},
+              {step:'02',title:'Create Checkout',d:'Cloud Function: createCheckoutSession()',color:C.sky},
+              {step:'03',title:'Stripe Checkout',d:'Hosted page — card + 3DS',color:'#635BFF'},
+              {step:'04',title:'Webhook fires',d:'checkout.session.completed',color:C.amber},
+              {step:'05',title:'Update Firestore',d:'clubs/{cid}.subscriptionTier = "pro"',color:C.goal},
+            ].map((s,i)=>(
+              <div key={i} style={{background:C.s2,border:`1px solid ${s.color}30`,borderRadius:10,padding:'12px 10px',position:'relative'}}>
+                <div style={{fontFamily:'var(--font-d)',fontSize:10,fontWeight:700,color:s.color,letterSpacing:'0.18em'}}>STEP {s.step}</div>
+                <div style={{fontSize:13,fontWeight:700,color:C.txt,marginTop:5,marginBottom:5,lineHeight:1.2}}>{s.title}</div>
+                <div className="mono" style={{fontSize:10.5,color:C.txt2,lineHeight:1.4}}>{s.d}</div>
+                {i<4 && <div style={{position:'absolute',right:-7,top:'50%',transform:'translateY(-50%)',color:C.txt3,fontSize:14}}>→</div>}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Feature matrix */}
+        <div style={{background:C.s1,border:`1px solid ${C.border}`,borderRadius:14,overflow:'hidden'}}>
+          <div style={{padding:'14px 18px',borderBottom:`1px solid ${C.border}`,fontSize:13,fontWeight:700,color:C.txt,letterSpacing:'0.04em',textTransform:'uppercase'}}>Feature × Tier matrix</div>
+          <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
+            <thead>
+              <tr style={{background:'#0E1115'}}>
+                <th style={{textAlign:'left',padding:'10px 18px',fontSize:11,color:C.txt3,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase'}}>Feature</th>
+                {STRIPE_TIERS.map(t=>(
+                  <th key={t.id} style={{textAlign:'center',padding:'10px 12px',fontSize:11,color:t.color,fontWeight:700,letterSpacing:'0.12em',textTransform:'uppercase'}}>{t.name}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {FEATURE_MATRIX.map((row,i)=>(
+                <tr key={i} style={{borderTop:`1px solid ${C.border}`}}>
+                  <td style={{padding:'10px 18px',color:C.txt}}>{row[0]}</td>
+                  {row.slice(1).map((c,j)=>(
+                    <td key={j} style={{textAlign:'center',padding:'10px 12px',color:c==='✓'?STRIPE_TIERS[j].color:C.txt3,fontWeight:c==='✓'?700:400}}>{c}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Section>
+
+      {/* Settings Pages Map */}
+      <Section id="settings" title="Settings Architecture" subtitle="Section 04 · Configuration">
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))',gap:12,marginBottom:18}}>
+          {SETTINGS_PAGES.map(s=>(
+            <div key={s.id} style={{background:C.s1,border:`1px solid ${C.border}`,borderRadius:12,padding:16,position:'relative'}}>
+              <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:8}}>
+                <div style={{fontSize:22}}>{s.icon}</div>
+                <div style={{fontSize:14,fontWeight:700,color:C.txt}}>{s.label}</div>
+                <div style={{marginLeft:'auto',fontSize:9,color:s.scope==='admin'?C.amber:C.sky,background:s.scope==='admin'?'rgba(255,176,32,0.1)':'rgba(63,169,245,0.1)',padding:'3px 8px',borderRadius:4,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase'}}>{s.scope}</div>
+              </div>
+              <div style={{fontSize:12,color:C.txt2,lineHeight:1.5,marginBottom:10}}>{s.desc}</div>
+              <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                {s.gated && <div style={{fontSize:9,color:C.lime,background:'rgba(182,255,43,0.1)',border:'1px solid rgba(182,255,43,0.25)',padding:'2px 7px',borderRadius:4,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase'}}>{s.gated}+ tier</div>}
+                {s.stripe && <div style={{fontSize:9,color:'#635BFF',background:'rgba(99,91,255,0.1)',border:'1px solid rgba(99,91,255,0.3)',padding:'2px 7px',borderRadius:4,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase'}}>Stripe</div>}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{display:'flex',gap:10}}>
+          <button onClick={()=>nav('tfb-settings.html')} style={{padding:'10px 20px',background:`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:9,fontSize:13,fontWeight:800,color:'#0F3D2E'}}>Open Settings →</button>
+          <button onClick={()=>nav('tfb-login.html')} style={{padding:'10px 20px',background:'rgba(255,255,255,0.06)',border:`1px solid ${C.border2}`,borderRadius:9,fontSize:13,fontWeight:700,color:C.txt}}>Onboarding & subscriptions</button>
+        </div>
+      </Section>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TFB – Quick RSVP</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="tfb-responsive.jsx"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--lime:#B6FF2B;--green:#0F3D2E;--green-dark:#0A2E20;--bg:#0A0D11;--s1:#15191F;--s2:#1F252D;--border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.16);--txt:#F0F2F4;--txt2:rgba(240,242,244,0.55);--txt3:rgba(240,242,244,0.32);--goal:#2ED47A;--amber:#FFB020;--red:#E5533D;--sky:#3FA9F5;--font-d:'Barlow Condensed',sans-serif;--font-b:'Barlow',sans-serif}
+html,body,#root{height:100%}
+body{font-family:var(--font-b);background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased;overflow:auto}
+button,input,textarea{font-family:var(--font-b);color:inherit}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1}}
+.fade-in{animation:fadeIn .25s ease}
+@keyframes pop{0%{transform:scale(.94)}60%{transform:scale(1.04)}100%{transform:scale(1)}}
+.pop{animation:pop .35s ease}
+.bg-pitch{background:radial-gradient(ellipse at 30% 20%,rgba(15,61,46,0.35),transparent 60%),radial-gradient(ellipse at 80% 90%,rgba(182,255,43,0.06),transparent 60%),var(--bg)}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect} = React;
+const C={lime:'#B6FF2B',greenDark:'#0A2E20',bg:'#0A0D11',s1:'#15191F',s2:'#1F252D',border:'rgba(255,255,255,0.08)',border2:'rgba(255,255,255,0.16)',txt:'#F0F2F4',txt2:'rgba(240,242,244,0.55)',txt3:'rgba(240,242,244,0.32)',goal:'#2ED47A',amber:'#FFB020',red:'#E5533D',sky:'#3FA9F5'};
+
+const Logo = ({size=42}) => (
+  <div style={{width:size,height:size,borderRadius:size*0.22,background:`linear-gradient(135deg,${C.lime},#68B42E)`,display:'flex',alignItems:'center',justifyContent:'center',color:C.greenDark,fontFamily:'var(--font-d)',fontWeight:900,fontSize:size*0.5,boxShadow:'0 8px 24px rgba(182,255,43,0.25)'}}>TFB</div>
+);
+
+// Mock event being responded to (would come from URL query param: ?event=evt_8891)
+const EVENT = {
+  type:'Training',
+  title:'Session 5 — Pressing Triggers',
+  team:'U16 Boys · Malvern City SC',
+  date:'Tuesday, 5 May 2026',
+  time:'5:30 PM – 7:00 PM',
+  venue:'Hedgeley Dene Reserve · Pitch 2',
+  coach:'Alex Mitchell',
+  pillar:'Tactical · Defensive',
+  notes:'Focus on mid-block press triggers + counter-press windows. Wear long socks — pitch firm.',
+  squadCount:18,respondedCount:11
+};
+
+const RESP_OPTIONS = [
+  {id:'available',label:"I'll be there",icon:'✓',color:C.goal,desc:'Confirmed attendance'},
+  {id:'maybe',label:'Maybe',icon:'?',color:C.amber,desc:'Not 100% sure yet'},
+  {id:'unavailable',label:"Can't make it",icon:'✕',color:C.red,desc:'Apologies in advance'},
+];
+
+const RECENT_RESPONSES = [
+  {name:'Marcus Rivera',status:'available',time:'2m ago',avatar:'#3FA9F5'},
+  {name:'Jude Okafor',status:'available',time:'8m ago',avatar:'#FFB020'},
+  {name:'Ethan Park',status:'maybe',time:'18m ago',avatar:'#9B7FE8'},
+  {name:'Tom Hardy',status:'unavailable',time:'34m ago',avatar:'#E5533D'},
+];
+
+function App() {
+  const [stage,setStage] = useState('choose'); // choose, reason, success
+  const [resp,setResp] = useState(null);
+  const [reason,setReason] = useState('');
+  const [presetReason,setPresetReason] = useState('');
+
+  const REASON_PRESETS = ['School commitment','Illness / unwell','Injury','Family event','Travel','Other'];
+
+  const submit = () => {
+    setStage('success');
+    // Simulate Firebase write: setDoc(`clubs/${cid}/teams/${tid}/sessions/${sid}/availability/${pid}`)
+  };
+
+  return (
+    <div className="bg-pitch" style={{minHeight:'100vh',width:'100vw',display:'flex',flexDirection:'column',alignItems:'center',padding:'24px 16px 60px'}}>
+      {/* Header */}
+      <header style={{width:'100%',maxWidth:520,display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24}}>
+        <div style={{display:'flex',alignItems:'center',gap:10}}>
+          <Logo size={36}/>
+          <div>
+            <div style={{fontFamily:'var(--font-d)',fontSize:18,fontWeight:900,letterSpacing:'-0.02em',lineHeight:1}}>TFB</div>
+            <div style={{fontSize:9.5,fontWeight:600,color:C.txt2,letterSpacing:'0.18em',textTransform:'uppercase',marginTop:2}}>Quick RSVP</div>
+          </div>
+        </div>
+        <button onClick={()=>{try{window.location.href='tfb-nav.html'}catch(e){}}} style={{padding:'7px 12px',background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border2}`,borderRadius:8,fontSize:12,fontWeight:600,color:C.txt2,cursor:'pointer'}}>← All screens</button>
+      </header>
+
+      {stage === 'choose' && (
+        <div className="fade-in" style={{width:'100%',maxWidth:520}}>
+          {/* Magic-link banner */}
+          <div style={{background:'rgba(63,169,245,0.08)',border:'1px solid rgba(63,169,245,0.2)',borderRadius:10,padding:'10px 14px',marginBottom:14,display:'flex',alignItems:'center',gap:10}}>
+            <div style={{fontSize:18}}>🔗</div>
+            <div style={{flex:1}}>
+              <div style={{fontSize:12.5,color:C.txt,fontWeight:700}}>Signed in via magic link</div>
+              <div style={{fontSize:11,color:C.txt2}}>Liam Carter · #7 LW</div>
+            </div>
+          </div>
+
+          {/* Event card */}
+          <div style={{background:C.s1,border:`1px solid ${C.border}`,borderRadius:16,overflow:'hidden',marginBottom:16,boxShadow:'0 30px 60px rgba(0,0,0,0.4)'}}>
+            <div style={{padding:'4px 14px',background:`linear-gradient(90deg,${C.lime}22,transparent)`,borderBottom:`1px solid ${C.border}`}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 0'}}>
+                <div style={{fontSize:10.5,color:C.lime,fontWeight:800,letterSpacing:'0.16em',textTransform:'uppercase'}}>{EVENT.type} · {EVENT.pillar}</div>
+                <div style={{fontSize:10.5,color:C.txt3,fontWeight:600}}>{EVENT.respondedCount}/{EVENT.squadCount} responded</div>
+              </div>
+            </div>
+            <div style={{padding:'18px 18px 16px'}}>
+              <div style={{fontFamily:'var(--font-d)',fontSize:24,fontWeight:900,letterSpacing:'-0.01em',lineHeight:1.1,marginBottom:6,textTransform:'uppercase'}}>{EVENT.title}</div>
+              <div style={{fontSize:13,color:C.txt2,marginBottom:14}}>{EVENT.team}</div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:14}}>
+                <div style={{padding:'10px 12px',background:C.s2,borderRadius:8,border:`1px solid ${C.border}`}}>
+                  <div style={{fontSize:9.5,color:C.txt3,letterSpacing:'0.14em',textTransform:'uppercase',fontWeight:700}}>Date</div>
+                  <div style={{fontSize:13,color:C.txt,fontWeight:700,marginTop:3}}>{EVENT.date}</div>
+                </div>
+                <div style={{padding:'10px 12px',background:C.s2,borderRadius:8,border:`1px solid ${C.border}`}}>
+                  <div style={{fontSize:9.5,color:C.txt3,letterSpacing:'0.14em',textTransform:'uppercase',fontWeight:700}}>Time</div>
+                  <div style={{fontSize:13,color:C.txt,fontWeight:700,marginTop:3}}>{EVENT.time}</div>
+                </div>
+              </div>
+              <div style={{padding:'10px 12px',background:C.s2,borderRadius:8,border:`1px solid ${C.border}`,marginBottom:10}}>
+                <div style={{fontSize:9.5,color:C.txt3,letterSpacing:'0.14em',textTransform:'uppercase',fontWeight:700}}>Venue</div>
+                <div style={{fontSize:13,color:C.txt,fontWeight:700,marginTop:3}}>📍 {EVENT.venue}</div>
+              </div>
+              <div style={{padding:'10px 12px',background:'rgba(182,255,43,0.05)',borderRadius:8,border:'1px solid rgba(182,255,43,0.15)',fontSize:12,color:C.txt2,lineHeight:1.5}}>
+                <span style={{fontWeight:700,color:C.lime}}>Coach's note: </span>{EVENT.notes}
+              </div>
+            </div>
+          </div>
+
+          {/* Question */}
+          <div style={{textAlign:'center',marginBottom:14}}>
+            <div style={{fontFamily:'var(--font-d)',fontSize:22,fontWeight:900,letterSpacing:'-0.01em',textTransform:'uppercase'}}>Can you make it?</div>
+            <div style={{fontSize:12.5,color:C.txt2,marginTop:4}}>One tap — your coach gets notified instantly.</div>
+          </div>
+
+          {/* Big response buttons */}
+          <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:16}}>
+            {RESP_OPTIONS.map(o => (
+              <button key={o.id} onClick={()=>{setResp(o.id);if(o.id==='unavailable')setStage('reason');else submit();}} style={{display:'flex',alignItems:'center',gap:14,padding:'16px 18px',background:`${o.color}10`,border:`2px solid ${o.color}40`,borderRadius:14,cursor:'pointer',transition:'all .15s',textAlign:'left'}}
+                onMouseEnter={e=>{e.currentTarget.style.background=`${o.color}1a`;e.currentTarget.style.borderColor=`${o.color}80`}}
+                onMouseLeave={e=>{e.currentTarget.style.background=`${o.color}10`;e.currentTarget.style.borderColor=`${o.color}40`}}>
+                <div style={{width:42,height:42,borderRadius:'50%',background:o.color,color:C.greenDark,display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,fontWeight:900,flexShrink:0}}>{o.icon}</div>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:16,fontWeight:800,color:C.txt}}>{o.label}</div>
+                  <div style={{fontSize:12,color:C.txt2}}>{o.desc}</div>
+                </div>
+                <div style={{fontSize:20,color:C.txt3}}>›</div>
+              </button>
+            ))}
+          </div>
+
+          {/* Recent responses */}
+          <div style={{background:C.s1,border:`1px solid ${C.border}`,borderRadius:12,padding:14}}>
+            <div style={{fontSize:10.5,color:C.txt3,letterSpacing:'0.14em',textTransform:'uppercase',fontWeight:700,marginBottom:10}}>Recent teammate responses</div>
+            {RECENT_RESPONSES.map(r=>{
+              const opt = RESP_OPTIONS.find(o=>o.id===r.status);
+              return (
+                <div key={r.name} style={{display:'flex',alignItems:'center',gap:10,padding:'7px 0',borderTop:`1px dashed ${C.border}`}}>
+                  <div style={{width:28,height:28,borderRadius:'50%',background:r.avatar,display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:11,fontWeight:800}}>{r.name.split(' ').map(n=>n[0]).join('')}</div>
+                  <div style={{flex:1,fontSize:13,fontWeight:600}}>{r.name}</div>
+                  <div style={{fontSize:11,color:C.txt3,marginRight:6}}>{r.time}</div>
+                  <div style={{fontSize:11,fontWeight:800,color:opt.color,letterSpacing:'0.06em',textTransform:'uppercase'}}>{opt.icon} {r.status==='available'?'In':r.status==='maybe'?'Maybe':'Out'}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {stage === 'reason' && (
+        <div className="fade-in" style={{width:'100%',maxWidth:520,background:C.s1,border:`1px solid ${C.border}`,borderRadius:16,padding:24}}>
+          <div style={{fontSize:11,color:C.red,fontWeight:800,letterSpacing:'0.16em',textTransform:'uppercase',marginBottom:8}}>Can't make it</div>
+          <div style={{fontFamily:'var(--font-d)',fontSize:24,fontWeight:900,letterSpacing:'-0.01em',marginBottom:6,textTransform:'uppercase'}}>Help your coach plan</div>
+          <div style={{fontSize:13,color:C.txt2,marginBottom:18}}>An optional reason helps planning training intensity and substitutes.</div>
+
+          <div style={{fontSize:11,color:C.txt2,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:8}}>Quick reason</div>
+          <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:14}}>
+            {REASON_PRESETS.map(p=>(
+              <button key={p} onClick={()=>setPresetReason(p)} style={{padding:'7px 12px',background:presetReason===p?`${C.red}20`:'transparent',border:`1px solid ${presetReason===p?C.red:C.border2}`,borderRadius:7,fontSize:12,fontWeight:600,color:presetReason===p?C.red:C.txt,cursor:'pointer'}}>{p}</button>
+            ))}
+          </div>
+
+          <div style={{fontSize:11,color:C.txt2,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:8}}>Add a note (optional)</div>
+          <textarea value={reason} onChange={e=>setReason(e.target.value)} placeholder="e.g. dentist appointment at 5pm — back next session" rows={3} style={{width:'100%',padding:'10px 12px',background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border2}`,borderRadius:9,fontSize:13,color:C.txt,resize:'vertical',marginBottom:18,outline:'none'}}/>
+
+          <div style={{display:'flex',gap:8,justifyContent:'space-between'}}>
+            <button onClick={()=>setStage('choose')} style={{padding:'12px 22px',background:'transparent',border:`1px solid ${C.border2}`,borderRadius:10,fontSize:13,fontWeight:700,color:C.txt2,cursor:'pointer'}}>← Back</button>
+            <button onClick={submit} style={{padding:'12px 22px',background:`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:10,fontSize:13,fontWeight:800,color:C.greenDark,cursor:'pointer'}}>Submit RSVP →</button>
+          </div>
+        </div>
+      )}
+
+      {stage === 'success' && (
+        <div className="fade-in" style={{width:'100%',maxWidth:520,textAlign:'center',padding:'30px 0'}}>
+          {(() => {
+            const opt = RESP_OPTIONS.find(o=>o.id===resp);
+            return (
+              <>
+                <div className="pop" style={{width:90,height:90,borderRadius:'50%',background:opt.color,display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 22px',fontSize:46,fontWeight:900,color:C.greenDark,boxShadow:`0 12px 30px ${opt.color}55`}}>{opt.icon}</div>
+                <div style={{fontFamily:'var(--font-d)',fontSize:32,fontWeight:900,letterSpacing:'-0.01em',marginBottom:8,textTransform:'uppercase'}}>Got it!</div>
+                <div style={{fontSize:14,color:C.txt2,marginBottom:6}}>You've marked yourself <span style={{color:opt.color,fontWeight:800}}>{resp==='available'?'available':resp==='maybe'?'as maybe':'unavailable'}</span> for</div>
+                <div style={{fontSize:15,color:C.txt,fontWeight:700,marginBottom:24}}>{EVENT.title}</div>
+
+                <div style={{background:C.s1,border:`1px solid ${C.border}`,borderRadius:12,padding:16,marginBottom:18,textAlign:'left'}}>
+                  <div style={{fontSize:11,color:C.lime,fontWeight:800,letterSpacing:'0.14em',textTransform:'uppercase',marginBottom:10}}>What happens next</div>
+                  {[
+                    {t:'Coach gets notified',d:'Real-time push to Coach Mitchell'},
+                    {t:'Synced to your calendar',d:'Event added to your phone calendar'},
+                    {t:'Reminder 2 hours before',d:'Auto-cancelled if you change your mind'},
+                  ].map((s,i)=>(
+                    <div key={i} style={{display:'flex',gap:10,padding:'7px 0',borderTop:i?`1px dashed ${C.border}`:'none'}}>
+                      <div style={{width:20,height:20,borderRadius:'50%',background:'rgba(182,255,43,0.12)',color:C.lime,display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:800,flexShrink:0,marginTop:1}}>✓</div>
+                      <div>
+                        <div style={{fontSize:13,fontWeight:700}}>{s.t}</div>
+                        <div style={{fontSize:11.5,color:C.txt2}}>{s.d}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{display:'flex',gap:8,justifyContent:'center',marginBottom:14}}>
+                  <button onClick={()=>setStage('choose')} style={{padding:'10px 18px',background:'rgba(255,255,255,0.06)',border:`1px solid ${C.border2}`,borderRadius:9,fontSize:12.5,fontWeight:700,color:C.txt,cursor:'pointer'}}>Change response</button>
+                  <button onClick={()=>{try{window.location.href='tfb-availability.html'}catch(e){}}} style={{padding:'10px 18px',background:`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:9,fontSize:12.5,fontWeight:800,color:C.greenDark,cursor:'pointer'}}>View all events →</button>
+                </div>
+                <button onClick={()=>{try{window.location.href='tfb-dashboard.html'}catch(e){}}} style={{background:'none',border:'none',color:C.txt2,fontSize:12,cursor:'pointer'}}>or go to dashboard</button>
+              </>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* Demo controls */}
+      <div style={{position:'fixed',bottom:14,right:14,display:'flex',gap:4,padding:6,background:C.s1,border:`1px solid ${C.border}`,borderRadius:9}}>
+        {['choose','reason','success'].map(s=>(
+          <button key={s} onClick={()=>setStage(s)} style={{padding:'5px 9px',background:stage===s?C.lime:'transparent',color:stage===s?C.greenDark:C.txt2,border:'none',borderRadius:5,fontSize:10,fontWeight:700,letterSpacing:'0.04em',cursor:'pointer',textTransform:'uppercase'}}>{s}</button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

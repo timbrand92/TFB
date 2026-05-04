@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TFB – Player Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="tfb-responsive.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --lime:#B6FF2B; --green:#0F3D2E; --green-dark:#0A2E20;
+  --bg:#111418; --s1:#1C2128; --s2:#242B33; --s3:#2D3640;
+  --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.13);
+  --txt:#F0F2F4; --txt2:rgba(240,242,244,0.5); --txt3:rgba(240,242,244,0.28);
+  --goal:#2ED47A; --amber:#FFB020; --red:#E5533D; --sky:#3FA9F5;
+  --font-d:'Barlow Condensed',sans-serif;
+  --font-b:'Barlow',sans-serif;
+  --hh:54px; --nav-h:60px;
+}
+html,body,#root{height:100%;overflow:hidden}
+body{font-family:var(--font-b);background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font-family:var(--font-b);color:inherit}
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:3px}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes checkIn{from{transform:scale(0)}to{transform:scale(1)}}
+.fade-up{animation:fadeUp .25s ease forwards}
+.fade-in{animation:fadeIn .2s ease forwards}
+.check-in{animation:checkIn .3s cubic-bezier(.34,1.56,.64,1) forwards}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useCallback} = React;
+
+const C = {
+  lime:'#B6FF2B', green:'#0F3D2E', greenDark:'#0A2E20',
+  bg:'#111418', s1:'#1C2128', s2:'#242B33', s3:'#2D3640',
+  border:'rgba(255,255,255,0.07)', border2:'rgba(255,255,255,0.13)',
+  txt:'#F0F2F4', txt2:'rgba(240,242,244,0.5)', txt3:'rgba(240,242,244,0.28)',
+  goal:'#2ED47A', amber:'#FFB020', red:'#E5533D', sky:'#3FA9F5',
+};
+
+const Ic = ({d,size=16,color='currentColor',stroke=2,fill='none'}) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke={color}
+    strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>
+    {Array.isArray(d)?d.map((p,i)=><path key={i} d={p}/>):<path d={d}/>}
+  </svg>
+);
+
+const P = {
+  back:'M15 18l-6-6 6-6',
+  home:'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
+  calendar:'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z',
+  heart:'M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z',
+  target:'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zm0-6a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0-2a2 2 0 1 0 0-4 2 2 0 0 0 0 4',
+  user:'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z',
+  message:'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z',
+  check:'M20 6L9 17l-5-5',
+  x:'M18 6L6 18M6 6l12 12',
+  bell:'M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0',
+  chevD:'M6 9l6 6 6-6',
+  chevR:'M9 18l6-6-6-6',
+  trending:'M23 6l-9.5 9.5-5-5L1 18',
+  zap:'M13 2L3 14h9l-1 8 10-12h-9l1-8z',
+  activity:'M22 12h-4l-3 9L9 3l-3 9H2',
+  shield:'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z',
+  more:'M12 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm-7 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm14 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2z',
+  award:'M12 15a7 7 0 1 0 0-14 7 7 0 0 0 0 14zm0 0v6m-3-3h6',
+  logout:'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9',
+  send:'M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z',
+};
+
+// ── Player Data ───────────────────────────────────────────────────────────────
+const PLAYER = {
+  name: 'Oscar Petersen',
+  firstName: 'Oscar',
+  pos: 'LW', num: 11, age: 17,
+  team: 'Malvern City U18 Men',
+  coach: 'Tim Brand',
+  wellness: 82,
+  attendance: 87,
+  form: [1,0,1,1,1],
+  idpGoals: [
+    {title:'Improve final ball delivery',pillar:'Technical',done:true,progress:100},
+    {title:'Increase pressing intensity',pillar:'Tactical',done:true,progress:100},
+    {title:'Lead warm-up session',pillar:'Psychological',done:false,progress:60},
+    {title:'Avg 10+ sprints per session',pillar:'Physical',done:false,progress:75},
+    {title:'Complete video analysis review',pillar:'Tactical',done:false,progress:20},
+  ],
+  seasonStats:{apps:5,goals:2,assists:3,yellowCards:0,redCards:0},
+};
+
+const UPCOMING = [
+  {id:1, type:'training', title:'Pressing Shape & Triggers', date:'Thu 1 May', time:'6:00 PM', duration:75, location:'Tally Ho Park', rsvp:null},
+  {id:2, type:'match',    title:'vs Bulleen Lions',          date:'Sat 3 May', time:'2:00 PM', duration:90, location:'Tally Ho Park · Ground 1', rsvp:'yes'},
+  {id:3, type:'training', title:'Ball Mastery & First Touch', date:'Tue 6 May', time:'6:00 PM', duration:60, location:'Tally Ho Park', rsvp:null},
+  {id:4, type:'training', title:'Physical: Speed & Power',   date:'Thu 8 May', time:'6:00 PM', duration:45, location:'Tally Ho Park', rsvp:null},
+  {id:5, type:'match',    title:'vs Green Gully',            date:'Sat 10 May',time:'11:00 AM', duration:90, location:'Green Gully SC', rsvp:null},
+];
+
+const MESSAGES = [
+  {from:'Tim Brand',role:'Head Coach',time:'2h ago',text:'Great pressing today Oscar. Keep working on your first touch with the outside of the boot.',unread:true},
+  {from:'Tim Brand',role:'Head Coach',time:'Yesterday',text:'Don\'t forget availability for Saturday. Please RSVP as soon as possible.',unread:false},
+  {from:'Team Chat',role:'Group',time:'3h ago',text:'Beau Tremblay: Who\'s bringing the training bibs on Thursday?',unread:true},
+];
+
+const WELLNESS_HISTORY = [68,72,78,75,80,82,82];
+const WELLNESS_LABELS = ['Mon','Tue','Wed','Thu','Fri','Sat','Today'];
+
+const PILLAR_COLORS = {
+  Technical:'#3FA9F5', Tactical:'#B6FF2B', Physical:'#FFB020', Psychological:'#2ED47A'
+};
+
+// ── Header ─────────────────────────────────────────────────────────────────────
+function Header({onBack}) {
+  const [userOpen, setUserOpen] = useState(false);
+  return (
+    <header style={{height:'var(--hh)',background:`linear-gradient(90deg,${C.greenDark},${C.green})`,borderBottom:'1px solid rgba(182,255,43,0.18)',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 20px',flexShrink:0,boxShadow:'0 2px 12px rgba(0,0,0,0.3)',zIndex:50}}>
+      <div style={{display:'flex',alignItems:'center',gap:12}}>
+        <button onClick={onBack} style={{display:'flex',alignItems:'center',gap:6,padding:'6px 10px',background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,color:'rgba(255,255,255,0.7)',fontSize:12,fontWeight:600,cursor:'pointer',transition:'all .15s',whiteSpace:'nowrap'}}
+          onMouseEnter={e=>{e.currentTarget.style.background='rgba(182,255,43,0.12)';e.currentTarget.style.color='#B6FF2B'}}
+          onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,0.07)';e.currentTarget.style.color='rgba(255,255,255,0.7)'}}>
+          <Ic d={P.back} size={14} color="currentColor"/> Dashboard
+        </button>
+        <div style={{width:1,height:24,background:'rgba(255,255,255,0.12)'}}/>
+        <div style={{display:'flex',alignItems:'center',gap:10}}>
+          <svg width="28" height="28" viewBox="0 0 40 40" fill="none">
+            <polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="#0F3D2E" stroke="#B6FF2B" strokeWidth="1.5"/>
+            <text x="20" y="26" textAnchor="middle" fill="#B6FF2B" fontFamily="Barlow Condensed" fontWeight="900" fontSize="13">TFB</text>
+          </svg>
+          <div>
+            <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:17,color:'#fff',letterSpacing:'0.04em',lineHeight:1}}>MY DASHBOARD</div>
+            <div style={{fontSize:9.5,color:'rgba(182,255,43,0.65)',fontWeight:700,letterSpacing:'0.1em'}}>Malvern City U18 Men · Player</div>
+          </div>
+        </div>
+      </div>
+      <div style={{display:'flex',alignItems:'center',gap:10}}>
+        {/* Notifications */}
+        <button style={{position:'relative',background:'transparent',border:'none',color:'rgba(255,255,255,0.7)',cursor:'pointer',padding:8,borderRadius:8,display:'flex',transition:'all .15s'}}
+          onMouseEnter={e=>{e.currentTarget.style.background='rgba(182,255,43,0.12)';e.currentTarget.style.color='#B6FF2B'}}
+          onMouseLeave={e=>{e.currentTarget.style.background='transparent';e.currentTarget.style.color='rgba(255,255,255,0.7)'}}>
+          <Ic d={P.bell} size={18} color="currentColor"/>
+          <span style={{position:'absolute',top:6,right:6,width:7,height:7,background:C.red,borderRadius:'50%',border:`2px solid ${C.green}`}}/>
+        </button>
+        {/* User */}
+        <div style={{display:'flex',alignItems:'center',gap:8,padding:'4px 10px 4px 4px',background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:10}}>
+          <div style={{width:30,height:30,borderRadius:'50%',background:`linear-gradient(135deg,${C.lime},#68B42E)`,display:'flex',alignItems:'center',justifyContent:'center'}}>
+            <span style={{fontSize:12,fontWeight:900,color:C.green,fontFamily:'var(--font-d)'}}>OP</span>
+          </div>
+          <div>
+            <div style={{fontSize:12,fontWeight:700,color:'#fff',lineHeight:1.2}}>Oscar Petersen</div>
+            <div style={{fontSize:10,color:'rgba(255,255,255,0.5)',lineHeight:1.2}}>LW · #11</div>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+// ── Bottom Nav (mobile) ────────────────────────────────────────────────────────
+function BottomNav({tab,setTab}) {
+  const items = [
+    {id:'home',label:'Home',icon:P.home},
+    {id:'schedule',label:'Schedule',icon:P.calendar},
+    {id:'wellness',label:'Wellness',icon:P.heart},
+    {id:'development',label:'My Goals',icon:P.target},
+    {id:'messages',label:'Messages',icon:P.message},
+  ];
+  return (
+    <nav style={{height:'var(--nav-h)',background:C.s1,borderTop:`1px solid ${C.border}`,display:'flex',alignItems:'stretch',flexShrink:0}}>
+      {items.map(item=>{
+        const active = tab===item.id;
+        return (
+          <button key={item.id} onClick={()=>setTab(item.id)}
+            style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4,background:'transparent',border:'none',cursor:'pointer',position:'relative',transition:'color .15s'}}>
+            {active&&<div style={{position:'absolute',top:0,left:'20%',right:'20%',height:2,background:C.lime,borderRadius:'0 0 2px 2px'}}/>}
+            <Ic d={item.icon} size={20} color={active?C.lime:'rgba(255,255,255,0.35)'} stroke={active?2.5:2}/>
+            <span style={{fontSize:10,fontWeight:active?700:500,color:active?C.lime:'rgba(255,255,255,0.35)',letterSpacing:'0.02em'}}>{item.label}</span>
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
+// ── Wellness Check-in Modal ────────────────────────────────────────────────────
+function WellnessModal({onClose,onSubmit}) {
+  const [scores,setScores] = useState({physical:3,mental:3,sleep:3,soreness:3});
+  const [notes,setNotes] = useState('');
+  const avg = Math.round(Object.values(scores).reduce((a,b)=>a+b,0)/4*20);
+
+  const QUESTIONS = [
+    {key:'physical',label:'How is your body feeling?',low:'Terrible',high:'Great'},
+    {key:'mental',  label:'How is your mental state?',low:'Drained',high:'Focused'},
+    {key:'sleep',   label:'How did you sleep?',       low:'Poor',   high:'Great'},
+    {key:'soreness',label:'Muscle soreness / tightness?',low:'Very sore',high:'None'},
+  ];
+
+  const EMOJIS = ['😞','😕','😐','🙂','😃'];
+
+  return (
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:200,padding:16,backdropFilter:'blur(4px)'}} onClick={onClose}>
+      <div className="fade-up" style={{background:C.s1,border:`1px solid ${C.border2}`,borderRadius:20,width:'100%',maxWidth:460,maxHeight:'90vh',display:'flex',flexDirection:'column',boxShadow:'0 24px 64px rgba(0,0,0,0.7)',overflow:'hidden'}} onClick={e=>e.stopPropagation()}>
+        <div style={{padding:'18px 20px',borderBottom:`1px solid ${C.border}`,background:'rgba(46,212,122,0.06)',flexShrink:0}}>
+          <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:20,color:C.goal,letterSpacing:'0.03em'}}>Daily Wellness Check-in</div>
+          <div style={{fontSize:12,color:C.txt3,marginTop:3}}>How are you feeling today?</div>
+        </div>
+
+        <div style={{flex:1,overflowY:'auto',padding:'18px 20px',display:'flex',flexDirection:'column',gap:20}}>
+          {QUESTIONS.map(q=>(
+            <div key={q.key}>
+              <div style={{fontSize:13,fontWeight:600,color:C.txt,marginBottom:10}}>{q.label}</div>
+              <div style={{display:'flex',gap:8,justifyContent:'space-between'}}>
+                {[1,2,3,4,5].map(v=>(
+                  <button key={v} onClick={()=>setScores(s=>({...s,[q.key]:v}))}
+                    style={{flex:1,padding:'10px 4px',background:scores[q.key]===v?`rgba(46,212,122,0.2)`:'rgba(255,255,255,0.04)',border:`2px solid ${scores[q.key]===v?C.goal:'rgba(255,255,255,0.1)'}`,borderRadius:10,cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:4,transition:'all .12s'}}>
+                    <span style={{fontSize:20}}>{EMOJIS[v-1]}</span>
+                    <span style={{fontSize:10,fontWeight:700,color:scores[q.key]===v?C.goal:C.txt3}}>{v}</span>
+                  </button>
+                ))}
+              </div>
+              <div style={{display:'flex',justifyContent:'space-between',marginTop:5,fontSize:10,color:C.txt3}}>
+                <span>{q.low}</span><span>{q.high}</span>
+              </div>
+            </div>
+          ))}
+
+          {/* Overall score preview */}
+          <div style={{background:`rgba(46,212,122,0.08)`,border:`1px solid rgba(46,212,122,0.2)`,borderRadius:12,padding:'14px 16px',textAlign:'center'}}>
+            <div style={{fontSize:11,fontWeight:700,color:C.goal,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:6}}>Overall Score</div>
+            <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:48,color:avg>=80?C.goal:avg>=60?C.amber:C.red,lineHeight:1}}>{avg}</div>
+            <div style={{fontSize:12,color:C.txt3,marginTop:4}}>/100</div>
+          </div>
+
+          {/* Optional notes */}
+          <div>
+            <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:6}}>Notes (optional)</div>
+            <textarea value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Any injuries, niggles or concerns to flag to your coach…"
+              style={{width:'100%',height:70,background:C.s2,border:`1px solid ${C.border2}`,borderRadius:9,color:C.txt,fontSize:13,lineHeight:1.6,padding:'9px 12px',resize:'none',outline:'none'}}/>
+          </div>
+        </div>
+
+        <div style={{padding:'14px 20px',borderTop:`1px solid ${C.border}`,flexShrink:0}}>
+          <button onClick={()=>onSubmit(avg)}
+            style={{width:'100%',padding:'13px',background:`linear-gradient(135deg,${C.goal},#25c06e)`,border:'none',borderRadius:12,fontSize:15,fontWeight:800,color:'#0d3320',cursor:'pointer',transition:'opacity .15s'}}
+            onMouseEnter={e=>e.currentTarget.style.opacity='.88'}
+            onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
+            ✓ Submit Check-in
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── RSVP buttons ───────────────────────────────────────────────────────────────
+function RSVPButtons({eventId,current,onRSVP}) {
+  return (
+    <div style={{display:'flex',gap:6}}>
+      {[['yes','✓ Yes',C.goal],['maybe','? Maybe',C.amber],['no','✗ Can\'t',C.red]].map(([v,l,c])=>(
+        <button key={v} onClick={e=>{e.stopPropagation();onRSVP(eventId,v)}}
+          style={{padding:'5px 10px',background:current===v?`${c}20`:'rgba(255,255,255,0.04)',border:`1px solid ${current===v?c+'50':'rgba(255,255,255,0.1)'}`,borderRadius:7,fontSize:11,fontWeight:700,color:current===v?c:C.txt3,cursor:'pointer',transition:'all .12s'}}
+          onMouseEnter={e=>{if(current!==v){e.currentTarget.style.background=`${c}10`;e.currentTarget.style.borderColor=`${c}40`;e.currentTarget.style.color=c;}}}
+          onMouseLeave={e=>{if(current!==v){e.currentTarget.style.background='rgba(255,255,255,0.04)';e.currentTarget.style.borderColor='rgba(255,255,255,0.1)';e.currentTarget.style.color=C.txt3;}}}>
+          {l}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ── HOME Tab ───────────────────────────────────────────────────────────────────
+function HomeTab({player,events,onRSVP,onWellnessCheck,wellnessDone}) {
+  const greeting = (()=>{const h=new Date().getHours();return h<12?'Good morning':h<17?'Good afternoon':'Good evening';})();
+  const nextEvent = events.find(e=>!e.rsvp||e.rsvp==='yes');
+  const pendingRSVPs = events.filter(e=>!e.rsvp);
+
+  return (
+    <div style={{display:'flex',flexDirection:'column',gap:16}}>
+      {/* Hero greeting */}
+      <div style={{background:`linear-gradient(135deg,${C.greenDark},${C.green})`,borderRadius:14,padding:'20px 22px',border:'1px solid rgba(182,255,43,0.18)'}}>
+        <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:30,color:'#fff',lineHeight:1,marginBottom:6}}>
+          {greeting}, <span style={{color:C.lime}}>{player.firstName}</span>!
+        </div>
+        <div style={{fontSize:13,color:'rgba(255,255,255,0.55)',marginBottom:14}}>
+          <span style={{color:'rgba(255,255,255,0.8)',fontWeight:600}}>{player.team}</span>
+          <span style={{margin:'0 8px',color:'rgba(255,255,255,0.2)'}}>·</span>
+          {player.pos} · #{player.num}
+        </div>
+        {/* Quick stats */}
+        <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8}}>
+          {[
+            {label:'Wellness',value:`${player.wellness}%`,color:player.wellness>=80?C.goal:C.amber},
+            {label:'Attendance',value:`${player.attendance}%`,color:player.attendance>=85?C.goal:C.amber},
+            {label:'Goals',value:player.seasonStats.goals,color:C.lime},
+            {label:'Assists',value:player.seasonStats.assists,color:C.sky},
+          ].map(({label,value,color})=>(
+            <div key={label} style={{background:'rgba(0,0,0,0.2)',borderRadius:8,padding:'8px 10px',border:'1px solid rgba(255,255,255,0.08)',textAlign:'center'}}>
+              <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:20,color,lineHeight:1}}>{value}</div>
+              <div style={{fontSize:9.5,color:'rgba(255,255,255,0.4)',fontWeight:600,marginTop:3,textTransform:'uppercase',letterSpacing:'0.04em'}}>{label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Wellness check-in CTA */}
+      {!wellnessDone ? (
+        <button onClick={onWellnessCheck}
+          style={{display:'flex',alignItems:'center',gap:12,padding:'14px 16px',background:'rgba(46,212,122,0.08)',border:`1px solid rgba(46,212,122,0.25)`,borderRadius:12,cursor:'pointer',textAlign:'left',width:'100%',transition:'all .15s'}}
+          onMouseEnter={e=>{e.currentTarget.style.background='rgba(46,212,122,0.14)';e.currentTarget.style.borderColor='rgba(46,212,122,0.4)'}}
+          onMouseLeave={e=>{e.currentTarget.style.background='rgba(46,212,122,0.08)';e.currentTarget.style.borderColor='rgba(46,212,122,0.25)'}}>
+          <div style={{width:40,height:40,borderRadius:10,background:'rgba(46,212,122,0.2)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+            <Ic d={P.heart} size={20} color={C.goal} fill="rgba(46,212,122,0.3)"/>
+          </div>
+          <div>
+            <div style={{fontSize:14,fontWeight:700,color:C.goal}}>Complete today's wellness check-in</div>
+            <div style={{fontSize:12,color:C.txt3,marginTop:2}}>Takes 30 seconds · Helps your coach look after you</div>
+          </div>
+          <Ic d={P.chevR} size={16} color={C.goal} style={{marginLeft:'auto'}}/>
+        </button>
+      ) : (
+        <div style={{display:'flex',alignItems:'center',gap:10,padding:'12px 16px',background:'rgba(46,212,122,0.06)',border:'1px solid rgba(46,212,122,0.2)',borderRadius:12}}>
+          <div className="check-in" style={{width:28,height:28,borderRadius:'50%',background:C.goal,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+            <Ic d={P.check} size={14} color="#0d3320"/>
+          </div>
+          <div>
+            <div style={{fontSize:13,fontWeight:700,color:C.goal}}>Wellness check-in complete ✓</div>
+            <div style={{fontSize:11,color:C.txt3}}>Score: 82/100 — Great! Coach Tim has been notified.</div>
+          </div>
+        </div>
+      )}
+
+      {/* Pending RSVPs */}
+      {pendingRSVPs.length>0 && (
+        <div style={{background:C.s1,borderRadius:12,border:`1px solid ${C.border}`,overflow:'hidden'}}>
+          <div style={{padding:'12px 16px',borderBottom:`1px solid ${C.border}`,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+            <span style={{fontSize:13,fontWeight:700,color:C.txt,display:'flex',alignItems:'center',gap:6}}>
+              <Ic d={P.bell} size={14} color={C.amber}/> RSVP Required
+            </span>
+            <span style={{fontSize:11,fontWeight:700,color:C.amber,background:'rgba(255,176,32,0.12)',border:'1px solid rgba(255,176,32,0.25)',borderRadius:5,padding:'2px 8px'}}>{pendingRSVPs.length} pending</span>
+          </div>
+          {pendingRSVPs.map(ev=>(
+            <div key={ev.id} style={{padding:'12px 16px',borderBottom:`1px solid ${C.border}`,display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
+              <div style={{width:36,height:36,borderRadius:9,background:ev.type==='match'?'rgba(229,83,61,0.15)':'rgba(182,255,43,0.1)',border:`1px solid ${ev.type==='match'?'rgba(229,83,61,0.3)':'rgba(182,255,43,0.25)'}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                <Ic d={ev.type==='match'?P.zap:P.activity} size={16} color={ev.type==='match'?C.red:C.lime}/>
+              </div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:13,fontWeight:700,color:C.txt,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{ev.title}</div>
+                <div style={{fontSize:11,color:C.txt3,marginTop:2}}>{ev.date} · {ev.time} · {ev.duration}min</div>
+              </div>
+              <RSVPButtons eventId={ev.id} current={ev.rsvp} onRSVP={onRSVP}/>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Next event */}
+      {nextEvent && (
+        <div style={{background:C.s1,borderRadius:12,border:`1px solid ${C.border}`,padding:'14px 16px'}}>
+          <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:10}}>Next Up</div>
+          <div style={{display:'flex',alignItems:'center',gap:12}}>
+            <div style={{width:44,height:44,borderRadius:10,background:nextEvent.type==='match'?'rgba(229,83,61,0.15)':'rgba(182,255,43,0.1)',border:`1px solid ${nextEvent.type==='match'?'rgba(229,83,61,0.3)':'rgba(182,255,43,0.25)'}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+              <Ic d={nextEvent.type==='match'?P.zap:P.activity} size={20} color={nextEvent.type==='match'?C.red:C.lime}/>
+            </div>
+            <div style={{flex:1}}>
+              <div style={{fontSize:14,fontWeight:700,color:C.txt}}>{nextEvent.title}</div>
+              <div style={{fontSize:12,color:C.txt2,marginTop:3}}>{nextEvent.date} · {nextEvent.time}</div>
+              <div style={{fontSize:11,color:C.txt3,marginTop:2}}>{nextEvent.location}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Recent form */}
+      <div style={{background:C.s1,borderRadius:12,border:`1px solid ${C.border}`,padding:'14px 16px'}}>
+        <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:10}}>Season Form</div>
+        <div style={{display:'flex',gap:8,alignItems:'flex-end'}}>
+          {player.form.map((r,i)=>(
+            <div key={i} style={{flex:1,background:r?`${C.goal}15`:`${C.red}10`,border:`1px solid ${r?C.goal+'30':C.red+'20'}`,borderRadius:8,padding:'10px 4px',textAlign:'center'}}>
+              <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:16,color:r?C.goal:C.red}}>{r?'✓':'✗'}</div>
+              <div style={{fontSize:9.5,color:C.txt3,marginTop:2}}>Rd {i+3}</div>
+            </div>
+          ))}
+          {/* Season stats */}
+          <div style={{flex:1,background:C.s2,border:`1px solid ${C.border}`,borderRadius:8,padding:'8px 4px',textAlign:'center'}}>
+            <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:16,color:C.lime}}>{player.seasonStats.goals}G</div>
+            <div style={{fontSize:8.5,color:C.txt3,marginTop:2}}>Goals</div>
+          </div>
+          <div style={{flex:1,background:C.s2,border:`1px solid ${C.border}`,borderRadius:8,padding:'8px 4px',textAlign:'center'}}>
+            <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:16,color:C.sky}}>{player.seasonStats.assists}A</div>
+            <div style={{fontSize:8.5,color:C.txt3,marginTop:2}}>Assists</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── SCHEDULE Tab ───────────────────────────────────────────────────────────────
+function ScheduleTab({events,onRSVP}) {
+  const typeColor = {training:C.lime, match:C.red};
+  return (
+    <div style={{display:'flex',flexDirection:'column',gap:10}}>
+      <div style={{fontSize:12,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:4}}>Upcoming — May 2025</div>
+      {events.map(ev=>{
+        const tc = typeColor[ev.type]||C.txt2;
+        return (
+          <div key={ev.id} style={{background:C.s1,borderRadius:12,border:`1px solid ${ev.rsvp==='yes'?'rgba(46,212,122,0.25)':ev.rsvp==='no'?'rgba(229,83,61,0.15)':C.border}`,padding:'14px 16px',transition:'border-color .15s'}}>
+            <div style={{display:'flex',alignItems:'flex-start',gap:12}}>
+              {/* Type icon */}
+              <div style={{width:40,height:40,borderRadius:10,background:`${tc}15`,border:`1px solid ${tc}30`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,marginTop:1}}>
+                <Ic d={ev.type==='match'?P.zap:P.activity} size={18} color={tc}/>
+              </div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:8}}>
+                  <div>
+                    <div style={{fontSize:14,fontWeight:700,color:C.txt}}>{ev.title}</div>
+                    <div style={{fontSize:12,color:C.txt2,marginTop:2}}>{ev.date} · {ev.time}</div>
+                    <div style={{fontSize:11,color:C.txt3,marginTop:1}}>{ev.location} · {ev.duration}min</div>
+                  </div>
+                  <span style={{fontSize:10,fontWeight:800,color:tc,background:`${tc}15`,border:`1px solid ${tc}30`,borderRadius:5,padding:'2px 8px',letterSpacing:'0.05em',flexShrink:0,textTransform:'uppercase'}}>{ev.type}</span>
+                </div>
+                {/* RSVP */}
+                <div style={{marginTop:10,display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
+                  <span style={{fontSize:11,color:C.txt3}}>Your RSVP:</span>
+                  <RSVPButtons eventId={ev.id} current={ev.rsvp} onRSVP={onRSVP}/>
+                  {ev.rsvp && (
+                    <span style={{fontSize:11,color:ev.rsvp==='yes'?C.goal:ev.rsvp==='maybe'?C.amber:C.red,fontWeight:600}}>
+                      {ev.rsvp==='yes'?'Confirmed ✓':ev.rsvp==='maybe'?'Tentative ?':'Not attending ✗'}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── WELLNESS Tab ───────────────────────────────────────────────────────────────
+function WellnessTab({player,wellnessScore,wellnessDone,onCheckIn}) {
+  const score = wellnessDone ? wellnessScore : player.wellness;
+  const scoreColor = score>=80?C.goal:score>=60?C.amber:C.red;
+
+  return (
+    <div style={{display:'flex',flexDirection:'column',gap:14}}>
+      {/* Today's score */}
+      <div style={{background:`linear-gradient(135deg,${C.greenDark},${C.green})`,borderRadius:14,padding:'20px 22px',border:'1px solid rgba(182,255,43,0.15)',textAlign:'center'}}>
+        <div style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.5)',textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:10}}>
+          {wellnessDone?"Today's Score":'Last Check-in'}
+        </div>
+        <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:64,color:scoreColor,lineHeight:1}}>{score}</div>
+        <div style={{fontSize:13,color:'rgba(255,255,255,0.4)',marginTop:4}}>/ 100</div>
+        <div style={{marginTop:10,display:'inline-block',padding:'4px 14px',background:`${scoreColor}20`,border:`1px solid ${scoreColor}40`,borderRadius:8,fontSize:12,fontWeight:700,color:scoreColor}}>
+          {score>=80?'🟢 Great shape':score>=60?'🟡 Watch closely':'🔴 Needs attention'}
+        </div>
+        {!wellnessDone&&(
+          <div style={{marginTop:14}}>
+            <button onClick={onCheckIn} style={{padding:'10px 24px',background:`linear-gradient(135deg,${C.goal},#25c06e)`,border:'none',borderRadius:10,fontSize:13,fontWeight:800,color:'#0d3320',cursor:'pointer',transition:'opacity .15s'}}
+              onMouseEnter={e=>e.currentTarget.style.opacity='.88'}
+              onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
+              + Check in now
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* 7-day chart */}
+      <div style={{background:C.s1,borderRadius:12,border:`1px solid ${C.border}`,padding:'14px 16px'}}>
+        <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:14}}>7-Day Trend</div>
+        <div style={{display:'flex',flexDirection:'column',gap:4}}>
+          <div style={{display:'flex',alignItems:'flex-end',gap:6,height:70}}>
+            {WELLNESS_HISTORY.map((v,i)=>{
+              const c = v>=80?C.goal:v>=60?C.amber:C.red;
+              return (
+                <div key={i} style={{flex:1,height:`${Math.round((v/100)*68)}px`,background:i===6?c:`${c}40`,borderRadius:'3px 3px 0 0',transition:'height .4s ease',minHeight:2}}/>
+              );
+            })}
+          </div>
+          <div style={{display:'flex',gap:6}}>
+            {WELLNESS_LABELS.map((l,i)=>(
+              <div key={i} style={{flex:1,textAlign:'center',fontSize:9,color:i===6?C.lime:C.txt3,fontWeight:i===6?700:400}}>{l}</div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Category breakdown */}
+      <div style={{background:C.s1,borderRadius:12,border:`1px solid ${C.border}`,padding:'14px 16px'}}>
+        <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:12}}>Category Breakdown</div>
+        {[
+          {label:'Physical Readiness',value:85,color:C.goal},
+          {label:'Mental Wellbeing',value:78,color:C.sky},
+          {label:'Sleep Quality',value:90,color:C.goal},
+          {label:'Muscle Soreness',value:72,color:C.amber},
+        ].map(({label,value,color})=>(
+          <div key={label} style={{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
+            <span style={{fontSize:12,color:C.txt2,width:140,flexShrink:0}}>{label}</span>
+            <div style={{flex:1,height:6,background:'rgba(255,255,255,0.06)',borderRadius:3,overflow:'hidden'}}>
+              <div style={{height:'100%',width:`${value}%`,background:color,borderRadius:3,transition:'width .5s ease'}}/>
+            </div>
+            <span style={{fontSize:12,fontWeight:700,color,minWidth:36,textAlign:'right'}}>{value}%</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── DEVELOPMENT Tab ────────────────────────────────────────────────────────────
+function DevelopmentTab({player}) {
+  const completed = player.idpGoals.filter(g=>g.done).length;
+  const pct = Math.round((completed/player.idpGoals.length)*100);
+
+  return (
+    <div style={{display:'flex',flexDirection:'column',gap:14}}>
+      {/* IDP overview */}
+      <div style={{background:`linear-gradient(135deg,${C.greenDark},${C.green})`,borderRadius:14,padding:'18px 20px',border:'1px solid rgba(182,255,43,0.15)'}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
+          <div>
+            <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:20,color:'#fff',letterSpacing:'0.02em'}}>Individual Development Plan</div>
+            <div style={{fontSize:12,color:'rgba(255,255,255,0.5)',marginTop:2}}>2025 Season · Set by Coach Tim Brand</div>
+          </div>
+          <div style={{textAlign:'center'}}>
+            <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:32,color:C.lime,lineHeight:1}}>{pct}%</div>
+            <div style={{fontSize:10,color:'rgba(255,255,255,0.4)',marginTop:2}}>complete</div>
+          </div>
+        </div>
+        <div style={{height:8,background:'rgba(255,255,255,0.1)',borderRadius:4,overflow:'hidden'}}>
+          <div style={{height:'100%',width:`${pct}%`,background:`linear-gradient(90deg,${C.lime},#68B42E)`,borderRadius:4,transition:'width .6s ease'}}/>
+        </div>
+        <div style={{fontSize:11,color:'rgba(255,255,255,0.4)',marginTop:6}}>{completed} of {player.idpGoals.length} goals achieved</div>
+      </div>
+
+      {/* Goals list */}
+      <div style={{background:C.s1,borderRadius:12,border:`1px solid ${C.border}`,overflow:'hidden'}}>
+        {player.idpGoals.map((goal,i)=>{
+          const pc = PILLAR_COLORS[goal.pillar]||C.lime;
+          return (
+            <div key={i} style={{padding:'14px 16px',borderBottom:i<player.idpGoals.length-1?`1px solid ${C.border}`:'none'}}>
+              <div style={{display:'flex',alignItems:'flex-start',gap:12}}>
+                {/* Check circle */}
+                <div style={{width:28,height:28,borderRadius:'50%',background:goal.done?`${C.goal}20`:'rgba(255,255,255,0.05)',border:`2px solid ${goal.done?C.goal:'rgba(255,255,255,0.15)'}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,marginTop:1}}>
+                  {goal.done&&<Ic d={P.check} size={13} color={C.goal}/>}
+                </div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:8}}>
+                    <div style={{fontSize:13.5,fontWeight:600,color:goal.done?C.txt2:C.txt,textDecoration:goal.done?'line-through':'none',lineHeight:1.4}}>{goal.title}</div>
+                    <span style={{fontSize:9.5,fontWeight:800,color:pc,background:`${pc}15`,border:`1px solid ${pc}30`,borderRadius:4,padding:'2px 7px',letterSpacing:'0.05em',flexShrink:0}}>{goal.pillar}</span>
+                  </div>
+                  {/* Progress bar */}
+                  {!goal.done && (
+                    <div style={{marginTop:8}}>
+                      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
+                        <span style={{fontSize:10,color:C.txt3}}>Progress</span>
+                        <span style={{fontSize:11,fontWeight:700,color:pc}}>{goal.progress}%</span>
+                      </div>
+                      <div style={{height:4,background:'rgba(255,255,255,0.06)',borderRadius:2,overflow:'hidden'}}>
+                        <div style={{height:'100%',width:`${goal.progress}%`,background:pc,borderRadius:2,transition:'width .5s ease'}}/>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Coach notes */}
+      <div style={{background:C.s1,borderRadius:12,border:`1px solid ${C.border}`,padding:'14px 16px'}}>
+        <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:8}}>Coach Notes</div>
+        <p style={{fontSize:13,color:C.txt2,lineHeight:1.6}}>
+          Oscar is developing well on the left wing. His pace and dribbling are assets — the focus for this block is improving his final ball and pressing intensity off the ball. Keep up the good work!
+        </p>
+        <div style={{marginTop:8,fontSize:11,color:C.txt3}}>— Tim Brand · Head Coach</div>
+      </div>
+    </div>
+  );
+}
+
+// ── MESSAGES Tab ───────────────────────────────────────────────────────────────
+function MessagesTab({messages}) {
+  const [reply,setReply] = useState('');
+  const [sent,setSent] = useState(false);
+
+  return (
+    <div style={{display:'flex',flexDirection:'column',gap:10}}>
+      {messages.map((m,i)=>(
+        <div key={i} style={{background:C.s1,borderRadius:12,border:`1px solid ${m.unread?'rgba(182,255,43,0.25)':C.border}`,padding:'14px 16px',position:'relative'}}>
+          {m.unread&&<div style={{position:'absolute',top:14,right:14,width:8,height:8,borderRadius:'50%',background:C.lime}}/>}
+          <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8}}>
+            <div style={{width:32,height:32,borderRadius:'50%',background:'rgba(182,255,43,0.12)',border:'1px solid rgba(182,255,43,0.25)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+              <span style={{fontSize:11,fontWeight:900,color:C.lime,fontFamily:'var(--font-d)'}}>{m.from.split(' ').map(x=>x[0]).join('')}</span>
+            </div>
+            <div>
+              <div style={{fontSize:13,fontWeight:700,color:C.txt}}>{m.from}</div>
+              <div style={{fontSize:10,color:C.txt3}}>{m.role} · {m.time}</div>
+            </div>
+          </div>
+          <p style={{fontSize:13,color:C.txt2,lineHeight:1.6}}>{m.text}</p>
+        </div>
+      ))}
+
+      {/* Reply to coach */}
+      <div style={{background:C.s1,borderRadius:12,border:`1px solid ${C.border}`,padding:'14px 16px'}}>
+        <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:8}}>Reply to Coach Tim</div>
+        {!sent ? (
+          <>
+            <textarea value={reply} onChange={e=>setReply(e.target.value)} placeholder="Type a message…"
+              style={{width:'100%',height:80,background:C.s2,border:`1px solid ${C.border2}`,borderRadius:9,color:C.txt,fontSize:13,lineHeight:1.6,padding:'9px 12px',resize:'none',outline:'none',marginBottom:8}}/>
+            <button onClick={()=>{if(reply.trim()){setSent(true);}}}
+              style={{display:'flex',alignItems:'center',gap:6,padding:'8px 16px',background:reply.trim()?`linear-gradient(135deg,${C.lime},#68B42E)`:'rgba(255,255,255,0.07)',border:'none',borderRadius:8,fontSize:13,fontWeight:700,color:reply.trim()?C.green:C.txt3,cursor:reply.trim()?'pointer':'not-allowed',transition:'opacity .15s'}}>
+              <Ic d={P.send} size={13} color={reply.trim()?C.green:C.txt3}/> Send Message
+            </button>
+          </>
+        ) : (
+          <div style={{display:'flex',alignItems:'center',gap:8,color:C.goal}}>
+            <Ic d={P.check} size={16} color={C.goal}/> Message sent to Coach Tim!
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── App ───────────────────────────────────────────────────────────────────────
+function App() {
+  const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{"role":"player","colorMode":"dark"}/*EDITMODE-END*/;
+  const [tweaks,setTweak] = window.useTweaks(TWEAK_DEFAULTS);
+
+  const [tab,setTab] = useState('home');
+  const [events,setEvents] = useState(UPCOMING);
+  const [showWellness,setShowWellness] = useState(false);
+  const [wellnessDone,setWellnessDone] = useState(false);
+  const [wellnessScore,setWellnessScore] = useState(82);
+
+  const handleRSVP = useCallback((id,val)=>{
+    setEvents(prev=>prev.map(e=>e.id===id?{...e,rsvp:val}:e));
+  },[]);
+
+  const handleWellnessSubmit = useCallback((score)=>{
+    setWellnessScore(score);
+    setWellnessDone(true);
+    setShowWellness(false);
+  },[]);
+
+  return (
+    <div style={{height:'100vh',display:'flex',flexDirection:'column',background:C.bg,overflow:'hidden'}}>
+      <Header onBack={()=>{try{window.location.href='tfb-dashboard.html'}catch(e){}}}/>
+
+      {/* Main scrollable content */}
+      <div style={{flex:1,overflowY:'auto',padding:'16px 20px',paddingBottom:80}}>
+        <div style={{maxWidth:600,margin:'0 auto'}}>
+          {tab==='home'&&<HomeTab player={PLAYER} events={events} onRSVP={handleRSVP} onWellnessCheck={()=>setShowWellness(true)} wellnessDone={wellnessDone}/>}
+          {tab==='schedule'&&<ScheduleTab events={events} onRSVP={handleRSVP}/>}
+          {tab==='wellness'&&<WellnessTab player={PLAYER} wellnessScore={wellnessScore} wellnessDone={wellnessDone} onCheckIn={()=>setShowWellness(true)}/>}
+          {tab==='development'&&<DevelopmentTab player={PLAYER}/>}
+          {tab==='messages'&&<MessagesTab messages={MESSAGES}/>}
+        </div>
+      </div>
+
+      {/* Bottom nav */}
+      <BottomNav tab={tab} setTab={setTab}/>
+
+      {/* Wellness modal */}
+      {showWellness && <WellnessModal onClose={()=>setShowWellness(false)} onSubmit={handleWellnessSubmit}/>}
+
+      {/* Tweaks */}
+      <TweaksPanel>
+        <TweakSection label="View"/>
+        <TweakSelect label="Role" value={tweaks.role} options={['player','parent']} onChange={v=>setTweak('role',v)}/>
+        <TweakRadio label="Mode" value={tweaks.colorMode} options={['dark','light']} onChange={v=>setTweak('colorMode',v)}/>
+      </TweaksPanel>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

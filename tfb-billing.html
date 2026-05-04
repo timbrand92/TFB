@@ -29,24 +29,24 @@ const {useState} = React;
 const C={lime:'#B6FF2B',greenDark:'#0A2E20',bg:'#0A0D11',s1:'#15191F',s2:'#1F252D',border:'rgba(255,255,255,0.08)',border2:'rgba(255,255,255,0.16)',txt:'#F0F2F4',txt2:'rgba(240,242,244,0.55)',txt3:'rgba(240,242,244,0.32)',goal:'#2ED47A',amber:'#FFB020',red:'#E5533D',sky:'#3FA9F5',purple:'#9B7FE8',stripe:'#635BFF'};
 
 const SUB = {
-  plan:'Pro',price:79,status:'Active',nextBilling:'1 June 2026',
+  plan:'Pro',price:149,status:'Active',nextBilling:'1 June 2026',
   trialEnd:null,paymentMethod:{brand:'Visa',last4:'4242',expiry:'12/27'},
   customerId:'cus_PqL8mXfRm4ZkYz',subscriptionId:'sub_1Owpc3JxK9eTr2nM'
 };
 
 const INVOICES = [
-  {id:'in_1Pq...M21',date:'1 May 2026',amount:79,status:'paid',invoiceUrl:'#'},
-  {id:'in_1Pq...M20',date:'1 Apr 2026',amount:79,status:'paid',invoiceUrl:'#'},
-  {id:'in_1Pq...M19',date:'1 Mar 2026',amount:79,status:'paid',invoiceUrl:'#'},
-  {id:'in_1Pq...M18',date:'1 Feb 2026',amount:79,status:'paid',invoiceUrl:'#'},
+  {id:'in_1Pq...M21',date:'1 May 2026',amount:149,status:'paid',invoiceUrl:'#'},
+  {id:'in_1Pq...M20',date:'1 Apr 2026',amount:149,status:'paid',invoiceUrl:'#'},
+  {id:'in_1Pq...M19',date:'1 Mar 2026',amount:149,status:'paid',invoiceUrl:'#'},
+  {id:'in_1Pq...M18',date:'1 Feb 2026',amount:149,status:'paid',invoiceUrl:'#'},
   {id:'in_1Pq...M17',date:'1 Jan 2026',amount:0,status:'trial',invoiceUrl:'#'},
 ];
 
 const TIERS = [
   {id:'free',name:'Free',price:0,color:'#8A8F98'},
-  {id:'starter',name:'Starter',price:29,color:C.sky},
-  {id:'pro',name:'Pro',price:79,color:C.lime,current:true},
-  {id:'club',name:'Club',price:199,color:C.purple},
+  {id:'starter',name:'Starter',price:79,color:C.sky},
+  {id:'pro',name:'Pro',price:149,color:C.lime,current:true},
+  {id:'elite',name:'Elite',price:279,color:C.purple},
 ];
 
 const Logo=({size=36})=>(<div style={{width:size,height:size,borderRadius:size*0.22,background:`linear-gradient(135deg,${C.lime},#68B42E)`,display:'flex',alignItems:'center',justifyContent:'center',color:C.greenDark,fontFamily:'var(--font-d)',fontWeight:900,fontSize:size*0.5}}>TFB</div>);

@@ -10,6 +10,7 @@
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="tfb-plan.js"></script>
 <script type="text/babel" src="tfb-responsive.jsx"></script>
 <script type="text/babel" src="tweaks-panel.jsx"></script>
 <style>
@@ -1260,27 +1261,47 @@ function SeasonStatsWidget() {
 // ─── Widget Picker Modal ───────────────────────────────────────────────────
 const ALL_WIDGETS_CATALOG = [
   // Matches
-  { id: 'nextMatch',     name: 'Next Match',         desc: 'Upcoming fixture + availability',     cat: 'Matches',  icon: '⚽', size:'wide',  pro:false },
-  { id: 'seasonStats',   name: 'Season Stats',       desc: 'League performance & form',           cat: 'Matches',  icon: '📈', size:'wide',  pro:false },
-  { id: 'leagueTable',   name: 'League Standings',   desc: 'Live league position & top 5',        cat: 'Matches',  icon: '🏆', size:'std',   pro:false },
-  { id: 'topScorers',    name: 'Top Scorers',        desc: 'Goals + assists leaderboard',         cat: 'Matches',  icon: '🥇', size:'std',   pro:false },
+  { id: 'nextMatch',     name: 'Next Match',         desc: 'Upcoming fixture + availability',     cat: 'Matches',  icon: '⚽', size:'wide',  gate: null },
+  { id: 'seasonStats',   name: 'Season Stats',       desc: 'League performance & form',           cat: 'Matches',  icon: '📈', size:'wide',  gate: 'advanced_stats' },
+  { id: 'leagueTable',   name: 'League Standings',   desc: 'Live league position & top 5',        cat: 'Matches',  icon: '🏆', size:'std',   gate: null },
+  { id: 'topScorers',    name: 'Top Scorers',        desc: 'Goals + assists leaderboard',         cat: 'Matches',  icon: '🥇', size:'std',   gate: null },
   // Training
-  { id: 'schedule',      name: 'Training Schedule',  desc: 'Upcoming sessions & matches',         cat: 'Training', icon: '📅', size:'std',   pro:false },
-  { id: 'sessionDrills', name: 'Drill Library',      desc: 'Quick access to your drills',         cat: 'Training', icon: '🎯', size:'std',   pro:false },
-  { id: 'pillarBalance', name: 'Pillar Balance',     desc: '4-pillar training distribution',      cat: 'Training', icon: '🧱', size:'std',   pro:false },
+  { id: 'schedule',      name: 'Training Schedule',  desc: 'Upcoming sessions & matches',         cat: 'Training', icon: '📅', size:'std',   gate: null },
+  { id: 'sessionDrills', name: 'Drill Library',      desc: 'Quick access to your drills',         cat: 'Training', icon: '🎯', size:'std',   gate: 'sessions' },
+  { id: 'pillarBalance', name: 'Pillar Balance',     desc: '4-pillar training distribution',      cat: 'Training', icon: '🧱', size:'std',   gate: 'block_planner' },
   // Squad
-  { id: 'attendance',    name: 'Attendance',         desc: 'Player attendance tracking',          cat: 'Squad',    icon: '✓',  size:'wide',  pro:false },
-  { id: 'squad',         name: 'Squad Status',       desc: 'Player status & wellness',            cat: 'Squad',    icon: '👥', size:'std',   pro:false },
-  { id: 'wellness',      name: 'Wellness',           desc: 'Team wellness heatmap',               cat: 'Squad',    icon: '💚', size:'std',   pro:false },
-  { id: 'injuryList',    name: 'Injury List',        desc: 'Currently injured players',           cat: 'Squad',    icon: '🩹', size:'std',   pro:false },
-  { id: 'birthdays',     name: 'Birthdays',          desc: 'Upcoming player birthdays',           cat: 'Squad',    icon: '🎂', size:'std',   pro:false },
+  { id: 'attendance',    name: 'Attendance',         desc: 'Player attendance tracking',          cat: 'Squad',    icon: '✓',  size:'wide',  gate: 'attendance' },
+  { id: 'squad',         name: 'Squad Status',       desc: 'Player status & wellness',            cat: 'Squad',    icon: '👥', size:'std',   gate: null },
+  { id: 'wellness',      name: 'Wellness',           desc: 'Team wellness heatmap',               cat: 'Squad',    icon: '💚', size:'std',   gate: 'wellness' },
+  { id: 'injuryList',    name: 'Injury List',        desc: 'Currently injured players',           cat: 'Squad',    icon: '🩹', size:'std',   gate: null },
+  { id: 'birthdays',     name: 'Birthdays',          desc: 'Upcoming player birthdays',           cat: 'Squad',    icon: '🎂', size:'std',   gate: null },
   // Overview
-  { id: 'quickActions',  name: 'Quick Actions',      desc: 'Common shortcuts',                    cat: 'Overview', icon: '⚡', size:'std',   pro:false },
-  { id: 'activity',      name: 'Recent Activity',    desc: 'Latest team activity feed',           cat: 'Overview', icon: '🔔', size:'std',   pro:false },
-  { id: 'announcement',  name: 'Announcement',       desc: 'Pinned message to squad',             cat: 'Overview', icon: '📢', size:'wide',  pro:false },
-  { id: 'weather',       name: 'Match-day Weather',  desc: 'Forecast for next match venue',       cat: 'Overview', icon: '⛅', size:'std',   pro:false },
-  { id: 'todoList',      name: 'My To-do',           desc: 'Personal task tracker',               cat: 'Overview', icon: '☑',  size:'std',   pro:false },
+  { id: 'quickActions',  name: 'Quick Actions',      desc: 'Common shortcuts',                    cat: 'Overview', icon: '⚡', size:'std',   gate: null },
+  { id: 'activity',      name: 'Recent Activity',    desc: 'Latest team activity feed',           cat: 'Overview', icon: '🔔', size:'std',   gate: null },
+  { id: 'announcement',  name: 'Announcement',       desc: 'Pinned message to squad',             cat: 'Overview', icon: '📢', size:'wide',  gate: null },
+  { id: 'weather',       name: 'Match-day Weather',  desc: 'Forecast for next match venue',       cat: 'Overview', icon: '⛅', size:'std',   gate: null },
+  { id: 'todoList',      name: 'My To-do',           desc: 'Personal task tracker',               cat: 'Overview', icon: '☑',  size:'std',   gate: null },
 ];
+
+function LockedWidgetOverlay({ featureId }) {
+  const plan = window.TFBPlan?.getRequiredPlan(featureId);
+  if (!plan) return null;
+  return (
+    <div style={{ position:'absolute', inset:0, borderRadius:12, background:'rgba(10,13,17,0.82)', backdropFilter:'blur(3px)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:8, zIndex:10, border:'1px solid rgba(255,255,255,0.07)' }}>
+      <div style={{ fontSize:22 }}>🔒</div>
+      <div style={{ fontSize:12, fontWeight:800, color:'#F0F2F4', letterSpacing:'0.04em' }}>
+        {plan.name} Feature
+      </div>
+      <div style={{ fontSize:11, color:'rgba(240,242,244,0.5)', textAlign:'center', maxWidth:120 }}>
+        Upgrade to unlock
+      </div>
+      <button onClick={()=>{ try{ window.location.href='tfb-billing.html'; }catch(e){} }}
+        style={{ marginTop:4, padding:'6px 14px', background:`linear-gradient(135deg,${plan.color},${plan.color}bb)`, border:'none', borderRadius:7, fontSize:11, fontWeight:800, color: plan.id==='pro'?'#0A2E20':'#fff', cursor:'pointer', letterSpacing:'0.06em' }}>
+        Upgrade →
+      </button>
+    </div>
+  );
+}
 
 function WidgetPicker({ onClose, onAdd, current }) {
   const [search, setSearch] = useState('');
@@ -1321,7 +1342,7 @@ function WidgetPicker({ onClose, onAdd, current }) {
                   <div style={{ flex:1, minWidth:0 }}>
                     <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:3 }}>
                       <div style={{ fontSize:13, fontWeight:700, color:'var(--text-primary)' }}>{w.name}</div>
-                      {w.pro && <span style={{ fontSize:8.5, fontWeight:800, letterSpacing:'0.1em', color:'#9B7FE8', background:'rgba(155,127,232,0.12)', padding:'1px 5px', borderRadius:3 }}>PRO</span>}
+                      {w.gate && (() => { const rp = window.TFBPlan?.getRequiredPlan(w.gate); return rp ? <span style={{ fontSize:8.5, fontWeight:800, letterSpacing:'0.1em', color:rp.color, background:`${rp.color}18`, padding:'1px 5px', borderRadius:3 }}>{rp.name.toUpperCase()}</span> : null; })()}
                       {added && <span style={{ fontSize:8.5, fontWeight:800, letterSpacing:'0.1em', color:'#2ED47A', marginLeft:'auto' }}>✓ ADDED</span>}
                     </div>
                     <div style={{ fontSize:11, color:'var(--text-secondary)', lineHeight:1.4 }}>{w.desc}</div>
@@ -1689,6 +1710,8 @@ function Dashboard({ role, density }) {
           const SIMPLE_WIDGETS = ['nextMatch', 'quickActions', 'attendance', 'wellness'];
           if (isSimple && !SIMPLE_WIDGETS.includes(wid)) return null;
           const isWide = ['nextMatch', 'attendance', 'seasonStats'].includes(wid);
+          const catalogEntry = ALL_WIDGETS_CATALOG.find(w => w.id === wid);
+          const isLocked = catalogEntry?.gate && window.TFBPlan && !window.TFBPlan.canAccess(catalogEntry.gate);
           return (
             <div key={`${wid}-${i}`} style={{
               gridColumn: isWide ? 'span 1' : 'span 1',
@@ -1703,6 +1726,7 @@ function Dashboard({ role, density }) {
                 </button>
               )}
               <Comp compact={true} />
+              {isLocked && <LockedWidgetOverlay featureId={catalogEntry.gate} />}
             </div>
           );
         })}

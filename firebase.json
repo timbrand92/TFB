@@ -16,6 +16,10 @@
       {
         "source": "/api/createPortalSession",
         "function": "createPortalSession"
+      },
+      {
+        "source": "/",
+        "destination": "/tfb-landing.html"
       }
     ]
   },

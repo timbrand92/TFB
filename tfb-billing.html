@@ -24,23 +24,30 @@ button,input{font-family:var(--font-b);color:inherit;cursor:pointer}
 </head>
 <body>
 <div id="root"></div>
+<script type="module">
+import { requireAuth } from './tfb-auth-guard.js';
+import { db } from './tfb-firebase.js';
+import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+requireAuth();
+
+window.__billing = {
+  loadUser: async (uid) => {
+    const snap = await getDoc(doc(db, 'users', uid));
+    return snap.exists() ? snap.data() : null;
+  },
+  openPortal: (userId) =>
+    fetch('https://us-central1-tfb-the-football-blueprint.cloudfunctions.net/createPortalSession', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, returnUrl: window.location.href }),
+    }).then(r => r.json()),
+};
+</script>
 <script type="text/babel">
-const {useState} = React;
+const {useState, useEffect} = React;
 const C={lime:'#B6FF2B',greenDark:'#0A2E20',bg:'#0A0D11',s1:'#15191F',s2:'#1F252D',border:'rgba(255,255,255,0.08)',border2:'rgba(255,255,255,0.16)',txt:'#F0F2F4',txt2:'rgba(240,242,244,0.55)',txt3:'rgba(240,242,244,0.32)',goal:'#2ED47A',amber:'#FFB020',red:'#E5533D',sky:'#3FA9F5',purple:'#9B7FE8',stripe:'#635BFF'};
 
-const SUB = {
-  plan:'Pro',price:149,status:'Active',nextBilling:'1 June 2026',
-  trialEnd:null,paymentMethod:{brand:'Visa',last4:'4242',expiry:'12/27'},
-  customerId:'cus_PqL8mXfRm4ZkYz',subscriptionId:'sub_1Owpc3JxK9eTr2nM'
-};
-
-const INVOICES = [
-  {id:'in_1Pq...M21',date:'1 May 2026',amount:149,status:'paid',invoiceUrl:'#'},
-  {id:'in_1Pq...M20',date:'1 Apr 2026',amount:149,status:'paid',invoiceUrl:'#'},
-  {id:'in_1Pq...M19',date:'1 Mar 2026',amount:149,status:'paid',invoiceUrl:'#'},
-  {id:'in_1Pq...M18',date:'1 Feb 2026',amount:149,status:'paid',invoiceUrl:'#'},
-  {id:'in_1Pq...M17',date:'1 Jan 2026',amount:0,status:'trial',invoiceUrl:'#'},
-];
 
 const TIERS = [
   {id:'free',name:'Free Trial',price:0,color:'#8A8F98'},
@@ -52,28 +59,46 @@ const TIERS = [
 const Logo=({size=36})=>(<div style={{width:size,height:size,borderRadius:size*0.22,background:`linear-gradient(135deg,${C.lime},#68B42E)`,display:'flex',alignItems:'center',justifyContent:'center',color:C.greenDark,fontFamily:'var(--font-d)',fontWeight:900,fontSize:size*0.5}}>TFB</div>);
 
 function App(){
-  const [stage,setStage] = useState('overview'); // overview, redirect, change, cancel
+  const [stage,setStage] = useState('overview');
   const [selected,setSelected] = useState('pro');
+  const [userDoc, setUserDoc] = useState(null);
+  const [loadingPortal, setLoadingPortal] = useState(false);
 
-  if(stage==='redirect'){
-    return (
-      <div style={{minHeight:'100vh',width:'100vw',display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>
-        <div style={{textAlign:'center',maxWidth:380}}>
-          <div style={{width:64,height:64,borderRadius:14,background:C.stripe,display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 18px',fontSize:30,color:'#fff',fontWeight:900,fontFamily:'var(--font-d)'}}>S</div>
-          <div className="spin" style={{width:32,height:32,border:`3px solid rgba(99,91,255,0.2)`,borderTopColor:C.stripe,borderRadius:'50%',margin:'0 auto 16px'}}/>
-          <div style={{fontFamily:'var(--font-d)',fontSize:22,fontWeight:900,marginBottom:6,textTransform:'uppercase'}}>Redirecting to Stripe...</div>
-          <div style={{fontSize:13,color:C.txt2,marginBottom:14,lineHeight:1.5}}>Stripe Customer Portal is opening in a new tab. You'll be able to manage your card, download invoices, and update billing details.</div>
-          <div style={{fontSize:11,color:C.txt3,fontFamily:'monospace',padding:'8px 12px',background:C.s1,border:`1px solid ${C.border}`,borderRadius:8,marginBottom:18}}>billing.stripe.com/p/session/{SUB.customerId}</div>
-          <button onClick={()=>setStage('overview')} style={{padding:'10px 20px',background:`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:9,fontSize:13,fontWeight:800,color:C.greenDark}}>Continue in TFB →</button>
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    const poll = setInterval(() => {
+      if (window.__tfbUser) {
+        clearInterval(poll);
+        window.__billing.loadUser(window.__tfbUser.uid).then(d => setUserDoc(d || {}));
+      }
+    }, 100);
+    return () => clearInterval(poll);
+  }, []);
+
+  const planKey = userDoc?.plan || 'free';
+  const tier = TIERS.find(t => t.id === planKey) || TIERS[0];
+  const subStatus = userDoc?.subscriptionStatus || 'free';
+  const isActive = subStatus === 'active';
+
+  const openPortal = async () => {
+    if (!window.__tfbUser) return;
+    setLoadingPortal(true);
+    try {
+      const res = await window.__billing.openPortal(window.__tfbUser.uid);
+      if (res.url) window.location.href = res.url;
+    } catch(e) {}
+    setLoadingPortal(false);
+  };
+
+  if (!userDoc) return (
+    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center'}}>
+      <div className="spin" style={{width:32,height:32,border:`3px solid rgba(182,255,43,0.2)`,borderTopColor:C.lime,borderRadius:'50%'}}/>
+    </div>
+  );
 
   return (
     <div style={{minHeight:'100vh',padding:'24px 32px 56px',maxWidth:1100,margin:'0 auto'}}>
       <header style={{display:'flex',alignItems:'center',gap:14,padding:'8px 0 22px',borderBottom:`1px solid ${C.border}`,marginBottom:28}}>
-        <button onClick={()=>{try{window.location.href='tfb-settings.html'}catch(e){}}} style={{padding:'7px 12px',background:'transparent',border:`1px solid ${C.border2}`,borderRadius:8,fontSize:12,fontWeight:600,color:C.txt2}}>← Settings</button>
+        <button onClick={()=>window.location.href='tfb-settings.html'} style={{padding:'7px 12px',background:'transparent',border:`1px solid ${C.border2}`,borderRadius:8,fontSize:12,fontWeight:600,color:C.txt2}}>← Settings</button>
         <Logo/>
         <div>
           <div style={{fontFamily:'var(--font-d)',fontSize:11,fontWeight:700,color:C.lime,letterSpacing:'0.18em',textTransform:'uppercase'}}>Subscription</div>
@@ -85,14 +110,14 @@ function App(){
       </header>
 
       {/* Status banner */}
-      <div className="fade-in" style={{background:`linear-gradient(135deg,${C.lime}15,${C.s1})`,border:`1px solid ${C.lime}40`,borderRadius:14,padding:'18px 22px',marginBottom:20,display:'flex',alignItems:'center',gap:18}}>
-        <div style={{width:48,height:48,borderRadius:12,background:`${C.lime}20`,display:'flex',alignItems:'center',justifyContent:'center',color:C.lime,fontSize:24,fontWeight:900,flexShrink:0}}>✓</div>
+      <div className="fade-in" style={{background:isActive?`linear-gradient(135deg,${C.lime}15,${C.s1})`:`linear-gradient(135deg,${C.sky}15,${C.s1})`,border:`1px solid ${isActive?C.lime:C.sky}40`,borderRadius:14,padding:'18px 22px',marginBottom:20,display:'flex',alignItems:'center',gap:18}}>
+        <div style={{width:48,height:48,borderRadius:12,background:isActive?`${C.lime}20`:`${C.sky}20`,display:'flex',alignItems:'center',justifyContent:'center',color:isActive?C.lime:C.sky,fontSize:24,fontWeight:900,flexShrink:0}}>{isActive?'✓':'ℹ'}</div>
         <div style={{flex:1}}>
-          <div style={{fontFamily:'var(--font-d)',fontSize:11,fontWeight:700,color:C.lime,letterSpacing:'0.16em',textTransform:'uppercase',marginBottom:3}}>Active subscription</div>
-          <div style={{fontSize:15,fontWeight:700,marginBottom:2}}>You're on the <span style={{color:C.lime}}>{SUB.plan}</span> plan — ${SUB.price}/mo</div>
-          <div style={{fontSize:12,color:C.txt2}}>Next charge: {SUB.nextBilling} · {SUB.paymentMethod.brand} ending in {SUB.paymentMethod.last4}</div>
+          <div style={{fontFamily:'var(--font-d)',fontSize:11,fontWeight:700,color:isActive?C.lime:C.sky,letterSpacing:'0.16em',textTransform:'uppercase',marginBottom:3}}>{isActive?'Active subscription':'Free plan'}</div>
+          <div style={{fontSize:15,fontWeight:700,marginBottom:2}}>You're on the <span style={{color:tier.color}}>{tier.name}</span> plan{tier.price>0?` — $${tier.price} AUD/mo`:''}</div>
+          {isActive && userDoc?.currentPeriodEnd && <div style={{fontSize:12,color:C.txt2}}>Next charge: {new Date(userDoc.currentPeriodEnd*1000).toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'})}</div>}
         </div>
-        <button onClick={()=>setStage('redirect')} style={{padding:'10px 16px',background:C.stripe,border:'none',borderRadius:9,fontSize:12.5,fontWeight:800,color:'#fff',letterSpacing:'0.04em'}}>Manage in Stripe ↗</button>
+        <button onClick={openPortal} style={{padding:'10px 16px',background:C.stripe,border:'none',borderRadius:9,fontSize:12.5,fontWeight:800,color:'#fff',letterSpacing:'0.04em'}}>Manage in Stripe ↗</button>
       </div>
 
       <div style={{display:'grid',gridTemplateColumns:'1.6fr 1fr',gap:20,marginBottom:24}}>
@@ -118,7 +143,7 @@ function App(){
               );
             })}
           </div>
-          <button disabled={selected==='pro'} onClick={()=>setStage('redirect')} style={{width:'100%',marginTop:14,padding:'12px',background:selected==='pro'?'rgba(255,255,255,0.04)':`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:10,fontSize:13,fontWeight:800,color:selected==='pro'?C.txt3:C.greenDark,cursor:selected==='pro'?'not-allowed':'pointer'}}>{selected==='pro'?'You\'re on this plan':selected==='free'?'Downgrade to Free':selected==='starter'?'Downgrade to Starter →':'Upgrade to '+TIERS.find(t=>t.id===selected).name+' →'}</button>
+          <button disabled={selected==='pro'} onClick={openPortal} style={{width:'100%',marginTop:14,padding:'12px',background:selected==='pro'?'rgba(255,255,255,0.04)':`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:10,fontSize:13,fontWeight:800,color:selected==='pro'?C.txt3:C.greenDark,cursor:selected==='pro'?'not-allowed':'pointer'}}>{selected==='pro'?'You\'re on this plan':selected==='free'?'Downgrade to Free':selected==='starter'?'Downgrade to Starter →':'Upgrade to '+TIERS.find(t=>t.id===selected).name+' →'}</button>
         </div>
 
         {/* Payment method */}
@@ -131,7 +156,7 @@ function App(){
             </div>
             <div style={{fontSize:11.5,color:C.txt2}}>Expires {SUB.paymentMethod.expiry}</div>
           </div>
-          <button onClick={()=>setStage('redirect')} style={{width:'100%',padding:'10px',background:'rgba(99,91,255,0.1)',border:'1px solid rgba(99,91,255,0.3)',borderRadius:9,fontSize:12,fontWeight:700,color:C.stripe}}>Update card via Stripe ↗</button>
+          <button onClick={openPortal} style={{width:'100%',padding:'10px',background:'rgba(99,91,255,0.1)',border:'1px solid rgba(99,91,255,0.3)',borderRadius:9,fontSize:12,fontWeight:700,color:C.stripe}}>Update card via Stripe ↗</button>
         </div>
       </div>
 
@@ -139,7 +164,7 @@ function App(){
       <div style={{background:C.s1,border:`1px solid ${C.border}`,borderRadius:14,overflow:'hidden',marginBottom:24}}>
         <div style={{padding:'14px 20px',borderBottom:`1px solid ${C.border}`,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
           <div style={{fontSize:13,fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase'}}>Invoices & receipts</div>
-          <button onClick={()=>setStage('redirect')} style={{padding:'6px 12px',background:'transparent',border:`1px solid ${C.border2}`,borderRadius:7,fontSize:11.5,fontWeight:600,color:C.txt2}}>View all in Stripe ↗</button>
+          <button onClick={openPortal} style={{padding:'6px 12px',background:'transparent',border:`1px solid ${C.border2}`,borderRadius:7,fontSize:11.5,fontWeight:600,color:C.txt2}}>View all in Stripe ↗</button>
         </div>
         <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
           <thead>
@@ -176,7 +201,7 @@ function App(){
           <div style={{fontSize:13,color:C.txt,marginBottom:2}}>Cancel subscription</div>
           <div style={{fontSize:11.5,color:C.txt2}}>Your plan stays active until {SUB.nextBilling}. Data is preserved.</div>
         </div>
-        <button onClick={()=>setStage('redirect')} style={{padding:'10px 16px',background:'transparent',border:`1px solid ${C.red}60`,borderRadius:9,fontSize:12,fontWeight:700,color:C.red}}>Cancel via Stripe</button>
+        <button onClick={openPortal} style={{padding:'10px 16px',background:'transparent',border:`1px solid ${C.red}60`,borderRadius:9,fontSize:12,fontWeight:700,color:C.red}}>Cancel via Stripe</button>
       </div>
     </div>
   );

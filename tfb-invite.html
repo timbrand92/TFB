@@ -23,6 +23,7 @@ input:focus{border-color:var(--lime)!important}
 </head>
 <body>
 <div id="root"></div>
+<script type="module">import{requireAuth}from'./tfb-auth-guard.js';requireAuth();</script>
 <script type="text/babel">
 const {useState} = React;
 const C={lime:'#B6FF2B',greenDark:'#0A2E20',bg:'#0A0D11',s1:'#15191F',s2:'#1F252D',border:'rgba(255,255,255,0.08)',border2:'rgba(255,255,255,0.16)',txt:'#F0F2F4',txt2:'rgba(240,242,244,0.55)',txt3:'rgba(240,242,244,0.32)',goal:'#2ED47A',amber:'#FFB020',red:'#E5533D',sky:'#3FA9F5'};

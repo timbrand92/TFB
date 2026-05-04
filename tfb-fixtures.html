@@ -16,6 +16,7 @@ button,select{font-family:var(--font-b);color:inherit}::-webkit-scrollbar{width:
 </style>
 </head>
 <body><div id="root"></div>
+<script type="module">import{requireAuth}from'./tfb-auth-guard.js';requireAuth();</script>
 <script type="text/babel">
 const {useState}=React;
 const C={lime:'#B6FF2B',green:'#0F3D2E',greenDark:'#0A2E20',bg:'#111418',s1:'#1C2128',s2:'#242B33',border:'rgba(255,255,255,0.07)',border2:'rgba(255,255,255,0.13)',txt:'#F0F2F4',txt2:'rgba(240,242,244,0.5)',txt3:'rgba(240,242,244,0.28)',goal:'#2ED47A',amber:'#FFB020',red:'#E5533D',sky:'#3FA9F5'};

@@ -52,7 +52,7 @@ const FEATURES = [
   {icon:'📋',title:'Session Builder',desc:'Multi-section visual diagrams. Drag players, draw runs, save to cloud, export branded PDF.',color:C.lime,screen:'tfb-session-builder.html'},
   {icon:'🏟',title:'Live Gameday',desc:'FM-style lineup picker, formation library, real-time match tracking with stats and substitutions.',color:C.red,screen:'tfb-gameday.html'},
   {icon:'👥',title:'Team Management',desc:'Roster, profiles, attendance, season stats. Filter by age group and competition.',color:C.sky,screen:'tfb-team.html'},
-  {icon:'📅',title:'Block Planning',desc:'Periodise your season — pre-season, in-season, taper. Drag sessions across the calendar.',color:C.amber,screen:'tfb-blockplanner.html'},
+  {icon:'📅',title:'Block Planning',desc:'Periodise your season — pre-season, in-season, taper. Drag sessions across the calendar.',color:C.amber,screen:'tfb-planner.html'},
   {icon:'💚',title:'Wellness Tracking',desc:'Daily player check-ins, fatigue heatmap, injury risk indicators across the squad.',color:C.goal,screen:'tfb-wellness.html'},
   {icon:'🔔',title:'One-Tap RSVP',desc:'Players and parents respond from any link. Coaches see live attendance instantly.',color:C.purple,screen:'tfb-rsvp.html'},
 ];
@@ -302,7 +302,7 @@ function App(){
           <p style={{fontSize:17,color:C.txt2,marginBottom:32,lineHeight:1.5}}>Set up your club in 2 minutes. Free for your first team — forever.</p>
           <div style={{display:'flex',gap:12,justifyContent:'center',flexWrap:'wrap'}}>
             <button onClick={()=>nav('tfb-login.html')} style={{padding:'15px 32px',background:`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:12,fontSize:16,fontWeight:800,color:C.greenDark,letterSpacing:'0.04em',boxShadow:'0 12px 40px rgba(182,255,43,0.35)'}}>Start your free trial →</button>
-            <button onClick={()=>nav('tfb-nav.html')} style={{padding:'15px 26px',background:'rgba(255,255,255,0.06)',border:`1px solid ${C.border2}`,borderRadius:12,fontSize:16,fontWeight:700,color:C.txt}}>Browse all 23 screens</button>
+            <button onClick={()=>nav('tfb-login.html')} style={{padding:'15px 26px',background:'rgba(255,255,255,0.06)',border:`1px solid ${C.border2}`,borderRadius:12,fontSize:16,fontWeight:700,color:C.txt}}>Sign in →</button>
           </div>
         </div>
       </section>

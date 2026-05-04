@@ -28,6 +28,28 @@ input:focus{border-color:var(--lime)!important}
 </head>
 <body>
 <div id="root"></div>
+<script type="module">
+import { auth, db } from './tfb-firebase.js';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { doc, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+window.__fb = {
+  signIn: (email, password) => signInWithEmailAndPassword(auth, email, password),
+  createUser: (email, password) => createUserWithEmailAndPassword(auth, email, password),
+  resetPassword: (email) => sendPasswordResetEmail(auth, email),
+  saveProfile: (uid, profile) => setDoc(doc(db, 'users', uid), { ...profile, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }),
+  createCheckoutSession: (priceKey, userId, userEmail) =>
+    fetch('https://us-central1-tfb-the-football-blueprint.cloudfunctions.net/createCheckoutSession', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        priceKey, userId, userEmail,
+        successUrl: window.location.origin + '/tfb-dashboard.html?subscribed=true',
+        cancelUrl: window.location.origin + '/tfb-login.html',
+      }),
+    }).then(r => r.json()),
+};
+</script>
 <script type="text/babel">
 const {useState} = React;
 const C={lime:'#B6FF2B',green:'#0F3D2E',greenDark:'#0A2E20',bg:'#0A0D11',s1:'#15191F',s2:'#1F252D',s3:'#2A3139',border:'rgba(255,255,255,0.07)',border2:'rgba(255,255,255,0.16)',txt:'#F0F2F4',txt2:'rgba(240,242,244,0.55)',txt3:'rgba(240,242,244,0.32)',goal:'#2ED47A',amber:'#FFB020',red:'#E5533D',sky:'#3FA9F5',purple:'#9B7FE8'};
@@ -35,10 +57,10 @@ const C={lime:'#B6FF2B',green:'#0F3D2E',greenDark:'#0A2E20',bg:'#0A0D11',s1:'#15
 const STAGES = ['login','signup','role','context','club','solo','team','plan','payment','done'];
 
 const TIERS = [
-  {id:'free',name:'Free',price:0,desc:'Try it out — 1 team, 5 sessions/mo',features:['1 team','25 players max','5 sessions/month','Basic dashboard','Community support'],color:'#8A8F98'},
-  {id:'starter',name:'Starter',price:29,desc:'For single-team coaches',features:['Up to 3 teams','Unlimited sessions','PDF session export','Email support','Calendar sync'],color:C.sky},
-  {id:'pro',name:'Pro',price:79,desc:'For ambitious clubs',popular:true,features:['Up to 10 teams','Custom club branding','Video analysis','Priority support','API access'],color:C.lime},
-  {id:'club',name:'Club',price:199,desc:'Multi-team, multi-coach',features:['Unlimited teams','Multi-club hierarchy','SSO & advanced security','Dedicated success manager','Custom integrations'],color:C.purple},
+  {id:'free',name:'Free Trial',price:0,desc:'Try it out — 1 team, 5 sessions/mo',features:['1 team','25 players max','5 sessions/month','Basic dashboard','Community support'],color:'#8A8F98'},
+  {id:'starter',name:'Starter',price:79,desc:'For single-team coaches',features:['Up to 3 teams','Unlimited sessions','PDF session export','Email support','Calendar sync'],color:C.sky},
+  {id:'pro',name:'Pro',price:149,desc:'For ambitious clubs',popular:true,features:['Up to 10 teams','Custom club branding','Video analysis','Priority support','API access'],color:C.lime},
+  {id:'elite',name:'Elite',price:279,desc:'Multi-team, multi-coach',features:['Unlimited teams','Multi-club hierarchy','SSO & advanced security','Dedicated success manager','Custom integrations'],color:C.purple},
 ];
 
 const ROLES = [
@@ -115,6 +137,28 @@ const Btn = ({onClick,children,variant='primary',disabled,style={}}) => (
 
 // ── Stage components ──────────────────────────────────────────────────────
 function LoginStage({setStage}) {
+  const [email, setEmail] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [error, setError] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+  const [resetSent, setResetSent] = React.useState(false);
+
+  const signIn = async () => {
+    setError(''); setLoading(true);
+    try {
+      await window.__fb.signIn(email, password);
+      window.location.href = 'tfb-dashboard.html';
+    } catch(e) {
+      setError(e.code === 'auth/invalid-credential' ? 'Incorrect email or password.' : 'Sign in failed. Please try again.');
+      setLoading(false);
+    }
+  };
+
+  const resetPassword = async () => {
+    if (!email) { setError('Enter your email above first.'); return; }
+    try { await window.__fb.resetPassword(email); setResetSent(true); setError(''); } catch(e) { setError('Could not send reset email.'); }
+  };
+
   return (
     <Card>
       <div style={{textAlign:'center',marginBottom:28}}>
@@ -123,27 +167,17 @@ function LoginStage({setStage}) {
         <div style={{fontSize:14,color:C.txt2}}>The Football Blueprint — sign in to your account</div>
       </div>
 
-      <Field label="Email"><input type="email" placeholder="coach@malverncity.com" style={inp} defaultValue="alex@malverncity.com"/></Field>
-      <Field label="Password"><input type="password" placeholder="••••••••" style={inp} defaultValue="demopass"/></Field>
+      <Field label="Email"><input type="email" placeholder="coach@yourclub.com" style={inp} value={email} onChange={e=>setEmail(e.target.value)}/></Field>
+      <Field label="Password"><input type="password" placeholder="••••••••" style={inp} value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={e=>e.key==='Enter'&&signIn()}/></Field>
 
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:18,fontSize:12.5}}>
-        <label style={{display:'flex',alignItems:'center',gap:7,color:C.txt2,cursor:'pointer'}}>
-          <input type="checkbox" defaultChecked style={{accentColor:C.lime}}/> Remember me
-        </label>
-        <a href="#" style={{color:C.lime,textDecoration:'none',fontWeight:600}}>Forgot password?</a>
+      {error && <div style={{color:C.red,fontSize:12.5,marginBottom:10,padding:'8px 12px',background:'rgba(229,83,61,0.08)',borderRadius:7,border:'1px solid rgba(229,83,61,0.2)'}}>{error}</div>}
+      {resetSent && <div style={{color:C.goal,fontSize:12.5,marginBottom:10,padding:'8px 12px',background:'rgba(46,212,122,0.08)',borderRadius:7,border:'1px solid rgba(46,212,122,0.2)'}}>Password reset email sent.</div>}
+
+      <div style={{display:'flex',justifyContent:'flex-end',marginBottom:18,fontSize:12.5}}>
+        <button onClick={resetPassword} style={{background:'none',border:'none',color:C.lime,fontWeight:600,cursor:'pointer'}}>Forgot password?</button>
       </div>
 
-      <Btn onClick={()=>{try{window.location.href='tfb-dashboard.html'}catch(e){}}} style={{width:'100%',marginBottom:14}}>Sign in →</Btn>
-
-      <div style={{display:'flex',alignItems:'center',gap:10,margin:'18px 0',color:C.txt3,fontSize:11}}>
-        <div style={{flex:1,height:1,background:C.border}}/> OR <div style={{flex:1,height:1,background:C.border}}/>
-      </div>
-
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:18}}>
-        {[{n:'Google',c:'#fff'},{n:'Apple',c:'#fff'}].map(p=>(
-          <button key={p.n} style={{padding:'10px',background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border2}`,borderRadius:9,fontSize:13,fontWeight:600,color:C.txt}}>Continue with {p.n}</button>
-        ))}
-      </div>
+      <Btn onClick={signIn} disabled={loading||!email||!password} style={{width:'100%',marginBottom:14}}>{loading ? 'Signing in…' : 'Sign in →'}</Btn>
 
       <div style={{textAlign:'center',fontSize:13,color:C.txt2}}>
         New to TFB? <button onClick={()=>setStage('signup')} style={{background:'none',border:'none',color:C.lime,fontWeight:700,cursor:'pointer'}}>Create an account →</button>
@@ -153,7 +187,22 @@ function LoginStage({setStage}) {
 }
 
 function SignupStage({setStage,data,update}) {
-  const valid = data.fname && data.lname && data.email && data.password && data.password.length >=8;
+  const [error, setError] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+  const valid = data.fname && data.lname && data.email && data.password && data.password.length >= 8;
+
+  const createAccount = async () => {
+    setError(''); setLoading(true);
+    try {
+      const cred = await window.__fb.createUser(data.email, data.password);
+      update('uid', cred.user.uid);
+      setStage('role');
+    } catch(e) {
+      setError(e.code === 'auth/email-already-in-use' ? 'An account with this email already exists.' : 'Could not create account. Please try again.');
+      setLoading(false);
+    }
+  };
+
   return (
     <Card>
       <Stepper stage="signup" solo={data.context==='solo'}/>
@@ -167,9 +216,10 @@ function SignupStage({setStage,data,update}) {
         <input type="password" style={inp} value={data.password} onChange={e=>update('password',e.target.value)} placeholder="••••••••"/>
       </Field>
       <Field label="Mobile (optional)" hint="Used for SMS reminders"><input style={inp} value={data.phone} onChange={e=>update('phone',e.target.value)} placeholder="04XX XXX XXX"/></Field>
+      {error && <div style={{color:C.red,fontSize:12.5,padding:'8px 12px',background:'rgba(229,83,61,0.08)',borderRadius:7,border:'1px solid rgba(229,83,61,0.2)'}}>{error}</div>}
       <div style={{display:'flex',gap:10,justifyContent:'space-between',marginTop:18}}>
         <Btn variant="ghost" onClick={()=>setStage('login')}>← Back to sign in</Btn>
-        <Btn onClick={()=>setStage('role')} disabled={!valid}>Continue →</Btn>
+        <Btn onClick={createAccount} disabled={!valid||loading}>{loading ? 'Creating account…' : 'Continue →'}</Btn>
       </div>
     </Card>
   );
@@ -314,6 +364,30 @@ function TeamStage({setStage,data,update}) {
 }
 
 function PlanStage({setStage,data,update}) {
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState('');
+
+  const onContinue = async () => {
+    if (!data.plan) return;
+    if (data.plan === 'free') {
+      setLoading(true); setError('');
+      try {
+        await window.__fb.saveProfile(data.uid, {
+          firstName: data.fname, lastName: data.lname, email: data.email,
+          phone: data.phone || '', role: data.role, context: data.context,
+          clubName: data.clubName || '', teamName: data.teamName || '',
+          ageGroup: data.ageGroup || '', plan: 'free', subscriptionStatus: 'free',
+        });
+        setStage('done');
+      } catch(e) {
+        setError('Could not save your profile. Please try again.');
+        setLoading(false);
+      }
+    } else {
+      setStage('payment');
+    }
+  };
+
   return (
     <Card wide>
       <Stepper stage="plan" solo={data.context==='solo'}/>
@@ -326,8 +400,8 @@ function PlanStage({setStage,data,update}) {
               {t.popular && <div style={{position:'absolute',top:-9,right:14,background:t.color,color:C.greenDark,fontSize:9,fontWeight:800,padding:'3px 8px',borderRadius:4,letterSpacing:'0.1em',textTransform:'uppercase'}}>Popular</div>}
               <div style={{fontSize:11,color:t.color,fontWeight:800,letterSpacing:'0.16em',textTransform:'uppercase',marginBottom:5}}>{t.name}</div>
               <div style={{display:'flex',alignItems:'baseline',gap:3,marginBottom:6}}>
-                <span style={{fontFamily:'var(--font-d)',fontSize:30,fontWeight:900,color:'#fff'}}>${t.price}</span>
-                <span style={{fontSize:12,color:C.txt2}}>{t.price===0?'forever':'/mo'}</span>
+                <span style={{fontFamily:'var(--font-d)',fontSize:30,fontWeight:900,color:'#fff'}}>{t.price===0?'Free':`$${t.price}`}</span>
+                <span style={{fontSize:12,color:C.txt2}}>{t.price===0?'':' AUD/mo'}</span>
               </div>
               <div style={{fontSize:11.5,color:C.txt2,lineHeight:1.4,marginBottom:12,minHeight:30}}>{t.desc}</div>
               <ul style={{listStyle:'none'}}>
@@ -342,66 +416,64 @@ function PlanStage({setStage,data,update}) {
         })}
       </div>
       <div style={{marginTop:16,padding:14,background:'rgba(63,169,245,0.06)',border:`1px solid rgba(63,169,245,0.2)`,borderRadius:10,fontSize:12.5,color:C.txt2,lineHeight:1.5}}>
-        💡 <span style={{color:C.txt}}>14-day free trial</span> on Starter, Pro and Club. No card needed for Free. We'll only charge after your trial ends.
+        💡 <span style={{color:C.txt}}>14-day free trial</span> on Starter, Pro and Elite — you'll be redirected to Stripe. No charge until the trial ends.
       </div>
+      {error && <div style={{color:C.red,fontSize:12.5,marginTop:10,padding:'8px 12px',background:'rgba(229,83,61,0.08)',borderRadius:7,border:'1px solid rgba(229,83,61,0.2)'}}>{error}</div>}
       <div style={{display:'flex',gap:10,justifyContent:'space-between',marginTop:20}}>
         <Btn variant="ghost" onClick={()=>setStage('team')}>← Back</Btn>
-        <Btn onClick={()=>setStage(data.plan==='free'?'done':'payment')} disabled={!data.plan}>{data.plan==='free'?'Finish setup →':'Continue to payment →'}</Btn>
+        <Btn onClick={onContinue} disabled={!data.plan||loading}>{loading?'Saving…':data.plan==='free'?'Finish setup →':'Continue to payment →'}</Btn>
       </div>
     </Card>
   );
 }
 
-function PaymentStage({setStage,data,update}) {
+function PaymentStage({setStage,data}) {
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState('');
   const tier = TIERS.find(t=>t.id===data.plan);
+
+  const startCheckout = async () => {
+    setError(''); setLoading(true);
+    try {
+      await window.__fb.saveProfile(data.uid, {
+        firstName: data.fname, lastName: data.lname, email: data.email,
+        phone: data.phone || '', role: data.role, context: data.context,
+        clubName: data.clubName || '', teamName: data.teamName || '',
+        ageGroup: data.ageGroup || '', plan: data.plan, subscriptionStatus: 'pending',
+      });
+      const result = await window.__fb.createCheckoutSession(data.plan, data.uid, data.email);
+      if (result.url) { window.location.href = result.url; }
+      else { setError('Could not start checkout. Please try again.'); setLoading(false); }
+    } catch(e) {
+      setError('Something went wrong. Please try again.');
+      setLoading(false);
+    }
+  };
+
   return (
     <Card wide>
       <Stepper stage="payment" solo={data.context==='solo'}/>
-      <Heading sub="Step 06 · Secure checkout" title="Complete your subscription" desc="Powered by Stripe. Your card is verified now but charged after your 14-day trial."/>
-      <div style={{display:'grid',gridTemplateColumns:'1.6fr 1fr',gap:24}}>
-        {/* Form */}
-        <div>
-          <Field label="Card number"><input style={inp} placeholder="4242 4242 4242 4242" defaultValue="4242 4242 4242 4242"/></Field>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10}}>
-            <Field label="Expiry"><input style={inp} placeholder="MM/YY" defaultValue="12/27"/></Field>
-            <Field label="CVC"><input style={inp} placeholder="123" defaultValue="123"/></Field>
-            <Field label="Postcode"><input style={inp} placeholder="3144" defaultValue="3144"/></Field>
-          </div>
-          <Field label="Name on card"><input style={inp} placeholder="A. Mitchell" defaultValue={`${data.fname} ${data.lname}`}/></Field>
-          <Field label="Billing email"><input style={inp} placeholder="billing@..." defaultValue={data.email}/></Field>
-          <div style={{display:'flex',alignItems:'center',gap:8,marginTop:14,padding:'10px 12px',background:'rgba(46,212,122,0.06)',border:'1px solid rgba(46,212,122,0.18)',borderRadius:8,fontSize:12,color:C.txt2}}>
-            <span style={{fontSize:14}}>🔒</span>
-            <span>256-bit SSL · 3D Secure · PCI-compliant via Stripe</span>
+      <Heading sub="Step 06 · Secure checkout" title="Complete your subscription" desc="You'll be redirected to Stripe to enter your card details. Your 14-day free trial starts today."/>
+      <div style={{background:C.s2,border:`1px solid ${C.border}`,borderRadius:14,padding:22,marginBottom:20,maxWidth:440}}>
+        <div style={{fontSize:11,fontWeight:700,color:C.txt3,letterSpacing:'0.14em',textTransform:'uppercase',marginBottom:14}}>Order summary</div>
+        <div style={{display:'flex',alignItems:'center',gap:12,paddingBottom:14,borderBottom:`1px solid ${C.border}`,marginBottom:14}}>
+          <div style={{width:40,height:40,borderRadius:10,background:`${tier.color}20`,border:`1px solid ${tier.color}40`,display:'flex',alignItems:'center',justifyContent:'center',color:tier.color,fontWeight:800,fontSize:13}}>{tier.name[0]}</div>
+          <div>
+            <div style={{fontSize:15,fontWeight:700}}>{tier.name} plan</div>
+            <div style={{fontSize:12,color:C.txt2}}>Monthly billing · AUD</div>
           </div>
         </div>
-
-        {/* Summary */}
-        <div style={{background:C.s2,border:`1px solid ${C.border}`,borderRadius:12,padding:18}}>
-          <div style={{fontSize:11,fontWeight:700,color:C.txt3,letterSpacing:'0.14em',textTransform:'uppercase',marginBottom:12}}>Order summary</div>
-          <div style={{display:'flex',alignItems:'center',gap:10,paddingBottom:14,borderBottom:`1px solid ${C.border}`,marginBottom:14}}>
-            <div style={{width:36,height:36,borderRadius:8,background:`${tier.color}20`,border:`1px solid ${tier.color}40`,display:'flex',alignItems:'center',justifyContent:'center',color:tier.color,fontWeight:800,fontSize:11}}>{tier.name[0]}</div>
-            <div style={{flex:1}}>
-              <div style={{fontSize:14,fontWeight:700}}>{tier.name} plan</div>
-              <div style={{fontSize:11.5,color:C.txt2}}>Monthly billing</div>
-            </div>
-          </div>
-          <div style={{display:'flex',justifyContent:'space-between',padding:'4px 0',fontSize:13}}>
-            <span style={{color:C.txt2}}>Subtotal</span><span>${tier.price}.00</span>
-          </div>
-          <div style={{display:'flex',justifyContent:'space-between',padding:'4px 0',fontSize:13}}>
-            <span style={{color:C.txt2}}>14-day trial</span><span style={{color:C.goal,fontWeight:700}}>−${tier.price}.00</span>
-          </div>
-          <div style={{borderTop:`1px solid ${C.border}`,marginTop:8,paddingTop:8}}>
-            <div style={{display:'flex',justifyContent:'space-between',fontSize:14,fontWeight:800}}>
-              <span>Due today</span><span style={{color:C.lime}}>$0.00</span>
-            </div>
-            <div style={{fontSize:11,color:C.txt3,marginTop:4}}>Charged ${tier.price}.00 on May 15, 2026 unless cancelled.</div>
-          </div>
-        </div>
+        <div style={{display:'flex',justifyContent:'space-between',padding:'4px 0',fontSize:13}}><span style={{color:C.txt2}}>Monthly price</span><span>${tier.price}.00 AUD</span></div>
+        <div style={{display:'flex',justifyContent:'space-between',padding:'4px 0',fontSize:13}}><span style={{color:C.txt2}}>14-day trial discount</span><span style={{color:C.goal,fontWeight:700}}>−${tier.price}.00</span></div>
+        <div style={{borderTop:`1px solid ${C.border}`,marginTop:10,paddingTop:10,display:'flex',justifyContent:'space-between',fontSize:15,fontWeight:800}}><span>Due today</span><span style={{color:C.lime}}>$0.00 AUD</span></div>
       </div>
-      <div style={{display:'flex',gap:10,justifyContent:'space-between',marginTop:20}}>
+      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:18,padding:'10px 14px',background:'rgba(46,212,122,0.06)',border:'1px solid rgba(46,212,122,0.18)',borderRadius:8,fontSize:12,color:C.txt2,maxWidth:440}}>
+        <span style={{fontSize:16}}>🔒</span><span>Powered by Stripe · 256-bit SSL · PCI-compliant · Cancel anytime</span>
+      </div>
+      {error && <div style={{color:C.red,fontSize:12.5,marginBottom:12,padding:'8px 12px',background:'rgba(229,83,61,0.08)',borderRadius:7,border:'1px solid rgba(229,83,61,0.2)',maxWidth:440}}>{error}</div>}
+      <div style={{display:'flex',gap:10,justifyContent:'space-between',maxWidth:440}}>
         <Btn variant="ghost" onClick={()=>setStage('plan')}>← Change plan</Btn>
-        <Btn onClick={()=>setStage('done')}>Start 14-day trial →</Btn>
+        <Btn onClick={startCheckout} disabled={loading}>{loading ? 'Redirecting to Stripe…' : 'Start 14-day trial →'}</Btn>
       </div>
     </Card>
   );
@@ -443,8 +515,7 @@ function DoneStage({data}) {
           ))}
         </div>
 
-        <Btn onClick={()=>{try{window.location.href='tfb-dashboard.html'}catch(e){}}} style={{width:'100%',marginBottom:8}}>Open dashboard →</Btn>
-        <button onClick={()=>{try{window.location.href='tfb-nav.html'}catch(e){}}} style={{background:'none',border:'none',color:C.txt2,fontSize:12.5,cursor:'pointer'}}>Browse all screens</button>
+        <Btn onClick={()=>window.location.href='tfb-dashboard.html'} style={{width:'100%'}}>Open dashboard →</Btn>
       </div>
     </Card>
   );
@@ -454,11 +525,11 @@ function DoneStage({data}) {
 function App() {
   const [stage,setStage] = useState('login');
   const [data,setData] = useState({
-    fname:'Alex',lname:'Mitchell',email:'alex@malverncity.com',password:'demopass123',phone:'',
-    role:'coach',context:'',
-    clubName:'Malvern City SC',country:'Australia',region:'Victoria',federation:'Football Victoria — NPL',
-    brandName:'',city:'',experience:'1-3',qualification:'',specialties:[],
-    teamName:'U16 Boys',ageGroup:'U16',level:'NPL',playerCount:'18',season:'2026',plan:'pro'
+    uid:'',fname:'',lname:'',email:'',password:'',phone:'',
+    role:'',context:'',
+    clubName:'',country:'',region:'',federation:'',
+    brandName:'',city:'',experience:'',qualification:'',specialties:[],
+    teamName:'',ageGroup:'U16',level:'Recreational',playerCount:'',season:'2026',plan:''
   });
   const update = (k,v) => setData(p=>({...p,[k]:v}));
 
@@ -474,7 +545,7 @@ function App() {
           </div>
         </div>
         <div style={{display:'flex',gap:8}}>
-          <button onClick={()=>{try{window.location.href='tfb-nav.html'}catch(e){}}} style={{padding:'7px 14px',background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border2}`,borderRadius:8,fontSize:12,fontWeight:600,color:C.txt2,cursor:'pointer'}}>← All screens</button>
+          <div/>
           {stage==='login' && <button onClick={()=>setStage('signup')} style={{padding:'7px 14px',background:`${C.lime}14`,border:`1px solid ${C.lime}40`,borderRadius:8,fontSize:12,fontWeight:700,color:C.lime,cursor:'pointer'}}>Get started</button>}
         </div>
       </div>

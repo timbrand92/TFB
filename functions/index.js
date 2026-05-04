@@ -12,9 +12,9 @@ const stripeWebhookSecret = defineSecret("STRIPE_WEBHOOK_SECRET");
 // ─── Price IDs ────────────────────────────────────────────────────────────────
 // Stripe Dashboard → Products → click product → copy the price_... ID
 const PRICES = {
-  starter: "REPLACE_WITH_STARTER_PRICE_ID",  // $29/mo
-  pro:     "REPLACE_WITH_PRO_PRICE_ID",      // $79/mo
-  club:    "REPLACE_WITH_CLUB_PRICE_ID",     // $199/mo
+  starter: "price_1TTGNWHyfV3GtaDedhhVHi2B",  // $79 AUD/mo  — TFB Club Starter
+  pro:     "price_1TTGLsHyfV3GtaDemDJaaswm",  // $149 AUD/mo — TFB Club Pro
+  elite:   "price_1TTGNvHyfV3GtaDeF9Eas0iJ",  // $279 AUD/mo — TFB Club Elite
 };
 
 // ─── Create Stripe Checkout Session ───────────────────────────────────────────

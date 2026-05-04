@@ -10,17 +10,11 @@ const stripeSecretKey    = defineSecret("STRIPE_SECRET_KEY");
 const stripeWebhookSecret = defineSecret("STRIPE_WEBHOOK_SECRET");
 
 // ─── Price IDs ────────────────────────────────────────────────────────────────
-// Replace these with your real Stripe price IDs.
-// Stripe Dashboard → Products → (select product) → Prices → copy price ID
+// Stripe Dashboard → Products → click product → copy the price_... ID
 const PRICES = {
-  starter_monthly:  "REPLACE_WITH_STARTER_MONTHLY_PRICE_ID",
-  starter_annual:   "REPLACE_WITH_STARTER_ANNUAL_PRICE_ID",
-  pro_monthly:      "REPLACE_WITH_PRO_MONTHLY_PRICE_ID",
-  pro_annual:       "REPLACE_WITH_PRO_ANNUAL_PRICE_ID",
-  club_monthly:     "REPLACE_WITH_CLUB_MONTHLY_PRICE_ID",
-  club_annual:      "REPLACE_WITH_CLUB_ANNUAL_PRICE_ID",
-  elite_monthly:    "REPLACE_WITH_ELITE_MONTHLY_PRICE_ID",
-  elite_annual:     "REPLACE_WITH_ELITE_ANNUAL_PRICE_ID",
+  starter: "REPLACE_WITH_STARTER_PRICE_ID",  // $29/mo
+  pro:     "REPLACE_WITH_PRO_PRICE_ID",      // $79/mo
+  club:    "REPLACE_WITH_CLUB_PRICE_ID",     // $199/mo
 };
 
 // ─── Create Stripe Checkout Session ───────────────────────────────────────────

@@ -59,8 +59,8 @@ exports.createCheckoutSession = onRequest(
         payment_method_types: ["card"],
         line_items: [{ price: PRICES[priceKey], quantity: 1 }],
         mode: "subscription",
-        success_url: successUrl || "https://your-app.web.app/billing?success=true",
-        cancel_url:  cancelUrl  || "https://your-app.web.app/billing?canceled=true",
+        success_url: successUrl || "https://tfb-the-football-blueprint.web.app/billing?success=true",
+        cancel_url:  cancelUrl  || "https://tfb-the-football-blueprint.web.app/billing?canceled=true",
         metadata: { firebaseUserId: userId },
       });
 
@@ -90,7 +90,7 @@ exports.createPortalSession = onRequest(
 
       const session = await stripe.billingPortal.sessions.create({
         customer: userDoc.data().stripeCustomerId,
-        return_url: returnUrl || "https://your-app.web.app/billing",
+        return_url: returnUrl || "https://tfb-the-football-blueprint.web.app/billing",
       });
 
       res.json({ url: session.url });

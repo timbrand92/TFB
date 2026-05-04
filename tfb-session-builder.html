@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TFB – Session Builder</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="tfb-responsive.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --lime:#B6FF2B;--green:#0F3D2E;--green-dark:#0A2E20;
+  --bg:#111418;--s1:#1C2128;--s2:#242B33;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --txt:#F0F2F4;--txt2:rgba(240,242,244,0.5);--txt3:rgba(240,242,244,0.28);
+  --goal:#2ED47A;--amber:#FFB020;--red:#E5533D;--sky:#3FA9F5;
+  --font-d:'Barlow Condensed',sans-serif;--font-b:'Barlow',sans-serif;--hh:54px;
+}
+html,body,#root{height:100%;overflow:hidden}
+body{font-family:var(--font-b);background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font-family:var(--font-b);color:inherit}
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:3px}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn .18s ease forwards}
+/* Pitch */
+.pitch{background-color:#2d6a3f;background-image:repeating-linear-gradient(0deg,transparent,transparent 40px,rgba(0,0,0,0.08) 40px,rgba(0,0,0,0.08) 80px)}
+/* Draggable elements */
+.draggable{cursor:grab;user-select:none}
+.draggable:active{cursor:grabbing}
+.draggable:hover .element-label{opacity:1!important}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState, useEffect, useRef, useCallback} = React;
+
+const C={lime:'#B6FF2B',green:'#0F3D2E',greenDark:'#0A2E20',bg:'#111418',s1:'#1C2128',s2:'#242B33',border:'rgba(255,255,255,0.07)',border2:'rgba(255,255,255,0.13)',txt:'#F0F2F4',txt2:'rgba(240,242,244,0.5)',txt3:'rgba(240,242,244,0.28)',goal:'#2ED47A',amber:'#FFB020',red:'#E5533D',sky:'#3FA9F5'};
+
+const Ic=({d,size=16,color='currentColor',stroke=2,fill='none'})=>(<svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>{Array.isArray(d)?d.map((p,i)=><path key={i} d={p}/>):<path d={d}/> }</svg>);
+const P={
+  back:'M15 18l-6-6 6-6',plus:'M12 5v14M5 12h14',x:'M18 6L6 18M6 6l12 12',
+  save:'M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2zM17 21v-8H7v8M7 3v5h8',
+  undo:'M3 7v6h6M3.51 15a9 9 0 1 0 2.13-9.36L3 10',
+  redo:'M21 7v6h-6M20.49 15a9 9 0 1 1-2.13-9.36L21 10',
+  trash:'M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6',
+  edit:'M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z',
+  move:'M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20',
+  pen:'M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z',
+  arrow:'M5 12h14M12 5l7 7-7 7',
+  circle:'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z',
+  square:'M3 3h18v18H3z',
+  minus:'M5 12h14',
+  chevD:'M6 9l6 6 6-6',
+};
+
+// ── Tool definitions ──────────────────────────────────────────────────────────
+const TOOLS = [
+  {id:'select',   label:'Select',    icon:P.move,   cursor:'default'},
+  {id:'arrow',    label:'Arrow',     icon:P.arrow,  cursor:'crosshair'},
+  {id:'line',     label:'Line',      icon:P.minus,  cursor:'crosshair'},
+  {id:'circle',   label:'Zone',      icon:P.circle, cursor:'crosshair'},
+  {id:'text',     label:'Text',      icon:P.edit,   cursor:'text'},
+  {id:'erase',    label:'Erase',     icon:P.trash,  cursor:'not-allowed'},
+];
+
+// ── Element types ─────────────────────────────────────────────────────────────
+const PLAYER_COLORS = {
+  team1:'#B6FF2B', team2:'#FFFFFF', gk:'#FFB020',
+  defender:'#3FA9F5', midfielder:'#B6FF2B', attacker:'#E5533D',
+};
+
+const OBJECT_TYPES = {
+  cone:    {label:'Cone',     emoji:'🔺', size:24},
+  cone_b:  {label:'Blue Cone',emoji:'🔵', size:24},
+  goal:    {label:'Goal',     emoji:'🥅', size:48},
+  ball:    {label:'Ball',     emoji:'⚽', size:28},
+  flag:    {label:'Flag',     emoji:'🚩', size:24},
+  mannequin:{label:'Mannequin',emoji:'🧍',size:28},
+};
+
+const ARROW_COLORS = {
+  run:    {color:'#B6FF2B', style:'solid',  label:'Player Run'},
+  dribble:{color:'#B6FF2B', style:'dashed', label:'Dribble'},
+  pass:   {color:'#fff',    style:'solid',  label:'Pass'},
+  shot:   {color:'#E5533D', style:'solid',  label:'Shot'},
+  opp:    {color:'#E5533D', style:'dashed', label:'Opp. Run'},
+};
+
+// ── Initial setup ─────────────────────────────────────────────────────────────
+let _id = 1;
+const uid = () => `el_${_id++}`;
+
+function makePlayer(x, y, label, color='#B6FF2B', number=null) {
+  return { id:uid(), type:'player', x, y, label, color, number };
+}
+function makeCone(x, y, variant='cone') {
+  return { id:uid(), type:'object', x, y, variant };
+}
+function makeGoal(x, y) {
+  return { id:uid(), type:'object', x, y, variant:'goal' };
+}
+
+const INIT_ELEMENTS = [
+  makeGoal(50, 4),
+  makeGoal(50, 94),
+  makePlayer(30, 40, '6', C.lime, 6),
+  makePlayer(50, 40, '8', C.lime, 8),
+  makePlayer(70, 40, '10', C.lime, 10),
+  makePlayer(50, 60, '9', C.lime, 9),
+  makePlayer(30, 70, '11', C.lime, 11),
+  makePlayer(70, 70, '7', C.lime, 7),
+  {id:uid(), type:'object', x:20, y:50, variant:'cone'},
+  {id:uid(), type:'object', x:40, y:50, variant:'cone'},
+  {id:uid(), type:'object', x:60, y:50, variant:'cone'},
+  {id:uid(), type:'object', x:80, y:50, variant:'cone'},
+  {id:uid(), type:'object', x:50, y:30, variant:'ball'},
+];
+
+// Lines: [{id, x1,y1,x2,y2, color, style, arrowEnd}]
+const INIT_LINES = [
+  {id:uid(), x1:50, y1:30, x2:50, y2:40, color:'#fff', style:'solid', arrowEnd:true, label:'Pass'},
+];
+
+// ── SVG Pitch Markings ────────────────────────────────────────────────────────
+function PitchMarkings() {
+  return (
+    <svg style={{position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:'none'}} viewBox="0 0 100 110" preserveAspectRatio="none">
+      <rect x="2" y="2" width="96" height="106" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="0.5"/>
+      <line x1="2" y1="55" x2="98" y2="55" stroke="rgba(255,255,255,0.18)" strokeWidth="0.4"/>
+      <circle cx="50" cy="55" r="10" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="0.4"/>
+      <circle cx="50" cy="55" r="0.7" fill="rgba(255,255,255,0.4)"/>
+      <rect x="22" y="2" width="56" height="18" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="0.4"/>
+      <rect x="22" y="90" width="56" height="18" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="0.4"/>
+      <rect x="35" y="2" width="30" height="8" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="0.35"/>
+      <rect x="35" y="100" width="30" height="8" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="0.35"/>
+      <circle cx="50" cy="14" r="0.7" fill="rgba(255,255,255,0.3)"/>
+      <circle cx="50" cy="96" r="0.7" fill="rgba(255,255,255,0.3)"/>
+      <path d="M34 20 A11 11 0 0 0 66 20" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="0.35"/>
+      <path d="M34 90 A11 11 0 0 1 66 90" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="0.35"/>
+    </svg>
+  );
+}
+
+// ── Pitch Element Renderer ────────────────────────────────────────────────────
+function PitchElement({el, selected, onPointerDown}) {
+  if(el.type==='player') {
+    return (
+      <div className="draggable" onPointerDown={e=>onPointerDown(e,el)}
+        style={{position:'absolute',left:`${el.x}%`,top:`${el.y}%`,transform:'translate(-50%,-50%)',display:'flex',flexDirection:'column',alignItems:'center',gap:2,zIndex:selected?20:5}}>
+        <div style={{width:30,height:30,borderRadius:'50%',background:`linear-gradient(135deg,${el.color},${el.color}cc)`,border:selected?'2.5px solid #fff':`2px solid ${el.color}80`,display:'flex',alignItems:'center',justifyContent:'center',boxShadow:selected?'0 0 0 3px rgba(255,255,255,0.3)':'0 2px 8px rgba(0,0,0,0.5)',transition:'box-shadow .1s'}}>
+          <span style={{fontSize:11,fontWeight:900,color:el.color==='#FFFFFF'?'#111418':'#0F3D2E',fontFamily:'var(--font-d)'}}>{el.number||el.label}</span>
+        </div>
+        <div className="element-label" style={{background:'rgba(0,0,0,0.7)',backdropFilter:'blur(4px)',borderRadius:3,padding:'1px 5px',fontSize:8.5,fontWeight:700,color:'#fff',whiteSpace:'nowrap',opacity:selected?1:0.7,transition:'opacity .15s',border:selected?'1px solid rgba(255,255,255,0.5)':'1px solid rgba(255,255,255,0.15)'}}>
+          {el.label}
+        </div>
+      </div>
+    );
+  }
+  if(el.type==='object') {
+    const obj = OBJECT_TYPES[el.variant]||OBJECT_TYPES.cone;
+    if(el.variant==='goal') {
+      return (
+        <div className="draggable" onPointerDown={e=>onPointerDown(e,el)}
+          style={{position:'absolute',left:`${el.x}%`,top:`${el.y}%`,transform:'translate(-50%,-50%)',zIndex:selected?20:4}}>
+          <svg width="60" height="16" viewBox="0 0 60 16" style={{filter:selected?'drop-shadow(0 0 4px rgba(255,255,255,0.5))':'none'}}>
+            <rect x="1" y="1" width="58" height="14" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" rx="1"/>
+            <line x1="1" y1="4" x2="59" y2="4" stroke="rgba(255,255,255,0.2)" strokeWidth="0.5"/>
+            <line x1="5" y1="1" x2="5" y2="15" stroke="rgba(255,255,255,0.2)" strokeWidth="0.5"/>
+            <line x1="55" y1="1" x2="55" y2="15" stroke="rgba(255,255,255,0.2)" strokeWidth="0.5"/>
+          </svg>
+        </div>
+      );
+    }
+    return (
+      <div className="draggable" onPointerDown={e=>onPointerDown(e,el)}
+        style={{position:'absolute',left:`${el.x}%`,top:`${el.y}%`,transform:'translate(-50%,-50%)',fontSize:obj.size,lineHeight:1,zIndex:selected?20:5,filter:selected?'drop-shadow(0 0 4px rgba(255,255,255,0.6))':'drop-shadow(0 1px 2px rgba(0,0,0,0.5))',cursor:'grab',userSelect:'none'}}>
+        {obj.emoji}
+      </div>
+    );
+  }
+  if(el.type==='text') {
+    return (
+      <div className="draggable" onPointerDown={e=>onPointerDown(e,el)}
+        style={{position:'absolute',left:`${el.x}%`,top:`${el.y}%`,transform:'translate(-50%,-50%)',background:'rgba(0,0,0,0.65)',border:selected?'1px solid #fff':'1px solid rgba(255,255,255,0.25)',borderRadius:5,padding:'3px 8px',fontSize:12,fontWeight:700,color:'#fff',whiteSpace:'nowrap',cursor:'grab',userSelect:'none',zIndex:selected?20:5}}>
+        {el.text||'Text'}
+      </div>
+    );
+  }
+  if(el.type==='zone') {
+    return (
+      <div className="draggable" onPointerDown={e=>onPointerDown(e,el)}
+        style={{position:'absolute',left:`${el.x}%`,top:`${el.y}%`,transform:'translate(-50%,-50%)',width:`${el.w||10}%`,height:`${el.h||10}%`,background:`${el.color||'rgba(63,169,245,0.15)'}`,border:`2px ${el.dash?'dashed':'solid'} ${el.color||'rgba(63,169,245,0.5)'}`,borderRadius:'50%',zIndex:selected?20:3,cursor:'grab',userSelect:'none'}}>
+      </div>
+    );
+  }
+  return null;
+}
+
+// ── Arrow SVG on pitch ────────────────────────────────────────────────────────
+function ArrowsLayer({lines, selected, onSelect, pitchW, pitchH}) {
+  const pct2px=(pct,dim)=>(pct/100)*dim;
+  return (
+    <svg style={{position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:10}} preserveAspectRatio="none" viewBox={`0 0 ${pitchW} ${pitchH}`}>
+      <defs>
+        {Object.entries(ARROW_COLORS).map(([k,v])=>(
+          <marker key={k} id={`arrowhead_${k}`} markerWidth="6" markerHeight="4" refX="5" refY="2" orient="auto">
+            <polygon points="0 0, 6 2, 0 4" fill={v.color}/>
+          </marker>
+        ))}
+      </defs>
+      {lines.map(line=>{
+        const x1=pct2px(line.x1,pitchW), y1=pct2px(line.y1,pitchH);
+        const x2=pct2px(line.x2,pitchW), y2=pct2px(line.y2,pitchH);
+        const arrowKey=line.arrowKey||'run';
+        const av=ARROW_COLORS[arrowKey]||ARROW_COLORS.run;
+        return (
+          <line key={line.id}
+            x1={x1} y1={y1} x2={x2} y2={y2}
+            stroke={av.color}
+            strokeWidth={selected===line.id?3:2}
+            strokeDasharray={av.style==='dashed'?'6 4':'none'}
+            markerEnd={line.arrowEnd?`url(#arrowhead_${arrowKey})`:undefined}
+            opacity={0.85}
+            style={{pointerEvents:'none'}}
+          />
+        );
+      })}
+    </svg>
+  );
+}
+
+// ── Toolbar ───────────────────────────────────────────────────────────────────
+function Toolbar({tool, setTool, onUndo, onRedo, onClear, canUndo, canRedo, arrowType, setArrowType, lineColor, setLineColor}) {
+  return (
+    <div style={{display:'flex',alignItems:'center',gap:6,padding:'8px 12px',background:C.s1,borderBottom:`1px solid ${C.border}`,flexShrink:0,flexWrap:'wrap'}}>
+      {/* Tools */}
+      <div style={{display:'flex',gap:3}}>
+        {TOOLS.map(t=>(
+          <button key={t.id} onClick={()=>setTool(t.id)} title={t.label}
+            style={{width:32,height:32,background:tool===t.id?'rgba(182,255,43,0.15)':'transparent',border:`1px solid ${tool===t.id?'rgba(182,255,43,0.4)':C.border2}`,borderRadius:7,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',transition:'all .12s'}}
+            onMouseEnter={e=>{if(tool!==t.id)e.currentTarget.style.background='rgba(255,255,255,0.05)'}}
+            onMouseLeave={e=>{if(tool!==t.id)e.currentTarget.style.background='transparent'}}>
+            <Ic d={t.icon} size={14} color={tool===t.id?C.lime:C.txt3}/>
+          </button>
+        ))}
+      </div>
+      <div style={{width:1,height:22,background:C.border}}/>
+      {/* Arrow type (when arrow tool active) */}
+      {(tool==='arrow'||tool==='line')&&(
+        <div style={{display:'flex',gap:3}}>
+          {Object.entries(ARROW_COLORS).map(([k,v])=>(
+            <button key={k} onClick={()=>setArrowType(k)} title={v.label}
+              style={{padding:'4px 8px',background:arrowType===k?`${v.color}20`:'transparent',border:`1px solid ${arrowType===k?v.color+'50':C.border2}`,borderRadius:6,cursor:'pointer',fontSize:10,fontWeight:700,color:arrowType===k?v.color:C.txt3,transition:'all .12s'}}>
+              {v.label}
+            </button>
+          ))}
+        </div>
+      )}
+      <div style={{flex:1}}/>
+      {/* Undo/Redo/Clear */}
+      <button onClick={onUndo} disabled={!canUndo} title="Undo"
+        style={{width:30,height:30,background:'transparent',border:`1px solid ${C.border2}`,borderRadius:6,cursor:canUndo?'pointer':'not-allowed',display:'flex',alignItems:'center',justifyContent:'center',opacity:canUndo?1:0.35,transition:'all .12s'}}
+        onMouseEnter={e=>{if(canUndo)e.currentTarget.style.background='rgba(255,255,255,0.06)'}}
+        onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+        <Ic d={P.undo} size={13} color={C.txt3}/>
+      </button>
+      <button onClick={onRedo} disabled={!canRedo} title="Redo"
+        style={{width:30,height:30,background:'transparent',border:`1px solid ${C.border2}`,borderRadius:6,cursor:canRedo?'pointer':'not-allowed',display:'flex',alignItems:'center',justifyContent:'center',opacity:canRedo?1:0.35,transition:'all .12s'}}
+        onMouseEnter={e=>{if(canRedo)e.currentTarget.style.background='rgba(255,255,255,0.06)'}}
+        onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+        <Ic d={P.redo} size={13} color={C.txt3}/>
+      </button>
+      <button onClick={onClear} title="Clear pitch"
+        style={{padding:'5px 10px',background:'transparent',border:`1px solid rgba(229,83,61,0.3)`,borderRadius:7,cursor:'pointer',fontSize:11,fontWeight:700,color:C.red,display:'flex',alignItems:'center',gap:4,transition:'all .12s'}}
+        onMouseEnter={e=>{e.currentTarget.style.background='rgba(229,83,61,0.1)'}}
+        onMouseLeave={e=>{e.currentTarget.style.background='transparent'}}>
+        <Ic d={P.trash} size={12} color={C.red}/> Clear
+      </button>
+    </div>
+  );
+}
+
+// ── Element Palette (left sidebar) ───────────────────────────────────────────
+function ElementPalette({onAddElement}) {
+  const [expanded,setExpanded]=useState({players:true,objects:true,zones:false});
+
+  const PLAYER_PRESETS=[
+    {label:'Team A',number:'1',color:'#B6FF2B'},{label:'Team A',number:'2',color:'#B6FF2B'},
+    {label:'Team A',number:'3',color:'#B6FF2B'},{label:'GK',number:'GK',color:'#FFB020'},
+    {label:'Team B',number:'X',color:'#FFFFFF'},{label:'Opp.',number:'D',color:'#E5533D'},
+  ];
+
+  const ZONE_PRESETS=[
+    {label:'Blue Zone',color:'rgba(63,169,245,0.2)',border:'rgba(63,169,245,0.6)',dash:false},
+    {label:'Red Zone',color:'rgba(229,83,61,0.15)',border:'rgba(229,83,61,0.6)',dash:true},
+    {label:'Green Zone',color:'rgba(46,212,122,0.15)',border:'rgba(46,212,122,0.6)',dash:false},
+    {label:'Yellow Zone',color:'rgba(255,176,32,0.15)',border:'rgba(255,176,32,0.6)',dash:true},
+  ];
+
+  const Section=({id,label,children})=>(
+    <div style={{marginBottom:8}}>
+      <button onClick={()=>setExpanded(e=>({...e,[id]:!e[id]}))} style={{width:'100%',display:'flex',alignItems:'center',gap:5,padding:'5px 6px',background:'transparent',border:'none',cursor:'pointer',borderRadius:5,transition:'background .12s'}} onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.04)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+        <Ic d={expanded[id]?P.chevD:P.back} size={11} color={C.txt3}/>
+        <span style={{fontSize:10,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.1em'}}>{label}</span>
+      </button>
+      {expanded[id]&&<div style={{padding:'4px 0'}}>{children}</div>}
+    </div>
+  );
+
+  return (
+    <div style={{width:180,background:C.s1,borderRight:`1px solid ${C.border}`,padding:'10px 8px',overflowY:'auto',flexShrink:0}}>
+      <Section id="players" label="Players">
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:5}}>
+          {PLAYER_PRESETS.map((p,i)=>(
+            <button key={i} onClick={()=>onAddElement({type:'player',label:p.label,number:p.number,color:p.color})}
+              style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3,padding:'7px 4px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:8,cursor:'pointer',transition:'all .12s'}}
+              onMouseEnter={e=>{e.currentTarget.style.borderColor=p.color+'60';e.currentTarget.style.background=`${p.color}10`}}
+              onMouseLeave={e=>{e.currentTarget.style.borderColor=C.border2;e.currentTarget.style.background=C.s2}}>
+              <div style={{width:24,height:24,borderRadius:'50%',background:`linear-gradient(135deg,${p.color},${p.color}cc)`,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                <span style={{fontSize:9,fontWeight:900,color:p.color==='#FFFFFF'?'#111':'#0F3D2E',fontFamily:'var(--font-d)'}}>{p.number}</span>
+              </div>
+              <span style={{fontSize:9,color:C.txt3,fontWeight:600}}>{p.label}</span>
+            </button>
+          ))}
+        </div>
+      </Section>
+
+      <Section id="objects" label="Objects">
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:5}}>
+          {Object.entries(OBJECT_TYPES).map(([k,v])=>(
+            <button key={k} onClick={()=>onAddElement({type:'object',variant:k})}
+              style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3,padding:'7px 4px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:8,cursor:'pointer',transition:'all .12s'}}
+              onMouseEnter={e=>{e.currentTarget.style.borderColor='rgba(182,255,43,0.35)';e.currentTarget.style.background='rgba(182,255,43,0.06)'}}
+              onMouseLeave={e=>{e.currentTarget.style.borderColor=C.border2;e.currentTarget.style.background=C.s2}}>
+              <span style={{fontSize:18}}>{v.emoji}</span>
+              <span style={{fontSize:9,color:C.txt3,fontWeight:600}}>{v.label}</span>
+            </button>
+          ))}
+        </div>
+      </Section>
+
+      <Section id="zones" label="Zones & Areas">
+        <div style={{display:'flex',flexDirection:'column',gap:4}}>
+          {ZONE_PRESETS.map((z,i)=>(
+            <button key={i} onClick={()=>onAddElement({type:'zone',color:z.color,borderColor:z.border,dash:z.dash,w:20,h:15})}
+              style={{display:'flex',alignItems:'center',gap:7,padding:'7px 9px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:7,cursor:'pointer',transition:'all .12s'}}
+              onMouseEnter={e=>{e.currentTarget.style.borderColor=z.border;e.currentTarget.style.background=z.color}}
+              onMouseLeave={e=>{e.currentTarget.style.borderColor=C.border2;e.currentTarget.style.background=C.s2}}>
+              <div style={{width:16,height:12,borderRadius:3,background:z.color,border:`2px ${z.dash?'dashed':'solid'} ${z.border}`,flexShrink:0}}/>
+              <span style={{fontSize:10,color:C.txt2,fontWeight:600}}>{z.label}</span>
+            </button>
+          ))}
+          <button onClick={()=>onAddElement({type:'text',text:'Label'})}
+            style={{display:'flex',alignItems:'center',gap:7,padding:'7px 9px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:7,cursor:'pointer',transition:'all .12s'}}
+            onMouseEnter={e=>{e.currentTarget.style.borderColor='rgba(182,255,43,0.35)';e.currentTarget.style.background='rgba(182,255,43,0.06)'}}
+            onMouseLeave={e=>{e.currentTarget.style.borderColor=C.border2;e.currentTarget.style.background=C.s2}}>
+            <Ic d={P.edit} size={14} color={C.txt3}/>
+            <span style={{fontSize:10,color:C.txt2,fontWeight:600}}>Text Label</span>
+          </button>
+        </div>
+      </Section>
+
+      {/* Arrow legend */}
+      <div style={{borderTop:`1px solid ${C.border}`,paddingTop:10,marginTop:4}}>
+        <div style={{fontSize:9.5,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:6}}>Arrow Types</div>
+        {Object.entries(ARROW_COLORS).map(([k,v])=>(
+          <div key={k} style={{display:'flex',alignItems:'center',gap:6,padding:'3px 4px'}}>
+            <svg width="30" height="10" viewBox="0 0 30 10">
+              <line x1="0" y1="5" x2="24" y2="5" stroke={v.color} strokeWidth="2" strokeDasharray={v.style==='dashed'?'4 3':'none'}/>
+              <polygon points="24,2 30,5 24,8" fill={v.color}/>
+            </svg>
+            <span style={{fontSize:9.5,color:C.txt3}}>{v.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Properties panel (right) ──────────────────────────────────────────────────
+function PropertiesPanel({selected, elements, lines, onUpdateElement, onDeleteElement}) {
+  const el = elements.find(e=>e.id===selected) || lines.find(l=>l.id===selected);
+  if(!el) return (
+    <div style={{width:200,background:C.s1,borderLeft:`1px solid ${C.border}`,padding:'14px 12px',display:'flex',flexDirection:'column',gap:10}}>
+      <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.1em'}}>Properties</div>
+      <div style={{fontSize:12,color:C.txt3,fontStyle:'italic',lineHeight:1.6}}>Click an element to edit its properties</div>
+      <div style={{marginTop:8}}>
+        <div style={{fontSize:10,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:6}}>Keyboard Shortcuts</div>
+        {[['Click','Select'],['Drag','Move element'],['Del','Delete selected'],['Esc','Deselect']].map(([k,v])=>(
+          <div key={k} style={{display:'flex',justifyContent:'space-between',padding:'3px 0',fontSize:11}}>
+            <kbd style={{background:C.s2,border:`1px solid ${C.border2}`,borderRadius:4,padding:'1px 6px',color:C.txt2,fontFamily:'monospace',fontSize:10}}>{k}</kbd>
+            <span style={{color:C.txt3}}>{v}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const isLine = el.x1!==undefined;
+  const isPlayer = el.type==='player';
+  const isObj = el.type==='object';
+  const isText = el.type==='text';
+  const isZone = el.type==='zone';
+
+  return (
+    <div style={{width:200,background:C.s1,borderLeft:`1px solid ${C.border}`,padding:'12px',display:'flex',flexDirection:'column',gap:12,overflowY:'auto'}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+        <div style={{fontSize:11,fontWeight:700,color:C.lime,textTransform:'uppercase',letterSpacing:'0.1em'}}>
+          {isLine?'Arrow / Line':isPlayer?'Player':isObj?'Object':isText?'Text':'Zone'}
+        </div>
+        <button onClick={()=>onDeleteElement(el.id)} style={{background:'transparent',border:`1px solid rgba(229,83,61,0.3)`,borderRadius:5,padding:'3px 7px',cursor:'pointer',fontSize:10,fontWeight:700,color:C.red,display:'flex',alignItems:'center',gap:3,transition:'all .12s'}} onMouseEnter={e=>e.currentTarget.style.background='rgba(229,83,61,0.1)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+          <Ic d={P.trash} size={11} color={C.red}/> Del
+        </button>
+      </div>
+
+      {isPlayer&&(<>
+        <div>
+          <div style={{fontSize:10,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:5}}>Label / Name</div>
+          <input value={el.label||''} onChange={e=>onUpdateElement(el.id,{label:e.target.value})} style={{width:'100%',padding:'7px 9px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:7,color:C.txt,fontSize:12,outline:'none'}}/>
+        </div>
+        <div>
+          <div style={{fontSize:10,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:5}}>Number</div>
+          <input value={el.number||''} onChange={e=>onUpdateElement(el.id,{number:e.target.value})} style={{width:'100%',padding:'7px 9px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:7,color:C.txt,fontSize:12,outline:'none'}}/>
+        </div>
+        <div>
+          <div style={{fontSize:10,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:5}}>Colour</div>
+          <div style={{display:'flex',gap:5,flexWrap:'wrap'}}>
+            {['#B6FF2B','#FFFFFF','#FFB020','#3FA9F5','#E5533D','#2ED47A'].map(c=>(
+              <button key={c} onClick={()=>onUpdateElement(el.id,{color:c})} style={{width:22,height:22,borderRadius:'50%',background:c,border:`2px solid ${el.color===c?'#fff':'transparent'}`,cursor:'pointer',transition:'border-color .1s'}}/>
+            ))}
+          </div>
+        </div>
+      </>)}
+
+      {isText&&(
+        <div>
+          <div style={{fontSize:10,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:5}}>Text</div>
+          <textarea value={el.text||''} onChange={e=>onUpdateElement(el.id,{text:e.target.value})} rows={2} style={{width:'100%',padding:'7px 9px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:7,color:C.txt,fontSize:12,outline:'none',resize:'none'}}/>
+        </div>
+      )}
+
+      {isLine&&(<>
+        <div>
+          <div style={{fontSize:10,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:5}}>Arrow Type</div>
+          <div style={{display:'flex',flexDirection:'column',gap:4}}>
+            {Object.entries(ARROW_COLORS).map(([k,v])=>(
+              <button key={k} onClick={()=>onUpdateElement(el.id,{arrowKey:k})} style={{display:'flex',alignItems:'center',gap:6,padding:'5px 8px',background:el.arrowKey===k?`${v.color}15`:'transparent',border:`1px solid ${el.arrowKey===k?v.color+'40':C.border}`,borderRadius:6,cursor:'pointer',transition:'all .12s'}}>
+                <svg width="24" height="8" viewBox="0 0 24 8"><line x1="0" y1="4" x2="18" y2="4" stroke={v.color} strokeWidth="1.5" strokeDasharray={v.style==='dashed'?'4 3':'none'}/><polygon points="18,1 24,4 18,7" fill={v.color}/></svg>
+                <span style={{fontSize:10,color:el.arrowKey===k?v.color:C.txt3,fontWeight:el.arrowKey===k?700:400}}>{v.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          <span style={{fontSize:11,color:C.txt2}}>Arrowhead</span>
+          <button onClick={()=>onUpdateElement(el.id,{arrowEnd:!el.arrowEnd})} style={{position:'relative',width:36,height:20,borderRadius:10,background:el.arrowEnd?`linear-gradient(135deg,${C.lime},#68B42E)`:'rgba(255,255,255,0.12)',border:'none',cursor:'pointer',padding:0,transition:'background .2s'}}>
+            <div style={{position:'absolute',top:2,left:el.arrowEnd?'calc(100% - 18px)':2,width:16,height:16,borderRadius:'50%',background:'#fff',transition:'left .2s'}}/>
+          </button>
+        </div>
+      </>)}
+
+      <div style={{borderTop:`1px solid ${C.border}`,paddingTop:10}}>
+        <div style={{fontSize:10,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:5}}>Position</div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
+          {isLine?(
+            <>
+              <div><div style={{fontSize:9,color:C.txt3,marginBottom:3}}>X1 {el.x1?.toFixed(1)}%</div></div>
+              <div><div style={{fontSize:9,color:C.txt3,marginBottom:3}}>Y1 {el.y1?.toFixed(1)}%</div></div>
+              <div><div style={{fontSize:9,color:C.txt3,marginBottom:3}}>X2 {el.x2?.toFixed(1)}%</div></div>
+              <div><div style={{fontSize:9,color:C.txt3,marginBottom:3}}>Y2 {el.y2?.toFixed(1)}%</div></div>
+            </>
+          ):(
+            <>
+              <div><div style={{fontSize:9,color:C.txt3,marginBottom:3}}>X {el.x?.toFixed(1)}%</div></div>
+              <div><div style={{fontSize:9,color:C.txt3,marginBottom:3}}>Y {el.y?.toFixed(1)}%</div></div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Main Pitch Canvas ─────────────────────────────────────────────────────────
+function PitchCanvas({elements, lines, setElements, setLines, tool, arrowType, selectedId, setSelectedId}) {
+  const pitchRef = useRef(null);
+  const [dragging, setDragging] = useState(null); // {id, offsetX, offsetY}
+  const [drawing, setDrawing] = useState(null);   // {x1, y1} for arrow/line
+  const [pitchDims, setPitchDims] = useState({w:400,h:600});
+
+  useEffect(()=>{
+    if(!pitchRef.current) return;
+    const ro = new ResizeObserver(entries=>{
+      for(const e of entries){
+        const {width,height}=e.contentRect;
+        setPitchDims({w:width,h:height});
+      }
+    });
+    ro.observe(pitchRef.current);
+    return()=>ro.disconnect();
+  },[]);
+
+  const pxToPct = useCallback((px,py)=>{
+    const r = pitchRef.current?.getBoundingClientRect();
+    if(!r) return {x:50,y:50};
+    return {
+      x: Math.max(0,Math.min(100,((px-r.left)/r.width)*100)),
+      y: Math.max(0,Math.min(100,((py-r.top)/r.height)*100)),
+    };
+  },[]);
+
+  const handlePointerDown = useCallback((e,el)=>{
+    if(tool==='select') {
+      e.stopPropagation();
+      setSelectedId(el.id);
+      const r=pitchRef.current?.getBoundingClientRect();
+      if(!r) return;
+      const elX=(el.x/100)*r.width+r.left;
+      const elY=(el.y/100)*r.height+r.top;
+      setDragging({id:el.id,offsetX:e.clientX-elX,offsetY:e.clientY-elY});
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } else if(tool==='erase') {
+      e.stopPropagation();
+      setElements(prev=>prev.filter(x=>x.id!==el.id));
+      if(selectedId===el.id) setSelectedId(null);
+    }
+  },[tool,selectedId]);
+
+  const handlePitchPointerDown = useCallback(e=>{
+    const {x,y}=pxToPct(e.clientX,e.clientY);
+    if(tool==='select') {
+      setSelectedId(null);
+    } else if(tool==='arrow'||tool==='line') {
+      setDrawing({x1:x,y1:y,x2:x,y2:y});
+      pitchRef.current?.setPointerCapture(e.pointerId);
+    }
+  },[tool,pxToPct]);
+
+  const handlePointerMove = useCallback(e=>{
+    if(dragging) {
+      const r=pitchRef.current?.getBoundingClientRect();
+      if(!r) return;
+      const nx=((e.clientX-dragging.offsetX-r.left)/r.width)*100;
+      const ny=((e.clientY-dragging.offsetY-r.top)/r.height)*100;
+      setElements(prev=>prev.map(el=>el.id===dragging.id?{...el,x:Math.max(0,Math.min(100,nx)),y:Math.max(0,Math.min(100,ny))}:el));
+    }
+    if(drawing) {
+      const {x,y}=pxToPct(e.clientX,e.clientY);
+      setDrawing(d=>({...d,x2:x,y2:y}));
+    }
+  },[dragging,drawing,pxToPct]);
+
+  const handlePointerUp = useCallback(e=>{
+    if(drawing) {
+      const {x,y}=pxToPct(e.clientX,e.clientY);
+      const dx=Math.abs(x-drawing.x1), dy=Math.abs(y-drawing.y1);
+      if(dx>1||dy>1) {
+        const newLine={id:uid(),x1:drawing.x1,y1:drawing.y1,x2:x,y2:y,arrowKey:arrowType,arrowEnd:tool==='arrow',color:ARROW_COLORS[arrowType]?.color||C.lime,style:ARROW_COLORS[arrowType]?.style||'solid'};
+        setLines(prev=>[...prev,newLine]);
+        setSelectedId(newLine.id);
+      }
+      setDrawing(null);
+    }
+    setDragging(null);
+  },[drawing,arrowType,tool,pxToPct]);
+
+  return (
+    <div ref={pitchRef} className="pitch" style={{flex:1,position:'relative',overflow:'hidden',cursor:tool==='select'?'default':tool==='erase'?'not-allowed':'crosshair'}}
+      onPointerDown={handlePitchPointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}>
+      <PitchMarkings/>
+      <ArrowsLayer lines={lines} selected={selectedId} pitchW={pitchDims.w} pitchH={pitchDims.h}/>
+      {/* Drawing preview line */}
+      {drawing&&(
+        <svg style={{position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:15}} viewBox={`0 0 ${pitchDims.w} ${pitchDims.h}`} preserveAspectRatio="none">
+          <line x1={drawing.x1/100*pitchDims.w} y1={drawing.y1/100*pitchDims.h}
+                x2={drawing.x2/100*pitchDims.w} y2={drawing.y2/100*pitchDims.h}
+                stroke={ARROW_COLORS[arrowType]?.color||C.lime} strokeWidth="2"
+                strokeDasharray={ARROW_COLORS[arrowType]?.style==='dashed'?'6 4':'none'} opacity="0.7"/>
+        </svg>
+      )}
+      {elements.map(el=>(
+        <PitchElement key={el.id} el={el} selected={selectedId===el.id} onPointerDown={handlePointerDown}/>
+      ))}
+      {/* Pitch label */}
+      <div style={{position:'absolute',top:6,left:'50%',transform:'translateX(-50%)',fontSize:9.5,color:'rgba(255,255,255,0.2)',fontWeight:700,letterSpacing:'0.1em',pointerEvents:'none',textTransform:'uppercase'}}>▲ Attack</div>
+    </div>
+  );
+}
+
+// ── Session Section ───────────────────────────────────────────────────────────
+function SessionSection({section, index, onUpdate, onRemove}) {
+  const pc = {Technical:'#3FA9F5',Tactical:'#B6FF2B',Physical:'#FFB020',Psychological:'#2ED47A',Warmup:'#8A8F98',Cooldown:'#8A8F98'}[section.pillar]||C.lime;
+  return (
+    <div style={{background:C.s1,borderRadius:10,border:`1px solid ${pc}25`,marginBottom:8,overflow:'hidden'}}>
+      <div style={{display:'flex',alignItems:'center',gap:8,padding:'9px 12px',background:`${pc}08`}}>
+        <div style={{width:3,height:32,borderRadius:2,background:pc,flexShrink:0}}/>
+        <div style={{flex:1,minWidth:0}}>
+          <input value={section.name} onChange={e=>onUpdate(index,{name:e.target.value})} style={{background:'transparent',border:'none',color:C.txt,fontSize:13,fontWeight:700,outline:'none',width:'100%',fontFamily:'var(--font-b)'}}/>
+          <div style={{fontSize:10,color:C.txt3}}>{section.duration}min · {section.pillar}</div>
+        </div>
+        <div style={{display:'flex',gap:3,alignItems:'center'}}>
+          <button onClick={()=>onUpdate(index,{duration:Math.max(5,section.duration-5)})} style={{width:22,height:22,background:C.s2,border:`1px solid ${C.border2}`,borderRadius:4,color:C.txt2,cursor:'pointer',fontSize:12,display:'flex',alignItems:'center',justifyContent:'center'}}>−</button>
+          <span style={{fontFamily:'var(--font-d)',fontWeight:700,fontSize:14,color:C.txt,minWidth:28,textAlign:'center'}}>{section.duration}</span>
+          <button onClick={()=>onUpdate(index,{duration:section.duration+5})} style={{width:22,height:22,background:C.s2,border:`1px solid ${C.border2}`,borderRadius:4,color:C.txt2,cursor:'pointer',fontSize:12,display:'flex',alignItems:'center',justifyContent:'center'}}>+</button>
+          <button onClick={()=>onRemove(index)} style={{width:22,height:22,background:'transparent',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',marginLeft:2}} onMouseEnter={e=>e.currentTarget.style.color=C.red} onMouseLeave={e=>e.currentTarget.style.color=C.txt3}>
+            <Ic d={P.x} size={12} color="currentColor"/>
+          </button>
+        </div>
+      </div>
+      {section.notes!==undefined&&(
+        <textarea value={section.notes} onChange={e=>onUpdate(index,{notes:e.target.value})} placeholder="Coaching points, objectives, equipment…" rows={2}
+          style={{width:'100%',background:'transparent',border:'none',borderTop:`1px solid ${C.border}`,color:C.txt2,fontSize:11,padding:'7px 12px',resize:'none',outline:'none',lineHeight:1.5}}/>
+      )}
+    </div>
+  );
+}
+
+// ── App ───────────────────────────────────────────────────────────────────────
+function App() {
+  const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+    "sessionName": "Ball Mastery & Pressing Shape",
+    "pitchType": "full",
+    "role": "Coach"
+  }/*EDITMODE-END*/;
+  const [tweaks,setTweak] = window.useTweaks(TWEAK_DEFAULTS);
+
+  const [tab, setTab] = useState('canvas');
+  const [activeSectionIdx, setActiveSectionIdx] = useState(0); // which section's diagram we're editing
+  const [tool, setTool] = useState('select');
+  const [arrowType, setArrowType] = useState('run');
+  const [selectedId, setSelectedId] = useState(null);
+  const [elements, setElements] = useState(INIT_ELEMENTS);
+  const [lines, setLines] = useState(INIT_LINES);
+  const [history, setHistory] = useState([{elements:INIT_ELEMENTS,lines:INIT_LINES}]);
+  const [histIdx, setHistIdx] = useState(0);
+
+  const [sessionName, setSessionName] = useState(tweaks.sessionName);
+  const [sections, setSections] = useState([
+    {name:'Warm-Up',pillar:'Warmup',duration:10,notes:'Dynamic stretches, activation',elements:[],lines:[]},
+    {name:'Ball Mastery Circuit',pillar:'Technical',duration:15,notes:'Focus on weak foot. See diagram.',elements:INIT_ELEMENTS,lines:INIT_LINES},
+    {name:'Pressing Shape Drill',pillar:'Tactical',duration:20,notes:'Triggers: GK ball, slow turn, back pass',elements:[],lines:[]},
+    {name:'Cool Down',pillar:'Cooldown',duration:8,notes:'Static stretch + debrief',elements:[],lines:[]},
+  ]);
+
+  // Derived: active section's elements/lines
+  const activeSection = sections[activeSectionIdx] || sections[0];
+  const setActiveElements = (elOrFn) => setSections(prev => prev.map((s,i) => i===activeSectionIdx ? {...s, elements: typeof elOrFn==='function' ? elOrFn(s.elements) : elOrFn} : s));
+  const setActiveLines = (lOrFn) => setSections(prev => prev.map((s,i) => i===activeSectionIdx ? {...s, lines: typeof lOrFn==='function' ? lOrFn(s.lines) : lOrFn} : s));
+
+  const totalDuration = sections.reduce((t,s)=>t+s.duration,0);
+
+  const pushHistory = useCallback(()=>{
+    setHistory(prev=>{
+      const newH=[...prev.slice(0,histIdx+1),{elements:[...elements],lines:[...lines]}];
+      return newH.slice(-30);
+    });
+    setHistIdx(prev=>Math.min(prev+1,29));
+  },[elements,lines,histIdx]);
+
+  const undo=()=>{
+    if(histIdx>0){const h=history[histIdx-1];setElements(h.elements);setLines(h.lines);setHistIdx(histIdx-1);}
+  };
+  const redo=()=>{
+    if(histIdx<history.length-1){const h=history[histIdx+1];setElements(h.elements);setLines(h.lines);setHistIdx(histIdx+1);}
+  };
+
+  const handleAddElement = useCallback((preset)=>{
+    const newEl={...preset,id:uid(),x:50,y:50};
+    setActiveElements(prev=>[...prev,newEl]);
+    setSelectedId(newEl.id);
+  },[activeSectionIdx]);
+
+  const handleUpdateElement = useCallback((id,updates)=>{
+    setActiveElements(prev=>prev.map(e=>e.id===id?{...e,...updates}:e));
+    setActiveLines(prev=>prev.map(l=>l.id===id?{...l,...updates}:l));
+  },[activeSectionIdx]);
+
+  const handleDeleteElement = useCallback((id)=>{
+    setActiveElements(prev=>prev.filter(e=>e.id!==id));
+    setActiveLines(prev=>prev.filter(l=>l.id!==id));
+    setSelectedId(null);
+  },[activeSectionIdx]);
+
+  const handleClear = ()=>{
+    setActiveElements([]);
+    setActiveLines([]);
+    setSelectedId(null);
+  };
+
+  const updateSection=(idx,updates)=>setSections(prev=>prev.map((s,i)=>i===idx?{...s,...updates}:s));
+  const removeSection=(idx)=>setSections(prev=>prev.filter((_,i)=>i!==idx));
+  const addSection=()=>setSections(prev=>[...prev,{name:'New Section',pillar:'Technical',duration:15,notes:''}]);
+
+  // Keyboard shortcuts
+  useEffect(()=>{
+    const handler=e=>{
+      if(e.key==='Delete'||e.key==='Backspace'){
+        if(selectedId&&document.activeElement.tagName!=='INPUT'&&document.activeElement.tagName!=='TEXTAREA'){
+          handleDeleteElement(selectedId);
+        }
+      }
+      if(e.key==='Escape') setSelectedId(null);
+      if((e.ctrlKey||e.metaKey)&&e.key==='z') undo();
+      if((e.ctrlKey||e.metaKey)&&e.key==='y') redo();
+    };
+    window.addEventListener('keydown',handler);
+    return()=>window.removeEventListener('keydown',handler);
+  },[selectedId,handleDeleteElement,undo,redo]);
+
+
+  // ── PDF Export ──────────────────────────────────────────────────────────────
+  const exportPDF = () => {
+    const PC = {Technical:'#3FA9F5',Tactical:'#B6FF2B',Physical:'#FFB020',Psychological:'#2ED47A',Warmup:'#8A8F98',Cooldown:'#8A8F98'};
+    const totalMins = sections.reduce((t,s)=>t+s.duration,0);
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8"/>
+<title>Session Plan — ${sessionName}</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Barlow',sans-serif;background:#fff;color:#111418;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  @page{margin:16mm;size:A4}
+  @media print{body{padding:0}}
+  .page{max-width:760px;margin:0 auto;padding:24px}
+  /* Header */
+  .header{background:linear-gradient(135deg,#0A2E20,#0F3D2E);color:#fff;padding:20px 24px;border-radius:10px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between}
+  .logo{display:flex;align-items:center;gap:10}
+  .logo-hex{width:40px;height:40px}
+  .logo-text{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:22px;color:#fff;letter-spacing:0.04em;line-height:1}
+  .logo-sub{font-size:9px;color:rgba(182,255,43,0.7);font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-top:2px}
+  .session-title{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:26px;color:#fff;text-align:right;letter-spacing:0.02em}
+  .session-meta{font-size:11px;color:rgba(255,255,255,0.55);text-align:right;margin-top:4px}
+  /* Stats bar */
+  .stats{display:flex;gap:12px;margin-bottom:20px}
+  .stat{flex:1;background:#f4f6f9;border-radius:8px;padding:10px 14px;text-align:center;border:1px solid #e8ecf0}
+  .stat-val{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:22px;color:#0F3D2E;line-height:1}
+  .stat-lbl{font-size:9px;color:#8A8F98;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-top:3px}
+  /* Timeline */
+  .timeline{height:8px;border-radius:4px;overflow:hidden;display:flex;gap:2px;margin-bottom:20px}
+  /* Section cards */
+  .section{border-radius:10px;border:1px solid #e8ecf0;margin-bottom:12px;overflow:hidden;break-inside:avoid}
+  .section-header{display:flex;align-items:center;gap:10;padding:11px 14px;border-bottom:1px solid #e8ecf0}
+  .pillar-bar{width:4px;height:36px;border-radius:2px;flex-shrink:0}
+  .section-name{font-size:14px;font-weight:700;color:#111418;flex:1}
+  .section-pillar{font-size:9px;font-weight:800;border-radius:4px;padding:2px 7px;text-transform:uppercase;letter-spacing:0.06em}
+  .section-duration{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:20px;color:#111418}
+  .section-body{padding:12px 14px;background:#fafbfc}
+  .notes{font-size:12px;color:#555;line-height:1.6}
+  .elements{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+  .element-chip{font-size:9.5px;background:#f0f2f4;border:1px solid #e0e4e8;border-radius:4px;padding:2px 7px;color:#555}
+  /* Footer */
+  .footer{margin-top:24px;padding-top:14px;border-top:2px solid #B6FF2B;display:flex;justify-content:space-between;align-items:center;font-size:10px;color:#8A8F98}
+  .footer-brand{font-family:'Barlow Condensed',sans-serif;font-weight:800;color:#0F3D2E;font-size:13px;letter-spacing:0.05em}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <div class="logo">
+      <svg class="logo-hex" viewBox="0 0 40 40" fill="none">
+        <polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="#0F3D2E" stroke="#B6FF2B" stroke-width="1.5"/>
+        <polygon points="20,9 30,15 30,25 20,31 10,25 10,15" fill="none" stroke="#B6FF2B" stroke-width="0.8" opacity="0.4"/>
+        <text x="20" y="26" text-anchor="middle" fill="#B6FF2B" font-family="Barlow Condensed" font-weight="900" font-size="13">TFB</text>
+      </svg>
+      <div><div class="logo-text">The Football Blueprint</div><div class="logo-sub">Coaching Platform</div></div>
+    </div>
+    <div>
+      <div class="session-title">${sessionName}</div>
+      <div class="session-meta">Session Plan · ${new Date().toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'long',year:'numeric'})} · ${totalMins}min total</div>
+    </div>
+  </div>
+
+  <div class="stats">
+    ${[['Sections',sections.length],['Total Time',totalMins+'min'],['W/U + C/D',sections.filter(s=>s.pillar==='Warmup'||s.pillar==='Cooldown').reduce((t,s)=>t+s.duration,0)+'min'],['Core Work',sections.filter(s=>s.pillar!=='Warmup'&&s.pillar!=='Cooldown').reduce((t,s)=>t+s.duration,0)+'min']].map(([l,v])=>`<div class="stat"><div class="stat-val">${v}</div><div class="stat-lbl">${l}</div></div>`).join('')}
+  </div>
+
+  <div class="timeline">
+    ${sections.map(s=>{const pc={Technical:'#3FA9F5',Tactical:'#B6FF2B',Physical:'#FFB020',Psychological:'#2ED47A',Warmup:'#8A8F98',Cooldown:'#8A8F98'}[s.pillar]||'#B6FF2B';return `<div style="flex:${s.duration};background:${pc};min-width:3px" title="${s.name}"></div>`;}).join('')}
+  </div>
+
+  ${sections.map((s,i)=>{
+    const pc={Technical:'#3FA9F5',Tactical:'#B6FF2B',Physical:'#FFB020',Psychological:'#2ED47A',Warmup:'#8A8F98',Cooldown:'#8A8F98'}[s.pillar]||'#B6FF2B';
+    const elCount = s.elements ? s.elements.filter(e=>e.type==='player').length : 0;
+    const coneCount = s.elements ? s.elements.filter(e=>e.variant==='cone'||e.variant==='cone_b').length : 0;
+    return `
+    <div class="section">
+      <div class="section-header">
+        <div class="pillar-bar" style="background:${pc}"></div>
+        <div>
+          <div class="section-name">${i+1}. ${s.name}</div>
+          <span class="section-pillar" style="background:${pc}18;color:${pc};border:1px solid ${pc}30">${s.pillar}</span>
+        </div>
+        <div style="margin-left:auto;text-align:right">
+          <div class="section-duration">${s.duration}<span style="font-size:12px;font-weight:400;color:#8A8F98">min</span></div>
+        </div>
+      </div>
+      ${s.notes?`<div class="section-body"><div class="notes">${s.notes}</div>${elCount>0?`<div class="elements"><span class="element-chip">👥 ${elCount} players</span>${coneCount>0?`<span class="element-chip">🔺 ${coneCount} cones</span>`:''}</div>`:''}</div>`:''}
+    </div>`;
+  }).join('')}
+
+  <div class="footer">
+    <div><div class="footer-brand">The Football Blueprint</div><div>thefootballblueprint.com.au · Plan. Develop. Succeed.</div></div>
+    <div style="text-align:right">Malvern City FC · Generated ${new Date().toLocaleDateString('en-AU')}</div>
+  </div>
+</div>
+</body>
+</html>`;
+
+    const win = window.open('','_blank');
+    if(win) {
+      win.document.write(html);
+      win.document.close();
+      setTimeout(()=>win.print(), 800);
+    }
+  };
+
+  return (
+    <div style={{height:'100vh',display:'flex',flexDirection:'column',background:C.bg,overflow:'hidden'}}>
+      {/* Header */}
+      <header style={{height:'var(--hh)',background:`linear-gradient(90deg,${C.greenDark},${C.green})`,borderBottom:'1px solid rgba(182,255,43,0.18)',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 20px',flexShrink:0}}>
+        <div style={{display:'flex',alignItems:'center',gap:12}}>
+          <button onClick={()=>{try{window.location.href='tfb-sessions.html'}catch(e){}}} style={{display:'flex',alignItems:'center',gap:6,padding:'6px 10px',background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,color:'rgba(255,255,255,0.7)',fontSize:12,fontWeight:600,cursor:'pointer'}} onMouseEnter={e=>{e.currentTarget.style.background='rgba(182,255,43,0.12)';e.currentTarget.style.color='#B6FF2B'}} onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,0.07)';e.currentTarget.style.color='rgba(255,255,255,0.7)'}}>
+            <Ic d={P.back} size={14} color="currentColor"/> Sessions
+          </button>
+          <div style={{width:1,height:24,background:'rgba(255,255,255,0.12)'}}/>
+          <svg width="26" height="26" viewBox="0 0 40 40" fill="none"><polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="#0F3D2E" stroke="#B6FF2B" strokeWidth="1.5"/><text x="20" y="26" textAnchor="middle" fill="#B6FF2B" fontFamily="Barlow Condensed" fontWeight="900" fontSize="13">TFB</text></svg>
+          {/* Editable name */}
+          <input value={sessionName} onChange={e=>{setSessionName(e.target.value);setTweak('sessionName',e.target.value);}}
+            style={{background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.12)',borderRadius:7,color:'#fff',fontSize:15,fontWeight:700,fontFamily:'var(--font-d)',padding:'4px 10px',outline:'none',letterSpacing:'0.03em',minWidth:220,transition:'border-color .15s'}}
+            onFocus={e=>e.target.style.borderColor='rgba(182,255,43,0.4)'} onBlur={e=>e.target.style.borderColor='rgba(255,255,255,0.12)'}/>
+        </div>
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          <div style={{fontSize:12,color:'rgba(255,255,255,0.5)',fontWeight:600}}>{totalDuration}min total</div>
+          <div style={{display:'flex',gap:6}}>
+            <button onClick={exportPDF} style={{display:'flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.15)',borderRadius:8,fontSize:12,fontWeight:700,color:'rgba(255,255,255,0.8)',cursor:'pointer',transition:'all .15s'}} onMouseEnter={e=>{e.currentTarget.style.background='rgba(255,255,255,0.12)';e.currentTarget.style.color='#fff'}} onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,0.07)';e.currentTarget.style.color='rgba(255,255,255,0.8)'}}>
+              📄 Export PDF
+            </button>
+            <button style={{display:'flex',alignItems:'center',gap:6,padding:'7px 16px',background:`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:8,fontSize:13,fontWeight:800,color:C.green,cursor:'pointer'}} onMouseEnter={e=>e.currentTarget.style.opacity='.88'} onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
+              <Ic d={P.save} size={14} color={C.green}/> Save Session
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Tab bar */}
+      <div style={{background:C.s1,borderBottom:`1px solid ${C.border}`,padding:'0 20px',display:'flex',gap:0,flexShrink:0}}>
+        {[['canvas','🎨 Visual Diagram'],['plan','📋 Session Plan'],['notes','📝 Notes & Goals']].map(([t,l])=>(
+          <button key={t} onClick={()=>setTab(t)} style={{padding:'10px 18px',background:'transparent',border:'none',borderBottom:`2px solid ${tab===t?C.lime:'transparent'}`,color:tab===t?C.lime:C.txt2,fontSize:13,fontWeight:700,cursor:'pointer',transition:'color .15s,border-color .15s'}}>{l}</button>
+        ))}
+      </div>
+
+      {/* Canvas tab */}
+      {tab==='canvas'&&(
+        <div style={{flex:1,display:'flex',overflow:'hidden'}}>
+          <ElementPalette onAddElement={handleAddElement}/>
+          <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
+            {/* Section selector for canvas */}
+          <div style={{display:'flex',alignItems:'center',gap:6,padding:'6px 12px',background:C.s1,borderBottom:`1px solid ${C.border}`,flexShrink:0,overflowX:'auto'}}>
+            <span style={{fontSize:10,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',whiteSpace:'nowrap'}}>Editing diagram for:</span>
+            {sections.map((s,i)=>{
+              const pc={Technical:'#3FA9F5',Tactical:'#B6FF2B',Physical:'#FFB020',Psychological:'#2ED47A',Warmup:'#8A8F98',Cooldown:'#8A8F98'}[s.pillar]||C.lime;
+              return(
+                <button key={i} onClick={()=>{setActiveSectionIdx(i);setSelectedId(null);}}
+                  style={{display:'flex',alignItems:'center',gap:5,padding:'4px 12px',background:activeSectionIdx===i?`${pc}18`:'transparent',border:`1px solid ${activeSectionIdx===i?pc+'45':C.border2}`,borderRadius:7,fontSize:11,fontWeight:700,color:activeSectionIdx===i?pc:C.txt3,cursor:'pointer',whiteSpace:'nowrap',transition:'all .12s'}}>
+                  <div style={{width:6,height:6,borderRadius:'50%',background:pc,flexShrink:0}}/>
+                  {s.name}
+                  {s.elements.length>0&&<span style={{fontSize:9,background:`${pc}18`,borderRadius:3,padding:'1px 4px'}}>{s.elements.length}</span>}
+                </button>
+              );
+            })}
+            <button onClick={addSection} style={{display:'flex',alignItems:'center',gap:4,padding:'4px 9px',background:'transparent',border:`1px solid ${C.border2}`,borderRadius:7,fontSize:11,fontWeight:600,color:C.txt3,cursor:'pointer',whiteSpace:'nowrap',transition:'all .12s'}} onMouseEnter={e=>{e.currentTarget.style.borderColor='rgba(182,255,43,0.3)';e.currentTarget.style.color=C.lime;}} onMouseLeave={e=>{e.currentTarget.style.borderColor=C.border2;e.currentTarget.style.color=C.txt3;}}>
+              + Section
+            </button>
+          </div>
+          <Toolbar tool={tool} setTool={setTool} onUndo={undo} onRedo={redo} onClear={handleClear} canUndo={histIdx>0} canRedo={histIdx<history.length-1} arrowType={arrowType} setArrowType={setArrowType} lineColor={C.lime} setLineColor={()=>{}}/>
+            <PitchCanvas elements={activeSection.elements} lines={activeSection.lines} setElements={setActiveElements} setLines={setActiveLines} tool={tool} arrowType={arrowType} selectedId={selectedId} setSelectedId={setSelectedId}/>
+          </div>
+          <PropertiesPanel selected={selectedId} elements={activeSection.elements} lines={activeSection.lines} onUpdateElement={handleUpdateElement} onDeleteElement={handleDeleteElement}/>
+        </div>
+      )}
+
+      {/* Plan tab */}
+      {tab==='plan'&&(
+        <div style={{flex:1,display:'flex',overflow:'hidden'}}>
+          <div style={{flex:1,overflowY:'auto',padding:'16px 20px'}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14}}>
+              <div>
+                <div style={{fontSize:13,fontWeight:700,color:C.txt}}>{sections.length} sections · {totalDuration}min total</div>
+                <div style={{fontSize:11,color:C.txt3,marginTop:2}}>Drag sections to reorder · Click to edit</div>
+              </div>
+              <button onClick={addSection} style={{display:'flex',alignItems:'center',gap:5,padding:'7px 14px',background:`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:8,fontSize:12,fontWeight:800,color:C.green,cursor:'pointer'}}>
+                <Ic d={P.plus} size={13} color={C.green}/> Add Section
+              </button>
+            </div>
+            {/* Timeline bar */}
+            <div style={{height:8,borderRadius:4,overflow:'hidden',display:'flex',marginBottom:16,gap:1}}>
+              {sections.map((s,i)=>{
+                const pc={Technical:'#3FA9F5',Tactical:'#B6FF2B',Physical:'#FFB020',Psychological:'#2ED47A',Warmup:'#8A8F98',Cooldown:'#8A8F98'}[s.pillar]||C.lime;
+                return(<div key={i} style={{flex:s.duration,background:pc,minWidth:2}}/>);
+              })}
+            </div>
+            {sections.map((s,i)=>(
+              <SessionSection key={i} section={s} index={i} onUpdate={updateSection} onRemove={removeSection}/>
+            ))}
+          </div>
+          {/* Pillar summary sidebar */}
+          <div style={{width:200,background:C.s1,borderLeft:`1px solid ${C.border}`,padding:'14px 12px',flexShrink:0}}>
+            <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:12}}>Pillar Balance</div>
+            {Object.entries(sections.reduce((acc,s)=>{acc[s.pillar]=(acc[s.pillar]||0)+s.duration;return acc;},{})).map(([p,d])=>{
+              const pc={Technical:'#3FA9F5',Tactical:'#B6FF2B',Physical:'#FFB020',Psychological:'#2ED47A',Warmup:'#8A8F98',Cooldown:'#8A8F98'}[p]||C.lime;
+              const pct=Math.round((d/totalDuration)*100);
+              return(<div key={p} style={{marginBottom:10}}>
+                <div style={{display:'flex',justifyContent:'space-between',marginBottom:3}}>
+                  <span style={{fontSize:11,fontWeight:600,color:pc}}>{p}</span>
+                  <span style={{fontSize:10,color:C.txt3}}>{d}min ({pct}%)</span>
+                </div>
+                <div style={{height:4,background:'rgba(255,255,255,0.06)',borderRadius:2,overflow:'hidden'}}>
+                  <div style={{height:'100%',width:`${pct}%`,background:pc,borderRadius:2}}/>
+                </div>
+              </div>);
+            })}
+            <div style={{borderTop:`1px solid ${C.border}`,paddingTop:10,marginTop:4}}>
+              <div style={{display:'flex',justifyContent:'space-between',fontSize:12}}>
+                <span style={{color:C.txt2}}>Total time</span>
+                <span style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:16,color:C.lime}}>{totalDuration}min</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notes tab */}
+      {tab==='notes'&&(
+        <div style={{flex:1,overflowY:'auto',padding:'20px'}}>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
+            {[['Session Objectives','What do you want players to achieve today?'],['Key Coaching Points','The 2-3 main messages to reinforce'],['Equipment Needed','Cones, bibs, goals, mannequins…'],['Adaptations','For advanced players / players needing extra support']].map(([title,placeholder])=>(
+              <div key={title} style={{background:C.s1,borderRadius:12,border:`1px solid ${C.border}`,overflow:'hidden'}}>
+                <div style={{padding:'10px 14px',borderBottom:`1px solid ${C.border}`,fontSize:12,fontWeight:700,color:C.txt}}>{title}</div>
+                <textarea placeholder={placeholder} rows={5} style={{width:'100%',background:'transparent',border:'none',color:C.txt2,fontSize:12,padding:'10px 14px',resize:'none',outline:'none',lineHeight:1.7}}/>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <TweaksPanel>
+        <TweakSection label="Session"/>
+        <TweakText label="Session Name" value={tweaks.sessionName} onChange={v=>{setTweak('sessionName',v);setSessionName(v);}}/>
+        <TweakSelect label="Pitch Type" value={tweaks.pitchType} options={['full','half','third','small_sided']} onChange={v=>setTweak('pitchType',v)}/>
+      </TweaksPanel>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

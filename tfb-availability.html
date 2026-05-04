@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TFB – My Availability</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="tfb-responsive.jsx"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--lime:#B6FF2B;--green:#0F3D2E;--green-dark:#0A2E20;--bg:#111418;--s1:#1C2128;--s2:#242B33;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);--txt:#F0F2F4;--txt2:rgba(240,242,244,0.5);--txt3:rgba(240,242,244,0.28);--goal:#2ED47A;--amber:#FFB020;--red:#E5533D;--sky:#3FA9F5;--font-d:'Barlow Condensed',sans-serif;--font-b:'Barlow',sans-serif;--hh:54px;}
+html,body,#root{height:100%;overflow:hidden}body{font-family:var(--font-b);background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased}
+button,textarea{font-family:var(--font-b);color:inherit}::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:3px}
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}.fade-in{animation:fadeIn .18s ease forwards}
+</style>
+</head>
+<body><div id="root"></div>
+<script type="text/babel">
+const {useState}=React;
+const C={lime:'#B6FF2B',green:'#0F3D2E',greenDark:'#0A2E20',bg:'#111418',s1:'#1C2128',s2:'#242B33',border:'rgba(255,255,255,0.07)',border2:'rgba(255,255,255,0.13)',txt:'#F0F2F4',txt2:'rgba(240,242,244,0.5)',txt3:'rgba(240,242,244,0.28)',goal:'#2ED47A',amber:'#FFB020',red:'#E5533D',sky:'#3FA9F5'};
+const Ic=({d,size=16,color='currentColor',stroke=2,fill='none'})=>(<svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>{Array.isArray(d)?d.map((p,i)=><path key={i} d={p}/>):<path d={d}/> }</svg>);
+const P={back:'M15 18l-6-6 6-6',bell:'M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0',check:'M20 6L9 17l-5-5',zap:'M13 2L3 14h9l-1 8 10-12h-9l1-8z',activity:'M22 12h-4l-3 9L9 3l-3 9H2'};
+
+const REQUESTS=[
+  {id:1,type:'match',title:'vs Bulleen Lions',date:'Sat 3 May',time:'2:00 PM',location:'Tally Ho Park',deadline:'Fri 2 May 6PM',rsvp:null,urgent:true},
+  {id:2,type:'training',title:'Technical: Ball Mastery',date:'Thu 1 May',time:'6:00 PM',location:'Tally Ho Park',deadline:'Wed 30 Apr',rsvp:'yes'},
+  {id:3,type:'match',title:'vs Green Gully',date:'Sat 10 May',time:'11:00 AM',location:'Green Gully SC',deadline:'Thu 8 May',rsvp:null},
+  {id:4,type:'training',title:'Tactical: Pressing Shape',date:'Tue 6 May',time:'6:30 PM',location:'Tally Ho Park',deadline:'Mon 5 May',rsvp:null},
+  {id:5,type:'training',title:'Physical: Speed & Power',date:'Thu 8 May',time:'6:00 PM',location:'Tally Ho Park',deadline:'Wed 7 May',rsvp:'maybe'},
+];
+
+const HISTORY=[
+  {id:10,type:'match',title:'vs Hume City',date:'Sat 26 Apr',rsvp:'yes',attended:true},
+  {id:11,type:'training',title:'Tactical: Defensive Shape',date:'Mon 28 Apr',rsvp:'yes',attended:true},
+  {id:12,type:'training',title:'Technical: Crossing & Finishing',date:'Thu 24 Apr',rsvp:'yes',attended:true},
+  {id:13,type:'match',title:'vs NorthCote City',date:'Sat 19 Apr',rsvp:'yes',attended:true},
+  {id:14,type:'training',title:'Psych: Team Building',date:'Mon 21 Apr',rsvp:'yes',attended:false},
+];
+
+const rsvpColor={yes:C.goal,maybe:C.amber,no:C.red};
+const typeColor={match:C.red,training:C.lime};
+const typeIcon={match:'zap',training:'activity'};
+
+function Header({onBack}){return(<header style={{height:'var(--hh)',background:`linear-gradient(90deg,${C.greenDark},${C.green})`,borderBottom:'1px solid rgba(182,255,43,0.18)',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 20px',flexShrink:0,zIndex:50}}>
+  <div style={{display:'flex',alignItems:'center',gap:12}}>
+    <button onClick={onBack} style={{display:'flex',alignItems:'center',gap:6,padding:'6px 10px',background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,color:'rgba(255,255,255,0.7)',fontSize:12,fontWeight:600,cursor:'pointer'}} onMouseEnter={e=>{e.currentTarget.style.background='rgba(182,255,43,0.12)';e.currentTarget.style.color='#B6FF2B'}} onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,0.07)';e.currentTarget.style.color='rgba(255,255,255,0.7)'}}>
+      <Ic d={P.back} size={14} color="currentColor"/> Dashboard
+    </button>
+    <div style={{width:1,height:24,background:'rgba(255,255,255,0.12)'}}/>
+    <svg width="28" height="28" viewBox="0 0 40 40" fill="none"><polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="#0F3D2E" stroke="#B6FF2B" strokeWidth="1.5"/><text x="20" y="26" textAnchor="middle" fill="#B6FF2B" fontFamily="Barlow Condensed" fontWeight="900" fontSize="13">TFB</text></svg>
+    <div><div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:17,color:'#fff',letterSpacing:'0.04em',lineHeight:1}}>MY AVAILABILITY</div><div style={{fontSize:9.5,color:'rgba(182,255,43,0.65)',fontWeight:700,letterSpacing:'0.1em'}}>Malvern City U18 Men · 2025</div></div>
+  </div>
+  <div style={{fontSize:12,fontWeight:700,color:C.amber,background:'rgba(255,176,32,0.12)',border:'1px solid rgba(255,176,32,0.25)',borderRadius:7,padding:'4px 12px',display:'flex',alignItems:'center',gap:5}}>
+    <Ic d={P.bell} size={12} color={C.amber}/>{REQUESTS.filter(r=>!r.rsvp).length} pending
+  </div>
+</header>);}
+
+function RSVPCard({req,onRSVP}){
+  const [note,setNote]=useState('');
+  const [showNote,setShowNote]=useState(false);
+  const tc=typeColor[req.type];
+  const ti=typeIcon[req.type];
+  return(<div className="fade-in" style={{background:req.urgent&&!req.rsvp?`rgba(229,83,61,0.05)`:C.s1,borderRadius:12,border:`1px solid ${req.urgent&&!req.rsvp?'rgba(229,83,61,0.25)':req.rsvp?`${rsvpColor[req.rsvp]}25`:C.border}`,padding:'16px',marginBottom:10}}>
+    <div style={{display:'flex',alignItems:'flex-start',gap:12,marginBottom:req.rsvp?0:12}}>
+      <div style={{width:42,height:42,borderRadius:10,background:`${tc}12`,border:`1px solid ${tc}25`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+        <Ic d={P[ti]} size={18} color={tc}/>
+      </div>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{display:'flex',alignItems:'center',gap:7,marginBottom:3}}>
+          <span style={{fontSize:14,fontWeight:700,color:C.txt}}>{req.title}</span>
+          <span style={{fontSize:9.5,fontWeight:800,color:tc,background:`${tc}12`,border:`1px solid ${tc}25`,borderRadius:4,padding:'1px 6px',textTransform:'uppercase'}}>{req.type}</span>
+          {req.urgent&&!req.rsvp&&<span style={{fontSize:9.5,fontWeight:800,color:C.red,background:'rgba(229,83,61,0.12)',border:'1px solid rgba(229,83,61,0.25)',borderRadius:4,padding:'1px 6px'}}>URGENT</span>}
+        </div>
+        <div style={{fontSize:11,color:C.txt3,marginBottom:2}}>{req.date} · {req.time} · {req.location}</div>
+        <div style={{fontSize:10.5,color:C.txt3}}>Respond by: <b style={{color:req.urgent?C.red:C.txt2}}>{req.deadline}</b></div>
+      </div>
+      {req.rsvp&&<span style={{fontSize:12,fontWeight:800,color:rsvpColor[req.rsvp],background:`${rsvpColor[req.rsvp]}15`,border:`1px solid ${rsvpColor[req.rsvp]}30`,borderRadius:7,padding:'5px 12px',flexShrink:0,textTransform:'uppercase'}}>{req.rsvp==='yes'?'✓ Going':req.rsvp==='maybe'?'? Maybe':'✗ Not Going'}</span>}
+    </div>
+    {!req.rsvp&&(
+      <div>
+        <div style={{display:'flex',gap:8,marginBottom:showNote?10:0}}>
+          {[['yes','✓ I\'m Going',C.goal],['maybe','? Maybe',C.amber],['no','✗ Can\'t Make It',C.red]].map(([v,l,c])=>(
+            <button key={v} onClick={()=>{onRSVP(req.id,v);if(v==='maybe'||v==='no')setShowNote(true);}}
+              style={{flex:1,padding:'9px',background:`${c}12`,border:`1px solid ${c}30`,borderRadius:9,fontSize:12,fontWeight:800,color:c,cursor:'pointer',transition:'all .15s'}}
+              onMouseEnter={e=>{e.currentTarget.style.background=`${c}22`;e.currentTarget.style.borderColor=`${c}55`}}
+              onMouseLeave={e=>{e.currentTarget.style.background=`${c}12`;e.currentTarget.style.borderColor=`${c}30`}}>
+              {l}
+            </button>
+          ))}
+        </div>
+        {showNote&&(
+          <textarea value={note} onChange={e=>setNote(e.target.value)} placeholder="Add a reason or note for your coach (optional)…" rows={2}
+            style={{width:'100%',marginTop:8,padding:'8px 12px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:8,color:C.txt,fontSize:12,outline:'none',resize:'none',lineHeight:1.5}}/>
+        )}
+      </div>
+    )}
+    {req.rsvp&&(
+      <button onClick={()=>onRSVP(req.id,null)} style={{marginTop:10,padding:'4px 12px',background:'transparent',border:`1px solid ${C.border2}`,borderRadius:6,fontSize:11,fontWeight:600,color:C.txt3,cursor:'pointer',transition:'color .15s'}} onMouseEnter={e=>e.currentTarget.style.color=C.lime} onMouseLeave={e=>e.currentTarget.style.color=C.txt3}>
+        Change response
+      </button>
+    )}
+  </div>);}
+
+function App(){
+  const [requests,setRequests]=useState(REQUESTS);
+  const [tab,setTab]=useState('pending');
+  const pending=requests.filter(r=>!r.rsvp);
+  const responded=requests.filter(r=>r.rsvp);
+  const attendanceRate=Math.round((HISTORY.filter(h=>h.attended).length/HISTORY.length)*100);
+
+  const handleRSVP=(id,val)=>{
+    setRequests(prev=>prev.map(r=>r.id===id?{...r,rsvp:val}:r));
+    if(val&&pending.length===1) setTab('responded');
+  };
+
+  return(<div style={{height:'100vh',display:'flex',flexDirection:'column',background:C.bg,overflow:'hidden'}}>
+    <Header onBack={()=>{try{window.location.href='tfb-dashboard.html'}catch(e){}}}/>
+    {/* Stats */}
+    <div style={{background:C.s1,borderBottom:`1px solid ${C.border}`,padding:'10px 20px',display:'flex',gap:20,alignItems:'center',flexShrink:0}}>
+      {[{label:'Pending RSVPs',value:pending.length,color:pending.length>0?C.amber:C.goal},{label:'Responded',value:responded.length,color:C.sky},{label:'Attendance Rate',value:`${attendanceRate}%`,color:attendanceRate>=85?C.goal:C.amber}].map(({label,value,color})=>(
+        <div key={label} style={{display:'flex',alignItems:'center',gap:8}}>
+          <span style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:20,color}}>{value}</span>
+          <span style={{fontSize:11,color:C.txt3}}>{label}</span>
+        </div>
+      ))}
+    </div>
+    {/* Tabs */}
+    <div style={{background:C.s1,borderBottom:`1px solid ${C.border}`,padding:'0 20px',display:'flex',gap:0,flexShrink:0}}>
+      {[['pending',`Pending (${pending.length})`],['responded','Responded'],['history','History']].map(([t,l])=>(
+        <button key={t} onClick={()=>setTab(t)} style={{padding:'10px 18px',background:'transparent',border:'none',borderBottom:`2px solid ${tab===t?C.lime:'transparent'}`,color:tab===t?C.lime:C.txt2,fontSize:13,fontWeight:700,cursor:'pointer',transition:'color .15s,border-color .15s'}}>{l}</button>
+      ))}
+    </div>
+    <div style={{flex:1,overflowY:'auto',padding:'16px 20px'}}>
+      {tab==='pending'&&(pending.length===0?(
+        <div style={{textAlign:'center',padding:'48px',color:C.txt3}}>
+          <div style={{fontSize:36,marginBottom:12}}>✅</div>
+          <div style={{fontSize:14,fontWeight:600,color:C.txt2,marginBottom:6}}>All caught up!</div>
+          <div style={{fontSize:12}}>No pending availability requests.</div>
+        </div>
+      ):pending.map(r=><RSVPCard key={r.id} req={r} onRSVP={handleRSVP}/>))}
+      {tab==='responded'&&(responded.length===0?<div style={{padding:'40px',textAlign:'center',color:C.txt3,fontSize:13}}>No responses yet</div>:responded.map(r=><RSVPCard key={r.id} req={r} onRSVP={handleRSVP}/>))}
+      {tab==='history'&&(
+        <div>
+          <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:10}}>Recent Attendance History</div>
+          {HISTORY.map(h=>(
+            <div key={h.id} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 14px',background:C.s1,borderRadius:10,border:`1px solid ${C.border}`,marginBottom:6}}>
+              <div style={{width:34,height:34,borderRadius:8,background:h.attended?'rgba(46,212,122,0.12)':'rgba(229,83,61,0.1)',border:`1px solid ${h.attended?'rgba(46,212,122,0.25)':'rgba(229,83,61,0.2)'}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                <Ic d={h.attended?P.check:'M18 6L6 18M6 6l12 12'} size={15} color={h.attended?C.goal:C.red}/>
+              </div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:13,fontWeight:600,color:C.txt}}>{h.title}</div>
+                <div style={{fontSize:11,color:C.txt3,marginTop:2}}>{h.date} · RSVP: <span style={{color:rsvpColor[h.rsvp],fontWeight:700}}>{h.rsvp}</span></div>
+              </div>
+              <span style={{fontSize:11,fontWeight:700,color:h.attended?C.goal:C.red}}>{h.attended?'Attended':'Missed'}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  </div>);}
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script></body></html>

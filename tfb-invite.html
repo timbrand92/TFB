@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TFB – Accept Invite</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="tfb-responsive.jsx"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--lime:#B6FF2B;--green-dark:#0A2E20;--bg:#0A0D11;--s1:#15191F;--s2:#1F252D;--border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.16);--txt:#F0F2F4;--txt2:rgba(240,242,244,0.55);--txt3:rgba(240,242,244,0.32);--goal:#2ED47A;--amber:#FFB020;--red:#E5533D;--sky:#3FA9F5;--font-d:'Barlow Condensed',sans-serif;--font-b:'Barlow',sans-serif}
+html,body,#root{height:100%}
+body{font-family:var(--font-b);background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased;overflow:auto}
+button,input{font-family:var(--font-b);color:inherit;outline:none}
+input:focus{border-color:var(--lime)!important}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1}}
+.fade-in{animation:fadeIn .25s ease}
+.bg-pitch{background:radial-gradient(ellipse at 30% 20%,rgba(15,61,46,0.4),transparent 60%),radial-gradient(ellipse at 80% 90%,rgba(182,255,43,0.06),transparent 60%),var(--bg)}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState} = React;
+const C={lime:'#B6FF2B',greenDark:'#0A2E20',bg:'#0A0D11',s1:'#15191F',s2:'#1F252D',border:'rgba(255,255,255,0.08)',border2:'rgba(255,255,255,0.16)',txt:'#F0F2F4',txt2:'rgba(240,242,244,0.55)',txt3:'rgba(240,242,244,0.32)',goal:'#2ED47A',amber:'#FFB020',red:'#E5533D',sky:'#3FA9F5'};
+
+const Logo=({size=42})=>(<div style={{width:size,height:size,borderRadius:size*0.22,background:`linear-gradient(135deg,${C.lime},#68B42E)`,display:'flex',alignItems:'center',justifyContent:'center',color:C.greenDark,fontFamily:'var(--font-d)',fontWeight:900,fontSize:size*0.5,boxShadow:'0 8px 24px rgba(182,255,43,0.25)'}}>TFB</div>);
+
+// Mock invite (would come from /invite/{id} URL)
+// Switch INVITE.role to 'Parent' to see the child-linking flow
+const INVITES = {
+  'Player': {
+    inviter:'Alex Mitchell',inviterRole:'Head Coach',
+    club:'Malvern City SC',clubLogo:'M',clubColor:'#0F3D2E',
+    team:'U16 Boys',role:'Player',roleDesc:'View sessions, RSVP availability, track development',
+    expires:'In 6 days',expiresColor:C.amber,
+    prefilledEmail:'liam.carter@email.com',prefilledName:'Liam Carter',
+    squadCount:18,
+    message:"Hey Liam — welcome to the U16 Boys squad! We're using TFB this season for sessions, fixtures and training. Hit accept and you're in. — Coach Mitchell"
+  },
+  'Parent': {
+    inviter:'Alex Mitchell',inviterRole:'Head Coach',
+    club:'Malvern City SC',clubLogo:'M',clubColor:'#0F3D2E',
+    team:'U14 Girls',role:'Parent',roleDesc:'View your child\'s schedule, wellness, and development',
+    expires:'In 6 days',expiresColor:C.amber,
+    prefilledEmail:'sarah.petersen@email.com',prefilledName:'Sarah Petersen',
+    childSuggested:{name:'Ella Petersen',team:'U14 Girls',jersey:'#8'},
+    squadCount:16,
+    message:"Hi Sarah — welcome to the U14 Girls family! TFB is how we'll keep you in the loop with Ella's training, matches, and progress this season. — Coach Mitchell"
+  },
+  'Team Manager': {
+    inviter:'Tim Brand',inviterRole:'Technical Director',
+    club:'Malvern City SC',clubLogo:'M',clubColor:'#0F3D2E',
+    team:'U16 Men',role:'Team Manager',roleDesc:'Handle logistics, fixtures, and team comms',
+    expires:'In 14 days',expiresColor:C.goal,
+    prefilledEmail:'lisa.tran@email.com',prefilledName:'Lisa Tran',
+    squadCount:18,
+    message:"Hi Lisa — Tim here. Welcome aboard as our U16 Team Manager. You'll handle fixtures, comms and rostering. — Tim"
+  },
+};
+// pick role from URL ?role= param so we can demo all three
+const _params = new URLSearchParams(window.location.search);
+const _roleParam = _params.get('role');
+const INVITE = INVITES[_roleParam] || INVITES['Player'];
+
+function App(){
+  const [stage,setStage]=useState('preview'); // preview, signup, link-child, magic, success
+  const [name,setName]=useState(INVITE.prefilledName);
+  const [email,setEmail]=useState(INVITE.prefilledEmail);
+  const [password,setPassword]=useState('');
+  const [agreed,setAgreed]=useState(false);
+  const isParent = INVITE.role === 'Parent';
+  const [linkedChildren, setLinkedChildren] = useState([]);
+  const [childSearch, setChildSearch] = useState('');
+  const [showAddChild, setShowAddChild] = useState(false);
+  const [newChild, setNewChild] = useState({name:'',dob:'',team:'U14 Girls',jersey:''});
+  const allTeamPlayers = [
+    {name:'Ella Petersen',team:'U14 Girls',jersey:'#8',pos:'CM',i:'EP'},
+    {name:'Maya Chen',team:'U14 Girls',jersey:'#7',pos:'RW',i:'MC'},
+    {name:'Sofia Russo',team:'U14 Girls',jersey:'#10',pos:'CAM',i:'SR'},
+    {name:'Hannah Walsh',team:'U12 Girls',jersey:'#4',pos:'CB',i:'HW'},
+    {name:'Oscar Petersen',team:'U18 Men',jersey:'#11',pos:'LW',i:'OP'},
+  ];
+
+  return (
+    <div className="bg-pitch" style={{minHeight:'100vh',width:'100vw',display:'flex',flexDirection:'column',alignItems:'center',padding:'24px 16px 60px'}}>
+      <header style={{width:'100%',maxWidth:540,display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24}}>
+        <div style={{display:'flex',alignItems:'center',gap:10}}>
+          <Logo size={36}/>
+          <div>
+            <div style={{fontFamily:'var(--font-d)',fontSize:18,fontWeight:900,letterSpacing:'-0.02em',lineHeight:1}}>TFB</div>
+            <div style={{fontSize:9.5,fontWeight:600,color:C.txt2,letterSpacing:'0.18em',textTransform:'uppercase',marginTop:2}}>Invite</div>
+          </div>
+        </div>
+        <button onClick={()=>{try{window.location.href='tfb-nav.html'}catch(e){}}} style={{padding:'7px 12px',background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border2}`,borderRadius:8,fontSize:12,fontWeight:600,color:C.txt2,cursor:'pointer'}}>← All screens</button>
+      </header>
+
+      {stage==='preview' && (
+        <div className="fade-in" style={{width:'100%',maxWidth:540}}>
+          {/* Expiry banner */}
+          <div style={{background:`${INVITE.expiresColor}10`,border:`1px solid ${INVITE.expiresColor}30`,borderRadius:9,padding:'8px 12px',marginBottom:14,display:'flex',alignItems:'center',gap:8}}>
+            <span style={{fontSize:14}}>⏱</span>
+            <div style={{fontSize:12,color:C.txt}}>This invite expires <span style={{color:INVITE.expiresColor,fontWeight:700}}>{INVITE.expires}</span></div>
+          </div>
+
+          {/* Main card */}
+          <div style={{background:C.s1,border:`1px solid ${C.border}`,borderRadius:16,padding:'32px 28px',boxShadow:'0 30px 80px rgba(0,0,0,0.5)'}}>
+            {/* Avatar stack */}
+            <div style={{display:'flex',justifyContent:'center',marginBottom:20}}>
+              <div style={{position:'relative',width:120,height:64}}>
+                <div style={{position:'absolute',left:0,top:0,width:64,height:64,borderRadius:'50%',background:INVITE.clubColor,border:`3px solid ${C.s1}`,display:'flex',alignItems:'center',justifyContent:'center',color:C.lime,fontFamily:'var(--font-d)',fontWeight:900,fontSize:30,zIndex:2}}>{INVITE.clubLogo}</div>
+                <div style={{position:'absolute',right:0,top:0,width:64,height:64,borderRadius:'50%',background:`linear-gradient(135deg,${C.lime},#68B42E)`,border:`3px solid ${C.s1}`,display:'flex',alignItems:'center',justifyContent:'center',color:C.greenDark,fontFamily:'var(--font-d)',fontWeight:900,fontSize:18}}>TFB</div>
+              </div>
+            </div>
+
+            <div style={{textAlign:'center',marginBottom:22}}>
+              <div style={{fontSize:11,color:C.lime,fontWeight:800,letterSpacing:'0.18em',textTransform:'uppercase',marginBottom:8}}>You're invited</div>
+              <div style={{fontFamily:'var(--font-d)',fontSize:28,fontWeight:900,letterSpacing:'-0.01em',lineHeight:1.1,marginBottom:12,textTransform:'uppercase'}}>Join {INVITE.team} on TFB</div>
+              <div style={{fontSize:14,color:C.txt2,lineHeight:1.55}}>{INVITE.inviter} ({INVITE.inviterRole} of {INVITE.club}) has invited you to join as a <span style={{color:C.txt,fontWeight:700}}>{INVITE.role}</span>.</div>
+            </div>
+
+            {/* Personal note */}
+            <div style={{background:C.s2,border:`1px solid ${C.border}`,borderLeft:`3px solid ${C.lime}`,borderRadius:8,padding:'12px 14px',marginBottom:18}}>
+              <div style={{fontSize:10.5,color:C.lime,letterSpacing:'0.14em',textTransform:'uppercase',fontWeight:700,marginBottom:5}}>Note from {INVITE.inviter.split(' ')[0]}</div>
+              <div style={{fontSize:13,color:C.txt,lineHeight:1.55,fontStyle:'italic'}}>"{INVITE.message}"</div>
+            </div>
+
+            {/* What you get */}
+            <div style={{marginBottom:20}}>
+              <div style={{fontSize:10.5,color:C.txt3,letterSpacing:'0.14em',textTransform:'uppercase',fontWeight:700,marginBottom:10}}>As a {INVITE.role}, you'll be able to</div>
+              {[
+                {i:'📅',t:'See upcoming sessions and matches',d:'Auto-synced to your phone calendar'},
+                {i:'✓',t:'RSVP one-tap availability',d:'Coach knows immediately'},
+                {i:'📊',t:'Track your development',d:'Match minutes, goals, attendance, ratings'},
+                {i:'💬',t:'Team chat & announcements',d:'Stay in the loop with the squad'},
+              ].map((f,i)=>(
+                <div key={i} style={{display:'flex',gap:12,padding:'7px 0',borderTop:i?`1px dashed ${C.border}`:'none'}}>
+                  <div style={{fontSize:18,flexShrink:0}}>{f.i}</div>
+                  <div>
+                    <div style={{fontSize:13,fontWeight:700}}>{f.t}</div>
+                    <div style={{fontSize:11.5,color:C.txt2}}>{f.d}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button onClick={()=>setStage('signup')} style={{width:'100%',padding:'14px',background:`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:11,fontSize:15,fontWeight:800,color:C.greenDark,cursor:'pointer',marginBottom:8,letterSpacing:'0.04em'}}>Accept invite →</button>
+            <button onClick={()=>setStage('magic')} style={{width:'100%',padding:'12px',background:'transparent',border:`1px solid ${C.border2}`,borderRadius:11,fontSize:13,fontWeight:600,color:C.txt2,cursor:'pointer',marginBottom:14}}>Already have a TFB account? Sign in</button>
+            <div style={{textAlign:'center',fontSize:11,color:C.txt3}}>By accepting you agree to TFB's <a href="#" style={{color:C.txt2}}>Terms</a> and <a href="#" style={{color:C.txt2}}>Privacy Policy</a></div>
+          </div>
+        </div>
+      )}
+
+      {stage==='signup' && (
+        <div className="fade-in" style={{width:'100%',maxWidth:480,background:C.s1,border:`1px solid ${C.border}`,borderRadius:16,padding:32}}>
+          <div style={{fontSize:11,color:C.lime,fontWeight:800,letterSpacing:'0.18em',textTransform:'uppercase',marginBottom:8}}>Final step</div>
+          <div style={{fontFamily:'var(--font-d)',fontSize:24,fontWeight:900,letterSpacing:'-0.01em',marginBottom:6,textTransform:'uppercase'}}>Create your account</div>
+          <div style={{fontSize:13,color:C.txt2,marginBottom:22}}>You'll join <span style={{color:C.txt,fontWeight:700}}>{INVITE.team}</span> at <span style={{color:C.txt,fontWeight:700}}>{INVITE.club}</span> as a <span style={{color:C.lime,fontWeight:700}}>{INVITE.role}</span>.</div>
+
+          <label style={{display:'block',fontSize:11,fontWeight:700,color:C.txt2,letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:6}}>Full name</label>
+          <input value={name} onChange={e=>setName(e.target.value)} style={{width:'100%',padding:'11px 14px',background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border2}`,borderRadius:9,fontSize:14,color:C.txt,marginBottom:14}}/>
+
+          <label style={{display:'block',fontSize:11,fontWeight:700,color:C.txt2,letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:6}}>Email</label>
+          <input value={email} disabled style={{width:'100%',padding:'11px 14px',background:'rgba(255,255,255,0.02)',border:`1px solid ${C.border}`,borderRadius:9,fontSize:14,color:C.txt2,marginBottom:5}}/>
+          <div style={{fontSize:11,color:C.txt3,marginBottom:14}}>🔒 Locked to invited email</div>
+
+          <label style={{display:'block',fontSize:11,fontWeight:700,color:C.txt2,letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:6}}>Choose a password</label>
+          <input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Min 8 characters" style={{width:'100%',padding:'11px 14px',background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border2}`,borderRadius:9,fontSize:14,color:C.txt,marginBottom:14}}/>
+
+          <label style={{display:'flex',alignItems:'flex-start',gap:8,marginBottom:18,cursor:'pointer'}}>
+            <input type="checkbox" checked={agreed} onChange={e=>setAgreed(e.target.checked)} style={{accentColor:C.lime,marginTop:3}}/>
+            <span style={{fontSize:12,color:C.txt2,lineHeight:1.5}}>I'm 16 or over (or have parent/guardian permission). I agree to the Terms and Privacy Policy.</span>
+          </label>
+
+          <button onClick={()=>setStage(isParent?'link-child':'success')} disabled={!password||password.length<8||!agreed} style={{width:'100%',padding:'13px',background:(!password||password.length<8||!agreed)?'rgba(255,255,255,0.04)':`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:10,fontSize:14,fontWeight:800,color:(!password||password.length<8||!agreed)?C.txt3:C.greenDark,cursor:(!password||password.length<8||!agreed)?'not-allowed':'pointer',marginBottom:8}}>{isParent?'Continue → Link your child':`Accept & join ${INVITE.team} →`}</button>
+          <button onClick={()=>setStage('preview')} style={{width:'100%',padding:'10px',background:'transparent',border:'none',fontSize:12,color:C.txt2,cursor:'pointer'}}>← Back</button>
+        </div>
+      )}
+
+      {stage==='link-child' && (
+        <div className="fade-in" style={{width:'100%',maxWidth:560,background:C.s1,border:`1px solid ${C.border}`,borderRadius:16,padding:32}}>
+          <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8}}>
+            <div style={{display:'flex',gap:4}}>
+              <div style={{width:24,height:4,borderRadius:2,background:C.lime}}/>
+              <div style={{width:24,height:4,borderRadius:2,background:C.lime}}/>
+              <div style={{width:24,height:4,borderRadius:2,background:'rgba(255,255,255,0.1)'}}/>
+            </div>
+            <span style={{fontSize:11,color:C.txt3,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase'}}>Step 2 of 3</span>
+          </div>
+          <div style={{fontFamily:'var(--font-d)',fontSize:26,fontWeight:900,letterSpacing:'-0.01em',marginBottom:6,textTransform:'uppercase'}}>Link your child</div>
+          <div style={{fontSize:13,color:C.txt2,marginBottom:20,lineHeight:1.55}}>Connect your account to your child's player profile. You'll be able to see their schedule, wellness check-ins, development, and receive coach messages on their behalf.</div>
+
+          {/* Suggested child from coach */}
+          {INVITE.childSuggested && !linkedChildren.find(c=>c.name===INVITE.childSuggested.name) && (
+            <div style={{background:'rgba(182,255,43,0.06)',border:`1px solid rgba(182,255,43,0.3)`,borderRadius:11,padding:14,marginBottom:14}}>
+              <div style={{fontSize:10.5,color:C.lime,fontWeight:800,letterSpacing:'0.14em',textTransform:'uppercase',marginBottom:8}}>Suggested by coach</div>
+              <div style={{display:'flex',alignItems:'center',gap:12}}>
+                <div style={{width:42,height:42,borderRadius:'50%',background:'rgba(182,255,43,0.15)',border:'1px solid rgba(182,255,43,0.3)',display:'flex',alignItems:'center',justifyContent:'center',color:C.lime,fontFamily:'var(--font-d)',fontWeight:900,fontSize:14,flexShrink:0}}>EP</div>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:14,fontWeight:700,color:C.txt}}>{INVITE.childSuggested.name}</div>
+                  <div style={{fontSize:11.5,color:C.txt3}}>{INVITE.childSuggested.team} · {INVITE.childSuggested.jersey}</div>
+                </div>
+                <button onClick={()=>setLinkedChildren([...linkedChildren,{name:INVITE.childSuggested.name,team:INVITE.childSuggested.team,jersey:INVITE.childSuggested.jersey,i:'EP'}])} style={{padding:'8px 16px',background:`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:8,fontSize:12,fontWeight:800,color:C.greenDark,cursor:'pointer'}}>+ Link</button>
+              </div>
+            </div>
+          )}
+
+          {/* Linked so far */}
+          {linkedChildren.length > 0 && (
+            <div style={{marginBottom:14}}>
+              <div style={{fontSize:10.5,color:C.txt3,fontWeight:700,letterSpacing:'0.14em',textTransform:'uppercase',marginBottom:8}}>Linked ({linkedChildren.length})</div>
+              {linkedChildren.map((c,i)=>(
+                <div key={i} style={{background:C.s2,border:`1px solid ${C.border}`,borderLeft:`3px solid ${C.goal}`,borderRadius:8,padding:'10px 14px',marginBottom:6,display:'flex',alignItems:'center',gap:10}}>
+                  <div style={{width:34,height:34,borderRadius:'50%',background:'rgba(46,212,122,0.15)',border:`1px solid rgba(46,212,122,0.35)`,display:'flex',alignItems:'center',justifyContent:'center',color:C.goal,fontFamily:'var(--font-d)',fontWeight:900,fontSize:12}}>{c.i||c.name.split(' ').map(s=>s[0]).join('').slice(0,2)}</div>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:13,fontWeight:700,color:C.txt}}>{c.name}</div>
+                    <div style={{fontSize:11,color:C.txt3}}>{c.team} {c.jersey?`· ${c.jersey}`:''}</div>
+                  </div>
+                  <span style={{fontSize:10,color:C.goal,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase'}}>✓ Linked</span>
+                  <button onClick={()=>setLinkedChildren(linkedChildren.filter((_,j)=>j!==i))} style={{width:24,height:24,borderRadius:6,background:'transparent',border:`1px solid ${C.border}`,color:C.txt3,fontSize:12,cursor:'pointer'}}>×</button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Search existing players */}
+          {!showAddChild && (
+            <div style={{marginBottom:14}}>
+              <div style={{fontSize:11,fontWeight:700,color:C.txt2,letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:6}}>Search by name</div>
+              <input placeholder="Type your child's name…" value={childSearch} onChange={e=>setChildSearch(e.target.value)} style={{width:'100%',padding:'11px 14px',background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border2}`,borderRadius:9,fontSize:14,color:C.txt}}/>
+              {childSearch.length>1 && (
+                <div style={{marginTop:6,background:C.s2,borderRadius:8,border:`1px solid ${C.border}`,maxHeight:180,overflowY:'auto'}}>
+                  {allTeamPlayers.filter(p=>p.name.toLowerCase().includes(childSearch.toLowerCase()) && !linkedChildren.find(c=>c.name===p.name)).map(p=>(
+                    <button key={p.name} onClick={()=>{setLinkedChildren([...linkedChildren,p]);setChildSearch('');}} style={{width:'100%',display:'flex',alignItems:'center',gap:10,padding:'9px 12px',background:'transparent',border:'none',borderTop:`1px solid ${C.border}`,cursor:'pointer',textAlign:'left'}}>
+                      <div style={{width:30,height:30,borderRadius:'50%',background:C.s1,display:'flex',alignItems:'center',justifyContent:'center',color:C.txt2,fontFamily:'var(--font-d)',fontWeight:900,fontSize:11}}>{p.i}</div>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:13,fontWeight:600,color:C.txt}}>{p.name}</div>
+                        <div style={{fontSize:11,color:C.txt3}}>{p.team} · {p.pos} {p.jersey}</div>
+                      </div>
+                      <span style={{fontSize:11,color:C.lime,fontWeight:700}}>+ Link</span>
+                    </button>
+                  ))}
+                  {allTeamPlayers.filter(p=>p.name.toLowerCase().includes(childSearch.toLowerCase())).length===0 && (
+                    <div style={{padding:'12px 14px',fontSize:12,color:C.txt3}}>No players found. Use "Add a new child" below if their account doesn't exist yet.</div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Add new child */}
+          {!showAddChild ? (
+            <button onClick={()=>setShowAddChild(true)} style={{width:'100%',padding:'10px',background:'transparent',border:`1px dashed ${C.border2}`,borderRadius:9,fontSize:12,fontWeight:700,color:C.txt2,cursor:'pointer',marginBottom:14}}>+ Add a new child (no account yet)</button>
+          ):(
+            <div style={{background:C.s2,border:`1px solid ${C.border}`,borderRadius:10,padding:14,marginBottom:14}}>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+                <div style={{fontSize:12,fontWeight:700,color:C.lime,letterSpacing:'0.1em',textTransform:'uppercase'}}>New child profile</div>
+                <button onClick={()=>setShowAddChild(false)} style={{background:'transparent',border:'none',color:C.txt3,fontSize:14,cursor:'pointer'}}>×</button>
+              </div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:8}}>
+                <input placeholder="Full name" value={newChild.name} onChange={e=>setNewChild({...newChild,name:e.target.value})} style={{padding:'10px 12px',background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border2}`,borderRadius:8,fontSize:13,color:C.txt}}/>
+                <input type="date" placeholder="Date of birth" value={newChild.dob} onChange={e=>setNewChild({...newChild,dob:e.target.value})} style={{padding:'10px 12px',background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border2}`,borderRadius:8,fontSize:13,color:C.txt}}/>
+              </div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 80px',gap:8,marginBottom:10}}>
+                <select value={newChild.team} onChange={e=>setNewChild({...newChild,team:e.target.value})} style={{padding:'10px 12px',background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border2}`,borderRadius:8,fontSize:13,color:C.txt}}>
+                  <option>U18 Men</option><option>U16 Men</option><option>U14 Boys</option><option>U14 Girls</option><option>U12 Girls</option><option>U10 Mixed</option>
+                </select>
+                <input placeholder="Jersey #" value={newChild.jersey} onChange={e=>setNewChild({...newChild,jersey:e.target.value})} style={{padding:'10px 12px',background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border2}`,borderRadius:8,fontSize:13,color:C.txt}}/>
+              </div>
+              <div style={{fontSize:11,color:C.txt3,marginBottom:10,lineHeight:1.5}}>📌 Coach will be notified to confirm this link before it activates.</div>
+              <button disabled={!newChild.name} onClick={()=>{setLinkedChildren([...linkedChildren,{...newChild,jersey:newChild.jersey?`#${newChild.jersey.replace('#','')}`:'',i:newChild.name.split(' ').map(s=>s[0]).join('').slice(0,2).toUpperCase()}]);setNewChild({name:'',dob:'',team:'U14 Girls',jersey:''});setShowAddChild(false);}} style={{width:'100%',padding:'9px',background:newChild.name?'rgba(182,255,43,0.12)':'rgba(255,255,255,0.04)',border:'1px solid rgba(182,255,43,0.3)',borderRadius:8,fontSize:12,fontWeight:700,color:newChild.name?C.lime:C.txt3,cursor:newChild.name?'pointer':'not-allowed'}}>Add child & request link</button>
+            </div>
+          )}
+
+          {/* Consent */}
+          <div style={{background:'rgba(63,169,245,0.05)',border:'1px solid rgba(63,169,245,0.18)',borderRadius:9,padding:'10px 12px',marginBottom:18}}>
+            <label style={{display:'flex',alignItems:'flex-start',gap:8,cursor:'pointer'}}>
+              <input type="checkbox" defaultChecked style={{accentColor:C.lime,marginTop:3}}/>
+              <span style={{fontSize:11.5,color:C.txt2,lineHeight:1.5}}>I confirm I am the parent or legal guardian of the linked child(ren), and consent to receive communications about them on TFB.</span>
+            </label>
+          </div>
+
+          <button onClick={()=>setStage('success')} disabled={linkedChildren.length===0} style={{width:'100%',padding:'13px',background:linkedChildren.length===0?'rgba(255,255,255,0.04)':`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:10,fontSize:14,fontWeight:800,color:linkedChildren.length===0?C.txt3:C.greenDark,cursor:linkedChildren.length===0?'not-allowed':'pointer',marginBottom:8}}>{linkedChildren.length===0?'Link at least one child to continue':`Continue with ${linkedChildren.length} ${linkedChildren.length===1?'child':'children'} →`}</button>
+          <button onClick={()=>setStage('signup')} style={{width:'100%',padding:'10px',background:'transparent',border:'none',fontSize:12,color:C.txt2,cursor:'pointer'}}>← Back</button>
+        </div>
+      )}
+
+      {stage==='magic' && (
+        <div className="fade-in" style={{width:'100%',maxWidth:440,background:C.s1,border:`1px solid ${C.border}`,borderRadius:16,padding:32}}>
+          <div style={{fontFamily:'var(--font-d)',fontSize:24,fontWeight:900,letterSpacing:'-0.01em',marginBottom:6,textTransform:'uppercase'}}>Sign in to accept</div>
+          <div style={{fontSize:13,color:C.txt2,marginBottom:18}}>We'll send a magic link to your TFB email — no password needed.</div>
+          <input value={email} onChange={e=>setEmail(e.target.value)} style={{width:'100%',padding:'11px 14px',background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border2}`,borderRadius:9,fontSize:14,color:C.txt,marginBottom:14}}/>
+          <button onClick={()=>setStage('success')} style={{width:'100%',padding:'13px',background:`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:10,fontSize:14,fontWeight:800,color:C.greenDark,cursor:'pointer',marginBottom:8}}>Send magic link →</button>
+          <button onClick={()=>setStage('preview')} style={{width:'100%',padding:'10px',background:'transparent',border:'none',fontSize:12,color:C.txt2,cursor:'pointer'}}>← Back</button>
+        </div>
+      )}
+
+      {stage==='success' && (
+        <div className="fade-in" style={{width:'100%',maxWidth:480,textAlign:'center',padding:'40px 0'}}>
+          <div style={{width:90,height:90,borderRadius:'50%',background:`linear-gradient(135deg,${C.lime},#68B42E)`,display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 22px',fontSize:46,color:C.greenDark,boxShadow:'0 12px 30px rgba(182,255,43,0.3)'}}>✓</div>
+          <div style={{fontFamily:'var(--font-d)',fontSize:32,fontWeight:900,letterSpacing:'-0.01em',marginBottom:10,textTransform:'uppercase'}}>Welcome to {INVITE.team.split(' ')[0]}!</div>
+          <div style={{fontSize:14,color:C.txt2,marginBottom:24,lineHeight:1.6}}>You're now a {INVITE.role} at <span style={{color:C.txt,fontWeight:700}}>{INVITE.club}</span>. Coach Mitchell has been notified.</div>
+
+          <div style={{background:C.s1,border:`1px solid ${C.border}`,borderRadius:12,padding:16,textAlign:'left',marginBottom:18}}>
+            <div style={{fontSize:11,color:C.lime,fontWeight:800,letterSpacing:'0.14em',textTransform:'uppercase',marginBottom:10}}>What's next</div>
+            {[
+              {t:'Set notification preferences',d:'Choose how you want session reminders'},
+              {t:'Complete your player profile',d:'Add position, jersey number, photo'},
+              {t:'See your first session',d:'U16 training Tuesday 5:30pm — RSVP now'},
+            ].map((s,i)=>(
+              <div key={i} style={{display:'flex',gap:10,padding:'7px 0',borderTop:i?`1px dashed ${C.border}`:'none'}}>
+                <div style={{width:22,height:22,borderRadius:'50%',background:'rgba(182,255,43,0.12)',color:C.lime,display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:800,flexShrink:0,marginTop:1}}>{i+1}</div>
+                <div>
+                  <div style={{fontSize:13,fontWeight:700}}>{s.t}</div>
+                  <div style={{fontSize:11.5,color:C.txt2}}>{s.d}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <button onClick={()=>{try{window.location.href='tfb-dashboard.html'}catch(e){}}} style={{padding:'12px 28px',background:`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:10,fontSize:14,fontWeight:800,color:C.greenDark,cursor:'pointer'}}>Open my dashboard →</button>
+        </div>
+      )}
+
+      <div style={{position:'fixed',bottom:14,right:14,display:'flex',gap:4,padding:6,background:C.s1,border:`1px solid ${C.border}`,borderRadius:9}}>
+        {['preview','signup','magic','success'].map(s=>(
+          <button key={s} onClick={()=>setStage(s)} style={{padding:'5px 9px',background:stage===s?C.lime:'transparent',color:stage===s?C.greenDark:C.txt2,border:'none',borderRadius:5,fontSize:10,fontWeight:700,cursor:'pointer',textTransform:'uppercase',letterSpacing:'0.04em'}}>{s}</button>
+        ))}
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

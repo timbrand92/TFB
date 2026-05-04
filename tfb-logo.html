@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TFB – Logo System</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;0,800;0,900;1,900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="tfb-responsive.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Barlow', sans-serif; background: #111418; -webkit-font-smoothing: antialiased; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+
+// ─── PITCH ICON (Option 1 — rectangular pitch with tactical arrows) ──────────
+function PitchIcon({ size = 80, bg = '#0F3D2E', lime = '#B6FF2B', white = '#FFFFFF' }) {
+  // Viewbox 80×80, pitch is a rectangle with markings + movement arrows
+  return (
+    <svg width={size} height={size} viewBox="0 0 80 80" fill="none">
+      {/* Outer border */}
+      <rect x="4" y="8" width="72" height="64" rx="1" stroke={white} strokeWidth="2.5" fill="none"/>
+      {/* Centre line */}
+      <line x1="4" y1="40" x2="76" y2="40" stroke={white} strokeWidth="1.5"/>
+      {/* Centre circle */}
+      <circle cx="40" cy="40" r="10" stroke={white} strokeWidth="1.5" fill="none"/>
+      {/* Centre spot */}
+      <circle cx="40" cy="40" r="1.5" fill={white}/>
+      {/* Top penalty box */}
+      <rect x="22" y="8" width="36" height="14" stroke={white} strokeWidth="1.5" fill="none"/>
+      {/* Bottom penalty box */}
+      <rect x="22" y="58" width="36" height="14" stroke={white} strokeWidth="1.5" fill="none"/>
+      {/* Top 6-yard box */}
+      <rect x="31" y="8" width="18" height="6" stroke={white} strokeWidth="1" fill="none"/>
+      {/* Bottom 6-yard box */}
+      <rect x="31" y="66" width="18" height="6" stroke={white} strokeWidth="1" fill="none"/>
+
+      {/* Tactical movement arrows in lime — showing attacking play */}
+      {/* Arrow 1: left mid → centre */}
+      <path d="M14 50 C18 44 28 42 34 40" stroke={lime} strokeWidth="2" fill="none" strokeDasharray="3 2"/>
+      <polygon points="34,37.5 38,40 34,42.5" fill={lime}/>
+      {/* Arrow 2: centre → top right */}
+      <path d="M40 32 C48 26 58 22 64 18" stroke={lime} strokeWidth="2" fill="none" strokeDasharray="3 2"/>
+      <polygon points="64,15 68,18 64,21" fill={lime}/>
+      {/* Arrow 3: right mid → goal */}
+      <path d="M62 52 C56 46 48 44 44 40" stroke={lime} strokeWidth="2" fill="none" strokeDasharray="3 2"/>
+      <polygon points="41,37.5 44,37 43,41" fill={lime}/>
+      {/* Player dots */}
+      <circle cx="14" cy="52" r="3" fill={lime}/>
+      <circle cx="40" cy="30" r="3" fill={lime}/>
+      <circle cx="62" cy="54" r="3" fill={lime}/>
+    </svg>
+  );
+}
+
+// ─── CIRCLE PITCH ICON (Option 2 — compact circle version) ──────────────────
+function CirclePitchIcon({ size = 80, bg = '#0F3D2E', lime = '#B6FF2B', white = '#FFFFFF' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 80 80" fill="none">
+      {/* Outer lime circle */}
+      <circle cx="40" cy="40" r="37" stroke={lime} strokeWidth="3" fill="none"/>
+      {/* Inner circle (thinner) */}
+      <circle cx="40" cy="40" r="30" stroke={lime} strokeWidth="1" fill="none" opacity="0.3"/>
+      {/* Mini pitch inside */}
+      <rect x="20" y="16" width="40" height="48" rx="1" stroke={white} strokeWidth="1.5" fill="none"/>
+      <line x1="20" y1="40" x2="60" y2="40" stroke={white} strokeWidth="1"/>
+      <circle cx="40" cy="40" r="7" stroke={white} strokeWidth="1" fill="none"/>
+      <circle cx="40" cy="40" r="1.2" fill={white}/>
+      {/* Top/bottom penalty boxes */}
+      <rect x="28" y="16" width="24" height="9" stroke={white} strokeWidth="1" fill="none"/>
+      <rect x="28" y="55" width="24" height="9" stroke={white} strokeWidth="1" fill="none"/>
+      {/* Tactical arrows */}
+      <path d="M24 50 C30 46 34 44 37 41" stroke={lime} strokeWidth="1.8" fill="none" strokeDasharray="2.5 1.5"/>
+      <polygon points="37,38.5 40,41 37,43.5" fill={lime}/>
+      <path d="M40 33 C46 28 52 24 56 20" stroke={lime} strokeWidth="1.8" fill="none" strokeDasharray="2.5 1.5"/>
+      <polygon points="56,17.5 59,20 56,22.5" fill={lime}/>
+      {/* Player dots */}
+      <circle cx="24" cy="51" r="2.2" fill={lime}/>
+      <circle cx="40" cy="31" r="2.2" fill={lime}/>
+    </svg>
+  );
+}
+
+// ─── TB MONOGRAM (Option 3 — bold app icon mark) ────────────────────────────
+// Bold interlocking T and B — the T bar cuts through the B
+function TBMark({ size = 80, bg = '#B6FF2B', dark = true }) {
+  const fg = dark ? '#0F3D2E' : '#0F3D2E';
+  return (
+    <svg width={size} height={size} viewBox="0 0 80 80" fill="none">
+      {/* Background */}
+      <rect width="80" height="80" rx={size * 0.2} fill={bg}/>
+      {/* Bold "T" — vertical stem + horizontal bar */}
+      {/* T stem */}
+      <rect x="14" y="14" width="14" height="52" rx="2" fill={fg}/>
+      {/* T bar — extends right, cuts into B */}
+      <rect x="14" y="14" width="52" height="13" rx="2" fill={fg}/>
+      {/* "B" — two bumps on the right side */}
+      {/* B upper bump */}
+      <path d="M46 14 L46 40 Q68 40 68 27 Q68 14 46 14Z" fill={fg}/>
+      {/* B lower bump */}
+      <path d="M46 40 L46 66 Q72 66 72 53 Q72 40 46 40Z" fill={fg}/>
+      {/* Cutouts to make B bumps round */}
+      <ellipse cx="57" cy="27" rx="8" ry="9" fill={bg}/>
+      <ellipse cx="59" cy="53" rx="9" ry="10" fill={bg}/>
+    </svg>
+  );
+}
+
+// ─── PRIMARY LOCKUP — Option 1 ────────────────────────────────────────────────
+function PrimaryLogo({ scale = 1, onDark = true }) {
+  const white = onDark ? '#FFFFFF' : '#111418';
+  const lime = '#B6FF2B';
+  const pitchBg = onDark ? '#0F3D2E' : '#0F3D2E';
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 16 * scale }}>
+      {/* Pitch icon in a box */}
+      <div style={{ background: pitchBg, border: `2px solid ${onDark ? 'rgba(255,255,255,0.15)' : '#0F3D2E'}`, borderRadius: 4 * scale, padding: 4 * scale, flexShrink: 0 }}>
+        <PitchIcon size={72 * scale} bg={pitchBg} lime={lime} white={onDark ? '#fff' : '#fff'}/>
+      </div>
+      {/* Vertical divider */}
+      <div style={{ width: 2 * scale, height: 80 * scale, background: lime, borderRadius: 1, flexShrink: 0 }}/>
+      {/* Wordmark */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+        <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 900, fontSize: 38 * scale, color: white, lineHeight: 0.9, letterSpacing: '0.01em', textTransform: 'uppercase' }}>THE</span>
+        <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 900, fontSize: 38 * scale, color: white, lineHeight: 0.9, letterSpacing: '0.01em', textTransform: 'uppercase' }}>FOOTBALL</span>
+        <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 900, fontSize: 38 * scale, color: lime, lineHeight: 0.95, letterSpacing: '0.01em', textTransform: 'uppercase' }}>BLUEPRINT</span>
+        <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 700, fontSize: 11 * scale, color: onDark ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.45)', letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: 4 * scale }}>Plan. Develop. Succeed.</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── SHORT LOCKUP — Option 2 ──────────────────────────────────────────────────
+function ShortLogo({ scale = 1, onDark = true }) {
+  const white = onDark ? '#FFFFFF' : '#111418';
+  const lime = '#B6FF2B';
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12 * scale }}>
+      <CirclePitchIcon size={56 * scale} lime={lime} white={onDark ? '#fff' : '#fff'} bg="#0F3D2E"/>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+        <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 900, fontSize: 28 * scale, color: white, lineHeight: 0.88, letterSpacing: '0.01em', textTransform: 'uppercase' }}>THE</span>
+        <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 900, fontSize: 28 * scale, color: white, lineHeight: 0.88, letterSpacing: '0.01em', textTransform: 'uppercase' }}>FOOTBALL</span>
+        <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 900, fontSize: 28 * scale, color: lime, lineHeight: 0.92, letterSpacing: '0.01em', textTransform: 'uppercase' }}>BLUEPRINT</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── WORDMARK ONLY — "TFB" ────────────────────────────────────────────────────
+function TFBWordmark({ scale = 1, onDark = true }) {
+  const white = onDark ? '#FFFFFF' : '#111418';
+  const lime = '#B6FF2B';
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
+      <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 900, fontSize: 52 * scale, color: white, lineHeight: 0.85, letterSpacing: '-0.01em', fontStyle: 'italic' }}>TFB</span>
+      <span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 700, fontSize: 11 * scale, color: lime, letterSpacing: '0.18em', textTransform: 'uppercase', marginTop: 3 * scale }}>THE FOOTBALL BLUEPRINT</span>
+    </div>
+  );
+}
+
+// ─── PRESENTATION SECTION ────────────────────────────────────────────────────
+function Pad({ bg, children, minH = 120, border }) {
+  return (
+    <div style={{ background: bg, borderRadius: 10, padding: '24px 28px', minHeight: minH, display: 'flex', flexDirection: 'column', justifyContent: 'center', border: border || 'none' }}>
+      {children}
+    </div>
+  );
+}
+
+function SectionTitle({ children }) {
+  return <div style={{ fontSize: 10, fontWeight: 800, color: '#B6FF2B', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 16, fontFamily: 'Barlow, sans-serif' }}>{children}</div>;
+}
+
+// ─── App ─────────────────────────────────────────────────────────────────────
+function App() {
+  return (
+    <DesignCanvas title="TFB — Logo System">
+
+      <DCSection id="primary" title="Primary Logos">
+
+        {/* Option 1 */}
+        <DCArtboard id="opt1" label="Option 1 — Primary (Pitch)" width={580} height={560}>
+          <div style={{ fontFamily: 'Barlow, sans-serif', color: '#fff', display: 'flex', flexDirection: 'column', gap: 16, height: '100%' }}>
+            <div>
+              <SectionTitle>Primary Logo — Option 1</SectionTitle>
+              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>Rectangular pitch with tactical movement arrows. For marketing, print, hero sections and large-format use.</p>
+            </div>
+            <Pad bg="#0F3D2E" border="1px solid rgba(182,255,43,0.2)" minH={140}>
+              <PrimaryLogo scale={0.85} onDark={true}/>
+            </Pad>
+            <Pad bg="#111418" border="1px solid rgba(255,255,255,0.06)" minH={120}>
+              <PrimaryLogo scale={0.75} onDark={true}/>
+            </Pad>
+            <Pad bg="#F0F3F6" minH={120} border="1px solid rgba(0,0,0,0.08)">
+              <PrimaryLogo scale={0.72} onDark={false}/>
+            </Pad>
+            <Pad bg="#FFFFFF" minH={100} border="1px solid rgba(0,0,0,0.08)">
+              <PrimaryLogo scale={0.6} onDark={false}/>
+            </Pad>
+          </div>
+        </DCArtboard>
+
+        {/* Option 2 */}
+        <DCArtboard id="opt2" label="Option 2 — Short (Circle Pitch)" width={440} height={560}>
+          <div style={{ fontFamily: 'Barlow, sans-serif', color: '#fff', display: 'flex', flexDirection: 'column', gap: 16, height: '100%' }}>
+            <div>
+              <SectionTitle>Short Logo — Option 2</SectionTitle>
+              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>Compact circle pitch icon. For app header, tight spaces, social media.</p>
+            </div>
+            <Pad bg="#0F3D2E" border="1px solid rgba(182,255,43,0.2)" minH={120}>
+              <ShortLogo scale={1} onDark={true}/>
+            </Pad>
+            <Pad bg="#111418" border="1px solid rgba(255,255,255,0.06)" minH={100}>
+              <ShortLogo scale={0.9} onDark={true}/>
+            </Pad>
+            <Pad bg="#F0F3F6" minH={100} border="1px solid rgba(0,0,0,0.08)">
+              <ShortLogo scale={0.85} onDark={false}/>
+            </Pad>
+            <Pad bg="#FFFFFF" minH={90} border="1px solid rgba(0,0,0,0.08)">
+              <ShortLogo scale={0.75} onDark={false}/>
+            </Pad>
+            {/* Scale test */}
+            <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '12px 16px' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>Scale test</div>
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 14 }}>
+                {[1, 0.7, 0.5, 0.35].map((s, i) => (
+                  <ShortLogo key={i} scale={s} onDark={true}/>
+                ))}
+              </div>
+            </div>
+          </div>
+        </DCArtboard>
+
+        {/* Option 3 — TB Icon */}
+        <DCArtboard id="opt3" label="Option 3 — TB Icon Mark" width={380} height={560}>
+          <div style={{ fontFamily: 'Barlow, sans-serif', color: '#fff', display: 'flex', flexDirection: 'column', gap: 16, height: '100%' }}>
+            <div>
+              <SectionTitle>TB Monogram — App Icon</SectionTitle>
+              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>Bold T+B monogram for app icon, favicon and small-format use where the pitch detail is lost.</p>
+            </div>
+            {/* Large */}
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+              <TBMark size={120} bg="#B6FF2B" dark={true}/>
+              <TBMark size={120} bg="#0F3D2E" dark={true}/>
+            </div>
+            {/* Sizes */}
+            <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '14px 16px' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>App icon sizes</div>
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12 }}>
+                {[96, 72, 48, 32, 24, 16].map(s => (
+                  <div key={s} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+                    <TBMark size={s} bg="#B6FF2B" dark={true}/>
+                    <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', fontWeight: 600 }}>{s}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* Colourways */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              {[['#B6FF2B', true, 'Lime (primary)'], ['#0F3D2E', true, 'Pitch Green'], ['#111418', true, 'Carbon Black'], ['#FFFFFF', false, 'White / Print']].map(([bg, dark, label]) => (
+                <div key={label} style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <TBMark size={36} bg={bg} dark={dark}/>
+                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', fontWeight: 600 }}>{label}</span>
+                </div>
+              ))}
+            </div>
+            {/* TFB Wordmark */}
+            <div style={{ background: '#0F3D2E', borderRadius: 10, padding: '16px 20px', border: '1px solid rgba(182,255,43,0.2)' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(182,255,43,0.5)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>TFB Wordmark</div>
+              <div style={{ display: 'flex', gap: 24, alignItems: 'flex-end' }}>
+                <TFBWordmark scale={0.9} onDark={true}/>
+                <TFBWordmark scale={0.6} onDark={true}/>
+              </div>
+            </div>
+          </div>
+        </DCArtboard>
+
+      </DCSection>
+
+      <DCSection id="context" title="In-Context">
+
+        {/* App header */}
+        <DCArtboard id="header" label="App Header Mockup" width={760} height={240}>
+          <div style={{ fontFamily: 'Barlow, sans-serif', color: '#fff', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <SectionTitle>In-App Header — Short Logo (Option 2)</SectionTitle>
+            {/* Dark green header */}
+            {[['linear-gradient(90deg,#0A2E20,#0F3D2E)', '1px solid rgba(182,255,43,0.18)', true],
+              ['#111418', '1px solid rgba(255,255,255,0.06)', true],
+              ['#FFFFFF', '1px solid rgba(0,0,0,0.08)', false]].map(([bg, border, dark], i) => (
+              <div key={i} style={{ background: bg, borderRadius: 10, padding: '0 20px', height: 58, display: 'flex', alignItems: 'center', justifyContent: 'space-between', border }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3.5, opacity: 0.6 }}>
+                    {[18, 12, 18].map((w, j) => <div key={j} style={{ width: w, height: 1.5, background: dark ? '#fff' : '#111', borderRadius: 1 }}/>)}
+                  </div>
+                  <div style={{ width: 1, height: 24, background: dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)' }}/>
+                  <ShortLogo scale={0.65} onDark={dark}/>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ background: dark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)', border: `1px solid ${dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'}`, borderRadius: 8, padding: '5px 12px', fontSize: 12, color: dark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.3)' }}>Search…</div>
+                  <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#B6FF2B,#68B42E)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ fontSize: 12, fontWeight: 900, color: '#0F3D2E', fontFamily: 'Barlow Condensed, sans-serif' }}>TB</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </DCArtboard>
+
+        {/* Social + App icons */}
+        <DCArtboard id="social" label="Social & App Icons" width={420} height={240}>
+          <div style={{ fontFamily: 'Barlow, sans-serif', color: '#fff', display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <SectionTitle>Social & App Icons</SectionTitle>
+            <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+              {/* App icon versions */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
+                <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>iOS</div>
+                <div style={{ borderRadius: '22%', overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
+                  <TBMark size={80} bg="#B6FF2B" dark={true}/>
+                </div>
+                <TBMark size={48} bg="#B6FF2B" dark={true}/>
+                <TBMark size={32} bg="#B6FF2B" dark={true}/>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
+                <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Pitch Icon</div>
+                <div style={{ background: '#0F3D2E', borderRadius: '22%', overflow: 'hidden', padding: 4, boxShadow: '0 8px 24px rgba(0,0,0,0.5)', border: '2px solid rgba(182,255,43,0.3)' }}>
+                  <PitchIcon size={72} bg="#0F3D2E" lime="#B6FF2B" white="#fff"/>
+                </div>
+                <div style={{ background: '#0F3D2E', borderRadius: '22%', overflow: 'hidden', padding: 3, border: '1.5px solid rgba(182,255,43,0.3)' }}>
+                  <PitchIcon size={42} bg="#0F3D2E" lime="#B6FF2B" white="#fff"/>
+                </div>
+              </div>
+              {/* Social profile */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Social Profile</div>
+                <div style={{ background: '#0F3D2E', borderRadius: 12, width: 80, height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(182,255,43,0.2)', boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
+                  <CirclePitchIcon size={68} lime="#B6FF2B" white="#fff" bg="#0F3D2E"/>
+                </div>
+                <div style={{ background: 'linear-gradient(135deg,#0F3D2E,#081F19)', borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 8, border: '1px solid rgba(182,255,43,0.15)' }}>
+                  <TBMark size={28} bg="#B6FF2B" dark={true}/>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#fff', fontFamily: 'Barlow Condensed, sans-serif', letterSpacing: '0.05em' }}>@tfblueprint</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </DCArtboard>
+
+      </DCSection>
+
+      <DCSection id="colours" title="Colour System">
+        <DCArtboard id="palette" label="Brand Colours" width={680} height={200}>
+          <div style={{ fontFamily: 'Barlow, sans-serif', color: '#fff', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <SectionTitle>Brand Colour Palette</SectionTitle>
+            <div style={{ display: 'flex', gap: 10 }}>
+              {[
+                { hex: '#0F3D2E', name: 'Pitch Green', role: 'Primary' },
+                { hex: '#B6FF2B', name: 'Electric Lime', role: 'Accent' },
+                { hex: '#121417', name: 'Carbon Black', role: 'Background' },
+                { hex: '#FFFFFF', name: 'Cloud White', role: 'Text / Light' },
+                { hex: '#2ED47A', name: 'Goal Green', role: 'Success' },
+                { hex: '#FFB020', name: 'Amber Card', role: 'Warning' },
+                { hex: '#E5533D', name: 'Red Card', role: 'Error' },
+                { hex: '#3FA9F5', name: 'Sky Assist', role: 'Info' },
+              ].map(({ hex, name, role }) => (
+                <div key={hex} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ height: 48, borderRadius: 8, background: hex, border: hex === '#FFFFFF' ? '1px solid rgba(0,0,0,0.1)' : 'none' }}/>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#fff' }}>{name}</div>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>{hex}</div>
+                  <div style={{ fontSize: 9, color: '#B6FF2B', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{role}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

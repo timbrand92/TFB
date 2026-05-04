@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TFB – Fixtures & Results</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="tfb-responsive.jsx"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--lime:#B6FF2B;--green:#0F3D2E;--green-dark:#0A2E20;--bg:#111418;--s1:#1C2128;--s2:#242B33;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);--txt:#F0F2F4;--txt2:rgba(240,242,244,0.5);--txt3:rgba(240,242,244,0.28);--goal:#2ED47A;--amber:#FFB020;--red:#E5533D;--sky:#3FA9F5;--font-d:'Barlow Condensed',sans-serif;--font-b:'Barlow',sans-serif;--hh:54px;}
+html,body,#root{height:100%;overflow:hidden}body{font-family:var(--font-b);background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased}
+button,select{font-family:var(--font-b);color:inherit}::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:3px}
+</style>
+</head>
+<body><div id="root"></div>
+<script type="text/babel">
+const {useState}=React;
+const C={lime:'#B6FF2B',green:'#0F3D2E',greenDark:'#0A2E20',bg:'#111418',s1:'#1C2128',s2:'#242B33',border:'rgba(255,255,255,0.07)',border2:'rgba(255,255,255,0.13)',txt:'#F0F2F4',txt2:'rgba(240,242,244,0.5)',txt3:'rgba(240,242,244,0.28)',goal:'#2ED47A',amber:'#FFB020',red:'#E5533D',sky:'#3FA9F5'};
+const Ic=({d,size=16,color='currentColor',stroke=2,fill='none'})=>(<svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>{Array.isArray(d)?d.map((p,i)=><path key={i} d={p}/>):<path d={d}/> }</svg>);
+const P={back:'M15 18l-6-6 6-6',zap:'M13 2L3 14h9l-1 8 10-12h-9l1-8z',plus:'M12 5v14M5 12h14'};
+
+const ALL_MATCHES=[
+  {id:7,round:7,date:'Sat 3 May',time:'2:00 PM',home:'Malvern City',away:'Bulleen Lions',venue:'Tally Ho Park',type:'Home',status:'upcoming',result:null},
+  {id:8,round:8,date:'Sat 10 May',time:'11:00 AM',home:'Green Gully',away:'Malvern City',venue:'Green Gully SC',type:'Away',status:'upcoming',result:null},
+  {id:9,round:9,date:'Sat 17 May',time:'3:00 PM',home:'Malvern City',away:'NorthCote City',venue:'Tally Ho Park',type:'Home',status:'upcoming',result:null},
+  {id:6,round:6,date:'Sat 26 Apr',time:'2:00 PM',home:'Malvern City',away:'Hume City',venue:'Tally Ho Park',type:'Home',status:'completed',result:{score:'2–1',outcome:'W',scorers:'D. Kowalski 24\', O. Petersen 67\'',assists:'R. Al-Farsi, A. Nguyen',attendance:234}},
+  {id:5,round:5,date:'Sat 19 Apr',time:'3:00 PM',home:'NorthCote',away:'Malvern City',venue:'NorthCote SC',type:'Away',status:'completed',result:{score:'1–1',outcome:'D',scorers:'B. Tremblay 55\'',assists:'R. Al-Farsi',attendance:187}},
+  {id:4,round:4,date:'Sat 12 Apr',time:'2:00 PM',home:'Malvern City',away:'Box Hill',venue:'Tally Ho Park',type:'Home',status:'completed',result:{score:'3–0',outcome:'W',scorers:'D. Kowalski 12\' 34\' R. Al-Farsi 78\'',assists:'O. Petersen, B. Tremblay, A. Nguyen',attendance:198}},
+  {id:3,round:3,date:'Sat 5 Apr',time:'4:00 PM',home:'Glen Eira',away:'Malvern City',venue:'Glen Eira FC',type:'Away',status:'completed',result:{score:'2–0',outcome:'L',scorers:'—',assists:'—',attendance:156}},
+  {id:2,round:2,date:'Sat 29 Mar',time:'2:00 PM',home:'Malvern City',away:'South Melbourne',venue:'Tally Ho Park',type:'Home',status:'completed',result:{score:'2–0',outcome:'W',scorers:'D. Kowalski 45\' O. Petersen 88\'',assists:'B. Tremblay, R. Al-Farsi',attendance:210}},
+  {id:1,round:1,date:'Sat 22 Mar',time:'3:00 PM',home:'Bentleigh Greens',away:'Malvern City',venue:'Bentleigh SC',type:'Away',status:'completed',result:{score:'1–1',outcome:'D',scorers:'R. Al-Farsi 33\'',assists:'O. Petersen',attendance:142}},
+];
+
+const outcomeColor={W:C.goal,D:C.amber,L:C.red};
+
+function Header({onBack}){return(<header style={{height:'var(--hh)',background:`linear-gradient(90deg,${C.greenDark},${C.green})`,borderBottom:'1px solid rgba(182,255,43,0.18)',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 20px',flexShrink:0,zIndex:50}}>
+  <div style={{display:'flex',alignItems:'center',gap:12}}>
+    <button onClick={onBack} style={{display:'flex',alignItems:'center',gap:6,padding:'6px 10px',background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,color:'rgba(255,255,255,0.7)',fontSize:12,fontWeight:600,cursor:'pointer'}} onMouseEnter={e=>{e.currentTarget.style.background='rgba(182,255,43,0.12)';e.currentTarget.style.color='#B6FF2B'}} onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,0.07)';e.currentTarget.style.color='rgba(255,255,255,0.7)'}}>
+      <Ic d={P.back} size={14} color="currentColor"/> Dashboard
+    </button>
+    <div style={{width:1,height:24,background:'rgba(255,255,255,0.12)'}}/>
+    <svg width="28" height="28" viewBox="0 0 40 40" fill="none"><polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="#0F3D2E" stroke="#B6FF2B" strokeWidth="1.5"/><text x="20" y="26" textAnchor="middle" fill="#B6FF2B" fontFamily="Barlow Condensed" fontWeight="900" fontSize="13">TFB</text></svg>
+    <div><div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:17,color:'#fff',letterSpacing:'0.04em',lineHeight:1}}>FIXTURES & RESULTS</div><div style={{fontSize:9.5,color:'rgba(182,255,43,0.65)',fontWeight:700,letterSpacing:'0.1em'}}>Malvern City U18 Men · NPL Victoria 2025</div></div>
+  </div>
+  <div style={{display:'flex',gap:6,fontSize:12,color:C.txt2}}>
+    {[['6','P'],['4','W'],['1','D'],['1','L']].map(([v,l])=>(<div key={l} style={{textAlign:'center',padding:'4px 10px',background:C.s1,border:`1px solid ${C.border2}`,borderRadius:7}}>
+      <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:18,color:l==='W'?C.goal:l==='L'?C.red:l==='D'?C.amber:C.lime,lineHeight:1}}>{v}</div>
+      <div style={{fontSize:9,color:C.txt3,fontWeight:700}}>{l}</div>
+    </div>))}
+  </div>
+</header>);}
+
+function MatchCard({match,selected,onSelect}){
+  const isHome=match.home==='Malvern City';
+  const rc=match.result?outcomeColor[match.result.outcome]:null;
+  return(<div onClick={()=>onSelect(match.id===selected?.id?null:match)} style={{background:selected?.id===match.id?'rgba(182,255,43,0.05)':C.s1,borderRadius:12,border:`1px solid ${selected?.id===match.id?'rgba(182,255,43,0.3)':C.border}`,padding:'14px 16px',cursor:'pointer',transition:'all .15s',marginBottom:8}} onMouseEnter={e=>{if(selected?.id!==match.id){e.currentTarget.style.borderColor=C.border2;e.currentTarget.style.background='rgba(255,255,255,0.02)'}}} onMouseLeave={e=>{if(selected?.id!==match.id){e.currentTarget.style.borderColor=C.border;e.currentTarget.style.background=C.s1}}}>
+    <div style={{display:'flex',alignItems:'center',gap:12}}>
+      {/* Round/outcome badge */}
+      <div style={{width:44,height:44,borderRadius:10,background:rc?`${rc}15`:'rgba(255,255,255,0.05)',border:`1px solid ${rc?rc+'30':C.border}`,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+        {rc?<span style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:18,color:rc,lineHeight:1}}>{match.result.outcome}</span>:
+          <Ic d={P.zap} size={18} color={C.lime}/>}
+        <span style={{fontSize:8,color:C.txt3,fontWeight:600}}>Rd {match.round}</span>
+      </div>
+      {/* Match info */}
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:3}}>
+          <span style={{fontSize:13.5,fontWeight:700,color:C.txt,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{match.home} vs {match.away}</span>
+          {match.result&&<span style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:18,color:rc,flexShrink:0}}>{match.result.score}</span>}
+        </div>
+        <div style={{display:'flex',gap:8,fontSize:11,color:C.txt3,flexWrap:'wrap'}}>
+          <span>{match.date} · {match.time}</span>
+          <span style={{color:isHome?C.goal:C.amber,fontWeight:700}}>{match.type}</span>
+          <span>{match.venue}</span>
+        </div>
+      </div>
+      {match.status==='upcoming'&&<button onClick={e=>{e.stopPropagation();try{window.location.href='tfb-gameday.html'}catch(e){}}} style={{padding:'6px 12px',background:'rgba(182,255,43,0.1)',border:'1px solid rgba(182,255,43,0.25)',borderRadius:7,fontSize:11,fontWeight:700,color:C.lime,cursor:'pointer',flexShrink:0,whiteSpace:'nowrap',transition:'background .15s'}} onMouseEnter={e=>e.currentTarget.style.background='rgba(182,255,43,0.2)'} onMouseLeave={e=>e.currentTarget.style.background='rgba(182,255,43,0.1)'}>⚡ Gameday</button>}
+    </div>
+    {/* Expanded detail */}
+    {selected?.id===match.id&&match.result&&(
+      <div style={{marginTop:12,paddingTop:12,borderTop:`1px solid ${C.border}`,display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12}}>
+        {[['Scorers',match.result.scorers],['Assists',match.result.assists],[`Attendance`,`${match.result.attendance} fans`]].map(([l,v])=>(
+          <div key={l}><div style={{fontSize:10,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:4}}>{l}</div>
+          <div style={{fontSize:12,color:C.txt2}}>{v}</div></div>
+        ))}
+      </div>
+    )}
+  </div>);}
+
+function App(){
+  const [filter,setFilter]=useState('all');
+  const [selected,setSelected]=useState(null);
+  const upcoming=ALL_MATCHES.filter(m=>m.status==='upcoming');
+  const completed=ALL_MATCHES.filter(m=>m.status==='completed');
+  const shown=filter==='upcoming'?upcoming:filter==='completed'?completed:ALL_MATCHES;
+  return(<div style={{height:'100vh',display:'flex',flexDirection:'column',background:C.bg,overflow:'hidden'}}>
+    <Header onBack={()=>{try{window.location.href='tfb-dashboard.html'}catch(e){}}}/>
+    <div style={{background:C.s1,borderBottom:`1px solid ${C.border}`,padding:'8px 20px',display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
+      {[['all','All Matches'],['upcoming','Upcoming'],['completed','Results']].map(([v,l])=>(
+        <button key={v} onClick={()=>setFilter(v)} style={{padding:'5px 14px',background:filter===v?'rgba(182,255,43,0.12)':'transparent',border:`1px solid ${filter===v?'rgba(182,255,43,0.35)':C.border}`,borderRadius:7,fontSize:12,fontWeight:700,color:filter===v?C.lime:C.txt2,cursor:'pointer',transition:'all .12s'}}>{l}</button>
+      ))}
+      <div style={{flex:1}}/>
+      <button style={{display:'flex',alignItems:'center',gap:5,padding:'6px 14px',background:`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:8,fontSize:12,fontWeight:800,color:C.green,cursor:'pointer'}}><Ic d={P.plus} size={13} color={C.green}/> Add Fixture</button>
+    </div>
+    <div style={{flex:1,overflowY:'auto',padding:'16px 20px'}}>
+      {/* Season form */}
+      <div style={{display:'flex',gap:6,marginBottom:16,alignItems:'center'}}>
+        <span style={{fontSize:11,color:C.txt3,fontWeight:600,marginRight:4}}>Season form:</span>
+        {completed.map(m=>{const rc=outcomeColor[m.result?.outcome]||C.txt3;return(
+          <div key={m.id} title={`Rd ${m.round}: ${m.result?.score}`} style={{width:28,height:28,borderRadius:6,background:`${rc}15`,border:`1px solid ${rc}30`,display:'flex',alignItems:'center',justifyContent:'center'}}>
+            <span style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:13,color:rc}}>{m.result?.outcome}</span>
+          </div>
+        );})}
+      </div>
+      {filter!=='completed'&&upcoming.length>0&&<div style={{fontSize:10,fontWeight:700,color:C.lime,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:8}}>Upcoming ({upcoming.length})</div>}
+      {(filter==='all'||filter==='upcoming')&&upcoming.map(m=><MatchCard key={m.id} match={m} selected={selected} onSelect={setSelected}/>)}
+      {filter!=='upcoming'&&completed.length>0&&<div style={{fontSize:10,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.1em',margin:'16px 0 8px'}}>Results ({completed.length})</div>}
+      {(filter==='all'||filter==='completed')&&completed.map(m=><MatchCard key={m.id} match={m} selected={selected} onSelect={setSelected}/>)}
+    </div>
+  </div>);}
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script></body></html>

@@ -1,0 +1,1820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TFB – The Football Blueprint</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="tfb-responsive.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --pitch-green: #0F3D2E;
+    --pitch-green-dark: #081F19;
+    --electric-lime: #B6FF2B;
+    --gradient-start: #68B42E;
+    --carbon-black: #111418;
+    --cloud-white: #FFFFFF;
+    --sideline-grey: #8A8F98;
+    --goal-green: #2ED47A;
+    --amber-card: #FFB020;
+    --red-card: #E5533D;
+    --sky-assist: #3FA9F5;
+    /* Dark mode surfaces */
+    --surface: #1C2128;
+    --surface-2: #242B33;
+    --surface-3: #2D3640;
+    --border: rgba(255,255,255,0.07);
+    --border-strong: rgba(255,255,255,0.14);
+    --text-primary: #F0F2F4;
+    --text-secondary: rgba(240,242,244,0.5);
+    --accent: #B6FF2B;
+    --accent-dim: rgba(182,255,43,0.12);
+    --sidebar-w: 240px;
+    --sidebar-collapsed-w: 64px;
+    --header-h: 60px;
+    --font-display: 'Barlow Condensed', sans-serif;
+    --font-body: 'Barlow', sans-serif;
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+  }
+  html, body, #root { height: 100%; }
+  body {
+    font-family: var(--font-body);
+    background: var(--carbon-black);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 4px; }
+  /* Light mode */
+  body.light {
+    --carbon-black: #F0F3F6;
+    --surface: #FFFFFF;
+    --surface-2: #F4F6F9;
+    --surface-3: #E8ECF0;
+    --border: rgba(0,0,0,0.07);
+    --border-strong: rgba(0,0,0,0.13);
+    --text-primary: #111418;
+    --text-secondary: rgba(17,20,24,0.52);
+    --accent-dim: rgba(15,61,46,0.08);
+  }
+  /* Subtle dark bg texture */
+  body:not(.light) #root::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: radial-gradient(ellipse at 20% 0%, rgba(15,61,46,0.35) 0%, transparent 60%),
+                      radial-gradient(ellipse at 80% 100%, rgba(182,255,43,0.04) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  /* Responsive */
+  @media (max-width: 1024px) {
+    :root { --search-display: none !important; }
+  }
+  @media (max-width: 640px) {
+    :root { --user-name-display: none !important; }
+  }
+  /* Sidebar tooltip on hover */
+  div:hover > .sidebar-tooltip { opacity: 1 !important; }
+  /* Stat grid responsive */
+  .stat-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; }
+  @media (max-width: 900px) { .stat-grid { grid-template-columns: repeat(2,1fr); } }
+  @media (max-width: 480px) { .stat-grid { grid-template-columns: repeat(2,1fr); gap: 8px; } }
+  /* Widget grid responsive */
+  .widget-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; }
+  @media (max-width: 1100px) { .widget-grid { grid-template-columns: repeat(2,1fr); } }
+  @media (max-width: 640px) { .widget-grid { grid-template-columns: 1fr; gap: 10px; } }
+  /* Mobile nav safe area */
+  .mobile-nav { padding-bottom: env(safe-area-inset-bottom, 0); }
+  /* Touch tap feedback */
+  @media (hover: none) {
+    button:active { opacity: 0.75 !important; transform: scale(0.97) !important; }
+  }
+  /* Hide on mobile */
+  @media (max-width: 767px) {
+    .desktop-only { display: none !important; }
+  }
+  /* Hide on desktop */
+  @media (min-width: 768px) {
+    .mobile-only { display: none !important; }
+  }
+  /* Main content padding responsive */
+  .main-content { padding: 20px; }
+  @media (max-width: 640px) { .main-content { padding: 14px 12px; } }
+
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+// ─── Icons (inline SVG components) ───────────────────────────────────────────
+const Icon = ({ d, size = 18, stroke = 2, color = 'currentColor', fill = 'none', className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" className={className} style={{flexShrink:0}}>
+    {Array.isArray(d) ? d.map((p,i) => <path key={i} d={p} />) : <path d={d} />}
+  </svg>
+);
+const icons = {
+  menu: 'M3 12h18M3 6h18M3 18h18',
+  home: 'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
+  calendar: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z',
+  users: 'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm8 4a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zm3 8v-2a4 4 0 0 0-3-3.87',
+  clipboard: 'M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2',
+  target: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zm0-6a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0-2a2 2 0 1 0 0-4 2 2 0 0 0 0 4',
+  trophy: 'M6 9H4.5a2.5 2.5 0 0 1 0-5H6m12 5h1.5a2.5 2.5 0 0 0 0-5H18m-6 14v-4m-4 4h8M12 9a6 6 0 1 1 0-12 6 6 0 0 1 0 12',
+  trending: 'M23 6l-9.5 9.5-5-5L1 18',
+  heart: 'M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z',
+  message: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z',
+  settings: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm8.2-2a8 8 0 0 0 .2-1 8 8 0 0 0-.2-1l2-1.6a.5.5 0 0 0 .1-.6l-1.8-3.2a.5.5 0 0 0-.6-.2l-2.4 1a7.9 7.9 0 0 0-1.6-.9l-.4-2.5A.5.5 0 0 0 14 2h-4a.5.5 0 0 0-.5.4l-.4 2.5a7.9 7.9 0 0 0-1.6.9l-2.4-1a.5.5 0 0 0-.6.2L2.7 8.2a.5.5 0 0 0 .1.6l2 1.6a8 8 0 0 0 0 2l-2 1.6a.5.5 0 0 0-.1.6l1.8 3.2a.5.5 0 0 0 .6.2l2.4-1c.5.3 1 .6 1.6.9l.4 2.5c.1.2.3.4.5.4h4c.3 0 .5-.2.5-.4l.4-2.5c.6-.2 1.1-.5 1.6-.9l2.4 1c.2.1.5 0 .6-.2l1.8-3.2a.5.5 0 0 0-.1-.6l-2-1.6z',
+  bell: 'M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0',
+  plus: 'M12 5v14M5 12h14',
+  x: 'M18 6L6 18M6 6l12 12',
+  chevronRight: 'M9 18l6-6-6-6',
+  chevronDown: 'M6 9l6 6 6-6',
+  chevronLeft: 'M15 18l-6-6 6-6',
+  zap: 'M13 2L3 14h9l-1 8 10-12h-9l1-8z',
+  activity: 'M22 12h-4l-3 9L9 3l-3 9H2',
+  shield: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z',
+  building: 'M2 20h20M4 20V8l8-6 8 6v12M9 20V12h6v8',
+  user: 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z',
+  more: 'M12 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm-7 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm14 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2z',
+  edit: 'M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z',
+  logout: 'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9',
+  award: 'M12 15a7 7 0 1 0 0-14 7 7 0 0 0 0 14zm0 0v6m-3-3h6',
+  video: 'M23 7l-7 5 7 5V7zM1 5h15a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H1V5z',
+  drag: 'M8 6h.01M8 10h.01M8 14h.01M16 6h.01M16 10h.01M16 14h.01',
+  check: 'M20 6L9 17l-5-5',
+  reload: 'M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15',
+  save: 'M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2zM17 21v-8H7v8M7 3v5h8',
+  calRange: ['M3 4h18v18H3zM16 2v4M8 2v4M3 10h18', 'M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01'],
+};
+
+// ─── Design Tokens ─────────────────────────────────────────────────────────
+const ROLES = ['Coach', 'Technical Director', 'Club Admin', 'Player', 'Parent'];
+
+// ─── Hexagon SVG Logo ──────────────────────────────────────────────────────
+function TFBLogo({ size = 32 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 40 40" fill="none">
+      <polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="var(--pitch-green)" stroke="var(--accent)" strokeWidth="1.5"/>
+      <polygon points="20,8 30,14 30,26 20,32 10,26 10,14" fill="none" stroke="var(--accent)" strokeWidth="1" opacity="0.4"/>
+      <text x="20" y="26" textAnchor="middle" fill="var(--accent)" fontFamily="'Barlow Condensed', sans-serif" fontWeight="900" fontSize="13" letterSpacing="0.5">TFB</text>
+    </svg>
+  );
+}
+
+// ─── Nav Config ────────────────────────────────────────────────────────────
+// ─── Built screens (others shown as "coming soon") ───────────────────────────
+const BUILT_SCREENS = new Set([
+  'Dashboard','Club Overview','Admin Panel',
+  'Team Management','Fixtures & Results','Gameday',
+  'Block Planner','Yearly Planner',
+  'Wellness','My Availability','My Development',
+  'Team Chat','Settings',
+]);
+// ─── Nav Config (role-aware) ──────────────────────────────────────────────
+const NAV_BY_ROLE = {
+  technical_director: [
+    { title: '', items: [{ name: 'Dashboard', icon: 'home' }] },
+    { title: 'Club Admin', items: [{ name: 'Club Overview', icon: 'building' }, { name: 'Admin Panel', icon: 'shield' }] },
+    { title: 'Team', items: [{ name: 'Team Management', icon: 'users' }, { name: 'Fixtures & Results', icon: 'calendar' }, { name: 'Gameday', icon: 'zap' }] },
+    { title: 'Training', items: [{ name: 'Yearly Planner', icon: 'calRange' }, { name: 'Block Planner', icon: 'target' }, { name: 'Sessions', icon: 'clipboard' }, { name: 'Player Development', icon: 'trending' }] },
+    { title: 'Coaching Hub', items: [{ name: 'Coaching Hub', icon: 'clipboard' }, { name: 'Video Analysis', icon: 'video' }, { name: 'Coaches Award', icon: 'award' }, { name: 'League', icon: 'trophy' }] },
+    { title: 'Players', items: [{ name: 'Wellness', icon: 'heart' }] },
+    { title: 'Communication', items: [{ name: 'Team Chat', icon: 'message' }] },
+    { title: 'Settings', items: [{ name: 'Settings', icon: 'settings' }] },
+  ],
+  club_admin: [
+    { title: '', items: [{ name: 'Dashboard', icon: 'home' }] },
+    { title: 'Club Admin', items: [{ name: 'Club Overview', icon: 'building' }, { name: 'Admin Panel', icon: 'shield' }] },
+    { title: 'Team', items: [{ name: 'Team Management', icon: 'users' }, { name: 'Fixtures & Results', icon: 'calendar' }] },
+    { title: 'Recruitment', items: [{ name: 'Expressions of Interest', icon: 'user' }, { name: 'Registrations', icon: 'clipboard' }, { name: 'Trials', icon: 'activity' }] },
+    { title: 'Communication', items: [{ name: 'Team Chat', icon: 'message' }] },
+    { title: 'Settings', items: [{ name: 'Settings', icon: 'settings' }] },
+  ],
+  coach: [
+    { title: '', items: [{ name: 'Dashboard', icon: 'home' }] },
+    { title: 'Team', items: [{ name: 'Team Management', icon: 'users' }, { name: 'Fixtures & Results', icon: 'calendar' }, { name: 'Gameday', icon: 'zap' }] },
+    { title: 'Training', items: [{ name: 'Yearly Planner', icon: 'calRange' }, { name: 'Block Planner', icon: 'target' }, { name: 'Sessions', icon: 'clipboard' }, { name: 'Player Development', icon: 'trending' }] },
+    { title: 'Coaching Hub', items: [{ name: 'Coaching Hub', icon: 'clipboard' }, { name: 'Video Analysis', icon: 'video' }, { name: 'Coaches Award', icon: 'award' }, { name: 'League', icon: 'trophy' }] },
+    { title: 'Players', items: [{ name: 'Wellness', icon: 'heart' }] },
+    { title: 'Communication', items: [{ name: 'Team Chat', icon: 'message' }] },
+    { title: 'Settings', items: [{ name: 'Settings', icon: 'settings' }] },
+  ],
+  assistant_coach: [
+    { title: '', items: [{ name: 'Dashboard', icon: 'home' }] },
+    { title: 'Team', items: [{ name: 'Team Management', icon: 'users' }, { name: 'Fixtures & Results', icon: 'calendar' }, { name: 'Gameday', icon: 'zap' }] },
+    { title: 'Training', items: [{ name: 'Sessions', icon: 'clipboard' }, { name: 'Player Development', icon: 'trending' }] },
+    { title: 'Coaching Hub', items: [{ name: 'Coaching Hub', icon: 'clipboard' }, { name: 'Video Analysis', icon: 'video' }] },
+    { title: 'Players', items: [{ name: 'Wellness', icon: 'heart' }] },
+    { title: 'Communication', items: [{ name: 'Team Chat', icon: 'message' }] },
+    { title: 'Settings', items: [{ name: 'Settings', icon: 'settings' }] },
+  ],
+  team_manager: [
+    { title: '', items: [{ name: 'Dashboard', icon: 'home' }] },
+    { title: 'Team', items: [{ name: 'Team Management', icon: 'users' }, { name: 'Fixtures & Results', icon: 'calendar' }] },
+    { title: 'Players', items: [{ name: 'My Availability', icon: 'bell' }] },
+    { title: 'Communication', items: [{ name: 'Team Chat', icon: 'message' }] },
+    { title: 'Settings', items: [{ name: 'Settings', icon: 'settings' }] },
+  ],
+  player: [
+    { title: '', items: [{ name: 'Dashboard', icon: 'home' }] },
+    { title: 'My Team', items: [{ name: 'Fixtures & Results', icon: 'calendar' }] },
+    { title: 'My Profile', items: [{ name: 'Wellness', icon: 'heart' }, { name: 'My Availability', icon: 'bell' }, { name: 'My Development', icon: 'trending' }] },
+    { title: 'Communication', items: [{ name: 'Team Chat', icon: 'message' }] },
+    { title: 'Settings', items: [{ name: 'Settings', icon: 'settings' }] },
+  ],
+  parent: [
+    { title: '', items: [{ name: 'Dashboard', icon: 'home' }] },
+    { title: 'My Child', items: [{ name: 'Fixtures & Results', icon: 'calendar' }, { name: 'My Availability', icon: 'bell' }] },
+    { title: 'Communication', items: [{ name: 'Team Chat', icon: 'message' }] },
+    { title: 'Settings', items: [{ name: 'Settings', icon: 'settings' }] },
+  ],
+};
+
+// Role ID map from display name
+const ROLE_ID_MAP = {
+  'Coach': 'coach',
+  'Technical Director': 'technical_director',
+  'Club Admin': 'club_admin',
+  'Player': 'player',
+  'Parent': 'parent',
+};
+
+function getNavSections(role) {
+  const id = ROLE_ID_MAP[role] || 'coach';
+  return NAV_BY_ROLE[id] || NAV_BY_ROLE.coach;
+}
+
+// Keep backward compat
+const NAV_SECTIONS = NAV_BY_ROLE.coach;
+
+
+// ─── Sample Data ───────────────────────────────────────────────────────────
+const SQUAD = [
+  { name: 'J. Mitchell', pos: 'GK', wellness: 92, attendance: 96, status: 'here' },
+  { name: 'T. Kovacs', pos: 'CB', wellness: 78, attendance: 88, status: 'here' },
+  { name: 'M. Osei', pos: 'CB', wellness: 85, attendance: 92, status: 'here' },
+  { name: 'L. Santos', pos: 'LB', wellness: 60, attendance: 72, status: 'injured' },
+  { name: 'A. Nguyen', pos: 'RB', wellness: 88, attendance: 90, status: 'here' },
+  { name: 'C. Walsh', pos: 'CM', wellness: 72, attendance: 84, status: 'late' },
+  { name: 'B. Tremblay', pos: 'CM', wellness: 90, attendance: 95, status: 'here' },
+  { name: 'R. Al-Farsi', pos: 'AM', wellness: 45, attendance: 68, status: 'injured' },
+  { name: 'O. Petersen', pos: 'LW', wellness: 82, attendance: 87, status: 'here' },
+  { name: 'K. Mensah', pos: 'RW', wellness: 77, attendance: 80, status: 'away' },
+  { name: 'D. Kowalski', pos: 'ST', wellness: 91, attendance: 94, status: 'here' },
+];
+
+const UPCOMING = [
+  { date: 'Thu 1 May', time: '6:00 PM', type: 'Training', label: 'Technical: Ball Mastery', tag: 'Technical', duration: '60 min', color: '#2ED47A' },
+  { date: 'Sat 3 May', time: '2:00 PM', type: 'Match', label: 'vs Bulleen Lions', tag: 'Home', duration: '90 min', color: '#B6FF2B' },
+  { date: 'Tue 6 May', time: '6:30 PM', type: 'Training', label: 'Tactical: Pressing Shape', tag: 'Tactical', duration: '75 min', color: '#3FA9F5' },
+  { date: 'Thu 8 May', time: '6:00 PM', type: 'Training', label: 'Physical: Speed & Power', tag: 'Physical', duration: '45 min', color: '#FFB020' },
+  { date: 'Sat 10 May', time: '11:00 AM', type: 'Match', label: 'vs Green Gully', tag: 'Away', duration: '90 min', color: '#B6FF2B' },
+];
+
+const RECENT_RESULTS = [
+  { vs: 'Hume City', score: '2–1', result: 'W', date: '26 Apr' },
+  { vs: 'NorthCote City', score: '1–1', result: 'D', date: '19 Apr' },
+  { vs: 'Box Hill', score: '3–0', result: 'W', date: '12 Apr' },
+  { vs: 'Glen Eira', score: '0–2', result: 'L', date: '5 Apr' },
+  { vs: 'South Melb.', score: '2–0', result: 'W', date: '29 Mar' },
+];
+
+const ACTIVITY = [
+  { who: 'B. Tremblay', action: 'submitted wellness check', time: '2m ago', type: 'wellness' },
+  { who: 'Coach Tim', action: 'created "Pressing Shape" session', time: '1h ago', type: 'session' },
+  { who: 'L. Santos', action: 'marked INJURED for Sat match', time: '3h ago', type: 'injury' },
+  { who: 'K. Mensah', action: "RSVP'd AWAY for Thursday training", time: '5h ago', type: 'rsvp' },
+  { who: 'System', action: 'Availability request sent for Sat match', time: '8h ago', type: 'system' },
+];
+
+const WELLNESS_DATA = [65, 72, 80, 75, 88, 91, 85];
+const WELLNESS_DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
+// ─── Utility ───────────────────────────────────────────────────────────────
+function cn(...classes) { return classes.filter(Boolean).join(' '); }
+
+function StatusBadge({ status }) {
+  const map = {
+    here: { bg: '#2ED47A22', color: '#2ED47A', label: 'HERE' },
+    late: { bg: '#FFB02022', color: '#FFB020', label: 'LATE' },
+    injured: { bg: '#E5533D22', color: '#E5533D', label: 'INJURED' },
+    away: { bg: '#8A8F9822', color: '#8A8F98', label: 'AWAY' },
+  };
+  const s = map[status] || map.away;
+  return (
+    <span style={{ background: s.bg, color: s.color, fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 4, letterSpacing: '0.05em', border: `1px solid ${s.color}30` }}>
+      {s.label}
+    </span>
+  );
+}
+
+// ─── Header ────────────────────────────────────────────────────────────────
+function Header({ collapsed, onToggle, onMobileMenu, role, notifOpen, setNotifOpen, userOpen, setUserOpen }) {
+  const notifications = [
+    { icon: 'heart', color: '#2ED47A', who: 'B. Tremblay', action: 'submitted wellness check', time: '2m ago', unread: true },
+    { icon: 'activity', color: '#E5533D', who: 'L. Santos', action: 'marked INJURED for Sat match', time: '3h ago', unread: true },
+    { icon: 'bell', color: '#FFB020', who: 'K. Mensah', action: "RSVP'd AWAY for Thursday training", time: '5h ago', unread: false },
+    { icon: 'clipboard', color: '#B6FF2B', who: 'Coach Tim', action: 'created "Pressing Shape" session', time: '1h ago', unread: false },
+  ];
+  const unreadCount = notifications.filter(n => n.unread).length;
+
+  return (
+    <header style={{
+      position: 'fixed', top: 0, left: 0, right: 0, height: 'var(--header-h)',
+      background: 'linear-gradient(90deg, #0A2E20 0%, #0F3D2E 100%)',
+      borderBottom: '1px solid rgba(182,255,43,0.18)',
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '0 20px', zIndex: 100,
+      boxShadow: '0 1px 0 rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.2)',
+    }}>
+
+      {/* ── Left: menu toggle + logo ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <button
+          onClick={onMobileMenu || onToggle}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', padding: '8px', borderRadius: 8, display: 'flex', alignItems: 'center', transition: 'all .15s', marginRight: 8 }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(182,255,43,0.12)'; e.currentTarget.style.color = '#B6FF2B'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; }}>
+          <Icon d={icons.menu} size={20} color="currentColor" />
+        </button>
+
+        {/* Logo lockup */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 11, cursor: 'pointer' }}>
+          <TFBLogo size={36} />
+          <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
+            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 19, color: '#fff', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+              The Football Blueprint
+            </span>
+            <span style={{ fontSize: 10, color: 'rgba(182,255,43,0.7)', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', marginTop: 1 }}>
+              Coaching Platform
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Centre: quick search (desktop) ── */}
+      <div style={{ flex: 1, maxWidth: 340, margin: '0 32px', display: 'var(--search-display, flex)', alignItems: 'center' }}>
+        <div style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '7px 12px', transition: 'border-color .15s' }}
+          onFocus={e => e.currentTarget.style.borderColor = 'rgba(182,255,43,0.4)'}
+          onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'}>
+          <Icon d="M21 21l-6-6m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0z" size={15} color="rgba(255,255,255,0.4)" />
+          <input placeholder="Search players, sessions, fixtures…" style={{ border: 'none', background: 'transparent', color: '#fff', fontSize: 13, outline: 'none', width: '100%', fontFamily: 'var(--font-body)' }} />
+        </div>
+      </div>
+
+      {/* ── Right: actions + user ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+
+        {/* Notifications */}
+        <div style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
+          <button
+            onClick={() => { setNotifOpen(!notifOpen); setUserOpen(false); }}
+            style={{ position: 'relative', background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', padding: 9, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all .15s' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(182,255,43,0.12)'; e.currentTarget.style.color = '#B6FF2B'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; }}>
+            <Icon d={icons.bell} size={19} color="currentColor" />
+            {unreadCount > 0 && (
+              <span style={{
+                position: 'absolute', top: 5, right: 5,
+                minWidth: 16, height: 16, borderRadius: 8,
+                background: '#E5533D', border: '2px solid #0F3D2E',
+                fontSize: 9, fontWeight: 800, color: '#fff',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                lineHeight: 1,
+              }}>{unreadCount}</span>
+            )}
+          </button>
+
+          {/* Notification dropdown */}
+          {notifOpen && (
+            <div style={{
+              position: 'absolute', top: 48, right: 0, width: 320,
+              background: 'var(--surface)', border: '1px solid var(--border)',
+              borderRadius: 14, boxShadow: '0 20px 60px rgba(0,0,0,0.6)', zIndex: 200, overflow: 'hidden',
+            }}>
+              {/* Header */}
+              <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>Notifications</span>
+                <span style={{ fontSize: 11, color: '#B6FF2B', fontWeight: 600, cursor: 'pointer' }}>Mark all read</span>
+              </div>
+              {/* Items */}
+              {notifications.map((n, i) => (
+                <div key={i} style={{
+                  padding: '11px 16px', borderBottom: '1px solid var(--border)',
+                  display: 'flex', gap: 11, alignItems: 'flex-start', cursor: 'pointer',
+                  background: n.unread ? 'rgba(182,255,43,0.03)' : 'transparent',
+                  transition: 'background .15s',
+                }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(182,255,43,0.06)'}
+                  onMouseLeave={e => e.currentTarget.style.background = n.unread ? 'rgba(182,255,43,0.03)' : 'transparent'}>
+                  <div style={{ width: 32, height: 32, borderRadius: '50%', background: `${n.color}18`, border: `1px solid ${n.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Icon d={icons[n.icon]} size={13} color={n.color} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.4 }}>
+                      <b style={{ fontWeight: 700 }}>{n.who}</b>{' '}
+                      <span style={{ color: 'var(--text-secondary)' }}>{n.action}</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 3 }}>{n.time}</div>
+                  </div>
+                  {n.unread && <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#B6FF2B', flexShrink: 0, marginTop: 5 }} />}
+                </div>
+              ))}
+              <div style={{ padding: '11px 16px', textAlign: 'center', fontSize: 13, color: '#B6FF2B', cursor: 'pointer', fontWeight: 600 }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(182,255,43,0.06)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                View all notifications →
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Divider */}
+        <div style={{ width: 1, height: 24, background: 'rgba(255,255,255,0.12)', margin: '0 6px' }} />
+
+        {/* User menu */}
+        <div style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
+          <button
+            onClick={() => { setUserOpen(!userOpen); setNotifOpen(false); }}
+            style={{ display: 'flex', alignItems: 'center', gap: 9, background: userOpen ? 'rgba(182,255,43,0.1)' : 'transparent', border: '1px solid', borderColor: userOpen ? 'rgba(182,255,43,0.3)' : 'transparent', color: '#fff', cursor: 'pointer', padding: '5px 10px 5px 5px', borderRadius: 10, transition: 'all .15s' }}
+            onMouseEnter={e => { if(!userOpen){ e.currentTarget.style.background = 'rgba(182,255,43,0.08)'; e.currentTarget.style.borderColor = 'rgba(182,255,43,0.2)'; }}}
+            onMouseLeave={e => { if(!userOpen){ e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; }}}>
+            {/* Avatar */}
+            <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg, #B6FF2B 0%, #68B42E 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <span style={{ fontSize: 13, fontWeight: 800, color: '#121417', fontFamily: 'var(--font-display)' }}>{getRoleUser(role).initials}</span>
+            </div>
+            {/* Name + role */}
+            <div style={{ textAlign: 'left', display: 'var(--user-name-display, block)' }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', lineHeight: 1.2, whiteSpace: 'nowrap' }}>{getRoleUser(role).full}</div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', lineHeight: 1.2, whiteSpace: 'nowrap' }}>{role}</div>
+            </div>
+            <Icon d={icons.chevronDown} size={14} color="rgba(255,255,255,0.5)" style={{ transition: 'transform .15s', transform: userOpen ? 'rotate(180deg)' : 'rotate(0deg)' }} />
+          </button>
+
+          {/* User dropdown */}
+          {userOpen && (
+            <div style={{
+              position: 'absolute', top: 50, right: 0, width: 220,
+              background: 'var(--surface)', border: '1px solid var(--border)',
+              borderRadius: 14, boxShadow: '0 20px 60px rgba(0,0,0,0.6)', zIndex: 200, overflow: 'hidden',
+            }}>
+              {/* Profile header */}
+              <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg, #B6FF2B, #68B42E)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <span style={{ fontSize: 15, fontWeight: 900, color: '#121417', fontFamily: 'var(--font-display)' }}>{getRoleUser(role).initials}</span>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{getRoleUser(role).full}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{getRoleUser(role).email}</div>
+                  </div>
+                </div>
+                {/* Plan pill */}
+                {(() => { const u = getRoleUser(role); return (
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: `${u.planColor}1A`, border: `1px solid ${u.planColor}40`, borderRadius: 6, padding: '4px 10px' }}>
+                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: u.planColor }} />
+                    <span style={{ fontSize: 11, fontWeight: 700, color: u.planColor, letterSpacing: '0.05em' }}>{u.plan} PLAN</span>
+                  </div>
+                ); })()}
+              </div>
+              {/* Menu items — tailored per role, with real nav */}
+              {(() => {
+                const ROLE_MENU = {
+                  'Coach':              [{label:'Profile Settings',icon:'user',href:'tfb-settings.html'},{label:'My Sessions',icon:'clipboard',href:'tfb-sessions.html'},{label:'Account & Billing',icon:'award',href:'tfb-billing.html'}],
+                  'Technical Director': [{label:'Profile Settings',icon:'user',href:'tfb-settings.html'},{label:'Club Settings',icon:'settings',href:'tfb-settings.html'},{label:'Coaching Staff',icon:'users',href:'tfb-coaching.html'},{label:'Subscription',icon:'award',href:'tfb-billing.html'}],
+                  'Club Admin':         [{label:'Admin Profile',icon:'user',href:'tfb-settings.html'},{label:'Club Settings',icon:'settings',href:'tfb-settings.html'},{label:'Member Database',icon:'users',href:'tfb-team.html'},{label:'Billing',icon:'award',href:'tfb-billing.html'}],
+                  'Player':             [{label:'My Profile',icon:'user',href:'tfb-player.html'},{label:'My Stats',icon:'trending',href:'tfb-development.html'},{label:'Notifications',icon:'bell',href:'tfb-settings.html'}],
+                  'Parent':             [{label:'My Profile',icon:'user',href:'tfb-settings.html'},{label:'Child Profile',icon:'users',href:'tfb-player.html'},{label:'Fees & Billing',icon:'award',href:'tfb-billing.html'},{label:'Notifications',icon:'bell',href:'tfb-settings.html'}],
+                };
+                return (ROLE_MENU[role] || ROLE_MENU['Coach']);
+              })().map(item => (
+                <button key={item.label}
+                  onClick={() => { try { window.location.href = item.href; } catch(e) {} }}
+                  style={{ width: '100%', padding: '10px 16px', background: 'transparent', border: 'none', textAlign: 'left', fontSize: 13, color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, fontFamily: 'var(--font-body)', transition: 'background .15s' }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(182,255,43,0.07)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                  <Icon d={icons[item.icon]} size={14} color="var(--text-secondary)" />
+                  {item.label}
+                </button>
+              ))}
+              <div style={{ borderTop: '1px solid var(--border)' }}>
+                <button
+                  onClick={() => { try { window.location.href = 'tfb-login.html'; } catch(e) {} }}
+                  style={{ width: '100%', padding: '10px 16px', background: 'transparent', border: 'none', textAlign: 'left', fontSize: 13, color: '#E5533D', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, fontFamily: 'var(--font-body)', transition: 'background .15s' }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(229,83,61,0.08)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                  <Icon d={icons.logout} size={14} color="#E5533D" />
+                  Sign Out
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </header>
+  );
+}
+
+// ─── Sidebar ───────────────────────────────────────────────────────────────
+function Sidebar({ collapsed, activeNav, setActiveNav, teamName, role }) {
+  const [teamOpen, setTeamOpen] = useState(false);
+  const TEAMS = ['Malvern City U18', 'Malvern City U16', 'Malvern City Reserves'];
+  const sections = getNavSections(role);
+
+  return (
+    <aside style={{
+      position: 'fixed', left: 0, top: 'var(--header-h)', bottom: 0,
+      width: collapsed ? 'var(--sidebar-collapsed-w)' : 'var(--sidebar-w)',
+      background: 'linear-gradient(180deg, #0A2E20 0%, #0F3D2E 100%)',
+      borderRight: '1px solid rgba(182,255,43,0.12)',
+      display: 'flex', flexDirection: 'column',
+      transition: 'width .2s ease', overflow: 'hidden', zIndex: 50,
+      boxShadow: '2px 0 16px rgba(0,0,0,0.25)',
+    }}>
+
+      {/* Nav */}
+      <nav style={{ flex: 1, padding: '10px 8px', overflowY: 'auto', overflowX: 'hidden' }}>
+        {sections.map((section, si) => (
+          <div key={si} style={{ marginBottom: 2 }}>
+
+            {/* Section label */}
+            {section.title && !collapsed && (
+              <div style={{
+                padding: '12px 12px 4px',
+                fontSize: 9.5, fontWeight: 800,
+                color: 'rgba(182,255,43,0.4)',
+                textTransform: 'uppercase', letterSpacing: '0.12em',
+                whiteSpace: 'nowrap',
+              }}>
+                {section.title}
+              </div>
+            )}
+            {section.title && collapsed && (
+              <div style={{ margin: '8px auto', width: 20, height: 1, background: 'rgba(255,255,255,0.1)' }} />
+            )}
+
+            {/* Nav items */}
+            {section.items.map(item => {
+              const isActive = activeNav === item.name;
+              const iconPaths = icons[item.icon];
+              return (
+                <div key={item.name} style={{ position: 'relative', marginBottom: 1 }}>
+                  <button
+                    onClick={() => { setActiveNav(item.name); const navMap = {'Gameday':'tfb-gameday.html','Team Management':'tfb-team.html','Block Planner':'tfb-planner.html','Yearly Planner':'tfb-planner.html','Player Development':'tfb-development.html','Club Overview':'tfb-overview.html','Yearly Planner':'tfb-yearly.html','Coaching Hub':'tfb-coaching.html','Video Analysis':'tfb-coaching.html','Coaches Award':'tfb-coaching.html','Sessions':'tfb-sessions.html','League':'tfb-league.html','Fixtures & Results':'tfb-fixtures.html','Wellness':'tfb-wellness.html','My Availability':'tfb-availability.html','My Development':'tfb-development.html','Team Chat':'tfb-chat.html','Settings':'tfb-settings.html'}; if(navMap[item.name]) try{window.location.href=navMap[item.name]}catch(e){}; }}
+                    title={collapsed ? item.name : undefined}
+                    style={{
+                      width: '100%', display: 'flex', alignItems: 'center',
+                      gap: collapsed ? 0 : 10,
+                      padding: collapsed ? '10px 0' : '8px 12px',
+                      justifyContent: collapsed ? 'center' : 'flex-start',
+                      background: isActive ? 'rgba(182,255,43,0.12)' : 'transparent',
+                      border: 'none',
+                      borderLeft: isActive ? '3px solid #B6FF2B' : '3px solid transparent',
+                      borderRadius: isActive ? '0 8px 8px 0' : 8,
+                      cursor: 'pointer',
+                      color: isActive ? '#B6FF2B' : 'rgba(255,255,255,0.6)',
+                      fontFamily: 'var(--font-body)', fontSize: 13.5,
+                      fontWeight: isActive ? 700 : 500,
+                      minHeight: 38, transition: 'all .15s',
+                      whiteSpace: 'nowrap', textAlign: 'left', overflow: 'hidden',
+                    }}
+                    onMouseEnter={e => {
+                      if (!isActive) {
+                        e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                        e.currentTarget.style.color = 'rgba(255,255,255,0.9)';
+                      }
+                    }}
+                    onMouseLeave={e => {
+                      if (!isActive) {
+                        e.currentTarget.style.background = 'transparent';
+                        e.currentTarget.style.color = 'rgba(255,255,255,0.6)';
+                      }
+                    }}>
+                    {Array.isArray(iconPaths)
+                      ? <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>{iconPaths.map((p, i) => <path key={i} d={p} />)}</svg>
+                      : <Icon d={iconPaths} size={17} color="currentColor" />}
+                    {!collapsed && (
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 }}>{item.name}</span>
+                    )}
+                  </button>
+
+                  {/* Tooltip in collapsed mode */}
+                  {collapsed && (
+                    <div style={{
+                      position: 'absolute', left: '100%', top: '50%', transform: 'translateY(-50%)',
+                      marginLeft: 10, background: '#121417', color: '#fff',
+                      fontSize: 12, fontWeight: 600, padding: '5px 10px', borderRadius: 7,
+                      whiteSpace: 'nowrap', pointerEvents: 'none', opacity: 0,
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+                      transition: 'opacity .15s',
+                    }}
+                      className="sidebar-tooltip">
+                      {item.name}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </nav>
+
+      {/* ── Bottom: role-aware CTA + team switcher ── */}
+      <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', padding: '10px 8px' }}>
+
+        {/* Role-aware CTA button */}
+        {(() => {
+          const roleCTAs = {
+            'Coach':              { label: '+ New Session',    icon: icons.plus,     href: 'tfb-planner.html' },
+            'Technical Director': { label: 'Club Overview',    icon: icons.building, href: 'tfb-overview.html' },
+            'Club Admin':         { label: 'Registrations',    icon: icons.clipboard,href: null },
+            'Player':             { label: '💚 Wellness',      icon: null,           href: 'tfb-player.html' },
+            'Parent':             { label: 'Child Profile',    icon: icons.user,     href: 'tfb-player.html' },
+          };
+          const ct = roleCTAs[role] || roleCTAs['Coach'];
+          return !collapsed ? (
+            <button onClick={() => { if(ct.href) try{window.location.href=ct.href}catch(e){} }}
+              style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', marginBottom: 8, background: 'linear-gradient(135deg, #B6FF2B, #68B42E)', border: 'none', borderRadius: 8, cursor: 'pointer', color: '#121417', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 700, transition: 'opacity .15s' }}
+              onMouseEnter={e => e.currentTarget.style.opacity = '0.9'}
+              onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
+              {ct.icon && <Icon d={ct.icon} size={15} color="#121417" />}
+              {ct.label}
+            </button>
+          ) : (
+            <button onClick={() => { if(ct.href) try{window.location.href=ct.href}catch(e){} }}
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '9px 0', marginBottom: 8, background: 'rgba(182,255,43,0.15)', border: '1px solid rgba(182,255,43,0.3)', borderRadius: 8, cursor: 'pointer', transition: 'background .15s' }}
+              title={ct.label}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(182,255,43,0.25)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'rgba(182,255,43,0.15)'}>
+              <Icon d={icons.plus} size={17} color="#B6FF2B" />
+            </button>
+          );
+        })()}
+
+        {/* Team switcher — only for roles that manage multiple teams */}
+        {(() => {
+          const canSwitchTeams = ['Coach', 'Technical Director', 'Club Admin'].includes(role);
+          const multiTeam = ['Technical Director', 'Club Admin'].includes(role);
+          const teamsForRole = multiTeam
+            ? ['Malvern City U18', 'Malvern City U16', 'Malvern City Reserves', 'Malvern City U14', 'Malvern City Senior']
+            : ['Malvern City U18', 'Malvern City U16'];
+
+          if (!canSwitchTeams) {
+            // Player/Parent — just show team name, no switcher
+            return !collapsed ? (
+              <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '9px 12px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>My Team</div>
+                <div style={{ fontSize: 12.5, fontWeight: 700, color: '#fff' }}>{teamName}</div>
+                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>NPL Victoria</div>
+              </div>
+            ) : (
+              <div title={teamName} style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+                <div style={{ width: 34, height: 34, borderRadius: 9, background: 'linear-gradient(135deg,#B6FF2B,#68B42E)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: 11, fontWeight: 900, color: '#121417', fontFamily: 'var(--font-display)' }}>MC</span>
+                </div>
+              </div>
+            );
+          }
+
+          return !collapsed ? (
+            <div style={{ position: 'relative' }}>
+              <button onClick={() => setTeamOpen(t => !t)}
+                style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '9px 12px', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8, transition: 'border-color .15s' }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(182,255,43,0.3)'}
+                onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'}>
+                <div style={{ width: 30, height: 30, borderRadius: 8, background: 'linear-gradient(135deg,#B6FF2B,#68B42E)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <span style={{ fontSize: 10, fontWeight: 900, color: '#121417', fontFamily: 'var(--font-display)' }}>MC</span>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 700, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{teamName}</div>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginTop: 1 }}>
+                    {multiTeam ? `${teamsForRole.length} teams` : 'NPL Victoria'}
+                  </div>
+                </div>
+                <Icon d={icons.chevronDown} size={14} color="rgba(255,255,255,0.4)" />
+              </button>
+              {teamOpen && (
+                <div style={{ position: 'absolute', bottom: '100%', left: 0, right: 0, marginBottom: 6, background: '#121417', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, overflow: 'hidden', boxShadow: '0 -8px 24px rgba(0,0,0,0.4)' }}>
+                  {multiTeam && (
+                    <div style={{ padding: '6px 12px 4px', fontSize: 9.5, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>All Teams</div>
+                  )}
+                  {teamsForRole.map(t => (
+                    <button key={t} onClick={() => { setTeamOpen(false); }}
+                      style={{ width: '100%', padding: '8px 14px', background: 'transparent', border: 'none', textAlign: 'left', cursor: 'pointer', fontSize: 12.5, fontWeight: t === teamName ? 700 : 500, color: t === teamName ? '#B6FF2B' : 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-body)', transition: 'background .15s' }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(182,255,43,0.08)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                      {t === teamName && <Icon d={icons.check} size={13} color="#B6FF2B" />}
+                      {t !== teamName && <span style={{ width: 13 }} />}
+                      {t}
+                    </button>
+                  ))}
+                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', padding: '6px 14px' }}>
+                    <button style={{ background: 'transparent', border: 'none', color: 'rgba(182,255,43,0.7)', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, fontFamily: 'var(--font-body)' }}>
+                      <Icon d={icons.plus} size={11} color="rgba(182,255,43,0.7)" /> {multiTeam ? 'Add Team' : 'View all teams'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div title={teamName} style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+              <div style={{ width: 34, height: 34, borderRadius: 9, background: 'linear-gradient(135deg,#B6FF2B,#68B42E)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                <span style={{ fontSize: 11, fontWeight: 900, color: '#121417', fontFamily: 'var(--font-display)' }}>MC</span>
+              </div>
+            </div>
+          );
+        })()}
+      </div>
+    </aside>
+  );
+}
+
+
+
+// ─── Mobile Bottom Nav ─────────────────────────────────────────────────────
+function MobileNav({ activeNav, setActiveNav }) {
+  const items = [
+    { name: 'Dashboard', icon: 'home', label: 'Home' },
+    { name: 'Fixtures & Results', icon: 'calendar', label: 'Fixtures' },
+    { name: 'Team Management', icon: 'users', label: 'Squad' },
+    { name: 'Sessions', icon: 'clipboard', label: 'Sessions' },
+    { name: 'Settings', icon: 'more', label: 'More' },
+  ];
+  return (
+    <nav className="mobile-nav" style={{
+      position: 'fixed', bottom: 0, left: 0, right: 0,
+      background: 'var(--surface)',
+      borderTop: '1px solid var(--border)',
+      display: 'flex', alignItems: 'stretch',
+      zIndex: 100, minHeight: 58,
+      boxShadow: '0 -4px 24px rgba(0,0,0,0.35)',
+    }}>
+      {items.map(item => {
+        const isActive = activeNav === item.name;
+        return (
+          <button key={item.name} onClick={() => { setActiveNav(item.name); const navMap={'Fixtures & Results':'tfb-planner.html','Team Management':'tfb-team.html','Sessions':'tfb-planner.html'}; if(navMap[item.name]) try{window.location.href=navMap[item.name]}catch(e){}; }}
+            style={{
+              flex: 1, display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center',
+              gap: 4, background: 'transparent', border: 'none',
+              cursor: 'pointer', padding: '8px 4px',
+              position: 'relative', minHeight: 58,
+              WebkitTapHighlightColor: 'transparent',
+            }}>
+            {isActive && (
+              <div style={{
+                position: 'absolute', top: 0, left: '25%', right: '25%',
+                height: 2, background: '#B6FF2B', borderRadius: '0 0 3px 3px',
+              }} />
+            )}
+            <Icon d={icons[item.icon]} size={22}
+              color={isActive ? '#B6FF2B' : '#8A8F98'}
+              stroke={isActive ? 2.5 : 2} />
+            <span style={{
+              fontSize: 10, fontWeight: isActive ? 700 : 500,
+              color: isActive ? '#B6FF2B' : '#8A8F98',
+              letterSpacing: '0.02em',
+            }}>{item.label}</span>
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
+// ─── Stat Card ─────────────────────────────────────────────────────────────
+function StatCard({ label, value, subvalue, icon, iconColor, iconBg, change, changeDir, accent }) {
+  return (
+    <div style={{
+      background: accent ? 'linear-gradient(135deg, #0F3D2E 0%, #0a2a1f 100%)' : 'var(--surface)',
+      borderRadius: 12, padding: '16px 18px',
+      border: accent ? '1px solid rgba(182,255,43,0.25)' : '1px solid var(--border)',
+      display: 'flex', flexDirection: 'column', gap: 10,
+      position: 'relative', overflow: 'hidden',
+      transition: 'transform .15s, box-shadow .15s', cursor: 'default',
+    }}
+      onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.25)'; }}
+      onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
+      {accent && <div style={{ position: 'absolute', top: -24, right: -24, width: 90, height: 90, borderRadius: '50%', background: 'rgba(182,255,43,0.07)', pointerEvents: 'none' }} />}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+        <div style={{ background: iconBg, borderRadius: 9, padding: 9, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Icon d={icons[icon]} size={16} color={iconColor} />
+        </div>
+        {change && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 3,
+            fontSize: 11, fontWeight: 700,
+            color: changeDir === 'up' ? '#2ED47A' : changeDir === 'down' ? '#E5533D' : '#8A8F98',
+            background: changeDir === 'up' ? 'rgba(46,212,122,0.1)' : changeDir === 'down' ? 'rgba(229,83,61,0.1)' : 'rgba(138,143,152,0.1)',
+            padding: '3px 7px', borderRadius: 6,
+          }}>
+            {changeDir === 'up' && <Icon d="M5 15l7-7 7 7" size={10} color="#2ED47A" />}
+            {changeDir === 'down' && <Icon d="M19 9l-7 7-7-7" size={10} color="#E5533D" />}
+            {change}
+          </div>
+        )}
+      </div>
+      <div>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
+          <span style={{ fontSize: 30, fontWeight: 900, fontFamily: 'var(--font-display)', color: accent ? '#B6FF2B' : 'var(--text-primary)', lineHeight: 1 }}>{value}</span>
+          {subvalue && <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 }}>{subvalue}</span>}
+        </div>
+        <div style={{ fontSize: 11, color: accent ? 'rgba(182,255,43,0.55)' : 'var(--text-secondary)', marginTop: 5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Next Match Widget ─────────────────────────────────────────────────────
+function NextMatchWidget() {
+  const [tab, setTab] = useState('availability');
+  return (
+    <div style={{ background: 'var(--surface)', borderRadius: 12, border: '1px solid var(--border)', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px 0' }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Icon d={icons.zap} size={14} color="#B6FF2B" /> Next Match
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 10, fontWeight: 700, color: '#B6FF2B', background: 'rgba(182,255,43,0.1)', border: '1px solid rgba(182,255,43,0.2)', padding: '2px 8px', borderRadius: 5 }}>HOME</span>
+          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)' }}>2 DAYS</span>
+        </div>
+      </div>
+
+      {/* Match fixture */}
+      <div style={{ margin: '12px 12px 0', background: 'linear-gradient(135deg, #0A2E20 0%, #0d3526 100%)', borderRadius: 10, padding: '12px 14px', border: '1px solid rgba(182,255,43,0.15)' }}>
+        <div style={{ fontSize: 9.5, color: 'rgba(182,255,43,0.65)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 10 }}>NPL Victoria · Round 7</div>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          {/* Home */}
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg,#B6FF2B,#68B42E)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <span style={{ fontSize: 11, fontWeight: 900, color: '#0F3D2E', fontFamily: 'var(--font-display)' }}>MCC</span>
+            </div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: '#fff' }}>Malvern City</div>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>U18 Men</div>
+            </div>
+          </div>
+          {/* VS */}
+          <div style={{ padding: '0 12px', textAlign: 'center' }}>
+            <div style={{ fontSize: 18, fontWeight: 900, fontFamily: 'var(--font-display)', color: 'rgba(255,255,255,0.3)', letterSpacing: 2 }}>VS</div>
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginTop: 2, whiteSpace: 'nowrap' }}>Sat · 2:00 PM</div>
+          </div>
+          {/* Away */}
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'flex-end' }}>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: '#fff' }}>Bulleen Lions</div>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>Away</div>
+            </div>
+            <div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <span style={{ fontSize: 11, fontWeight: 900, color: 'rgba(255,255,255,0.6)', fontFamily: 'var(--font-display)' }}>BUL</span>
+            </div>
+          </div>
+        </div>
+        {/* Venue */}
+        <div style={{ marginTop: 10, fontSize: 10, color: 'rgba(255,255,255,0.35)', display: 'flex', alignItems: 'center', gap: 5 }}>
+          <Icon d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0zM12 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2" size={11} color="rgba(255,255,255,0.35)" />
+          Tally Ho Park · East Burwood · Gate 2
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 0, padding: '10px 12px 0', borderBottom: '1px solid var(--border)' }}>
+        {['availability', 'form'].map(t => (
+          <button key={t} onClick={() => setTab(t)}
+            style={{ padding: '6px 12px', background: 'transparent', border: 'none', borderBottom: `2px solid ${tab === t ? '#B6FF2B' : 'transparent'}`, color: tab === t ? '#B6FF2B' : 'var(--text-secondary)', fontSize: 11, fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.06em', transition: 'color .15s', fontFamily: 'var(--font-body)' }}>
+            {t === 'availability' ? 'Availability' : 'Recent Form'}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ padding: '12px 14px', flex: 1 }}>
+        {tab === 'availability' && (
+          <div>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+              {[['9', '#2ED47A', 'Confirmed'], ['1', '#FFB020', 'Pending'], ['1', '#E5533D', 'Out']].map(([n, c, l]) => (
+                <div key={l} style={{ flex: 1, background: `${c}10`, border: `1px solid ${c}25`, borderRadius: 8, padding: '8px 6px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 20, fontWeight: 900, fontFamily: 'var(--font-display)', color: c }}>{n}</div>
+                  <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 600, marginTop: 1 }}>{l}</div>
+                </div>
+              ))}
+            </div>
+            {/* Mini player availability */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+              {SQUAD.map((p, i) => (
+                <div key={i} title={`${p.name} — ${p.status.toUpperCase()}`}
+                  style={{ width: 28, height: 28, borderRadius: '50%', background: p.status === 'here' ? 'rgba(46,212,122,0.15)' : p.status === 'late' ? 'rgba(255,176,32,0.15)' : 'rgba(229,83,61,0.15)', border: `1.5px solid ${p.status === 'here' ? '#2ED47A' : p.status === 'late' ? '#FFB020' : '#E5533D'}50`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: 8, fontWeight: 800, color: p.status === 'here' ? '#2ED47A' : p.status === 'late' ? '#FFB020' : '#E5533D', fontFamily: 'var(--font-display)' }}>
+                    {p.name.split('.')[0]}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {tab === 'form' && (
+          <div>
+            <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+              {RECENT_RESULTS.map((r, i) => (
+                <div key={i} title={`${r.vs} ${r.score}`} style={{ flex: 1, background: r.result === 'W' ? 'rgba(46,212,122,0.1)' : r.result === 'D' ? 'rgba(255,176,32,0.1)' : 'rgba(229,83,61,0.1)', border: `1px solid ${r.result === 'W' ? '#2ED47A' : r.result === 'D' ? '#FFB020' : '#E5533D'}30`, borderRadius: 8, padding: '8px 4px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 16, fontWeight: 900, fontFamily: 'var(--font-display)', color: r.result === 'W' ? '#2ED47A' : r.result === 'D' ? '#FFB020' : '#E5533D' }}>{r.result}</div>
+                  <div style={{ fontSize: 9, color: 'var(--text-secondary)', marginTop: 2 }}>{r.score}</div>
+                  <div style={{ fontSize: 9, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.vs}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-secondary)' }}>
+              <span>GF: <b style={{ color: 'var(--text-primary)' }}>12</b></span>
+              <span>GA: <b style={{ color: 'var(--text-primary)' }}>4</b></span>
+              <span>GD: <b style={{ color: '#2ED47A' }}>+8</b></span>
+              <span>Pts: <b style={{ color: '#B6FF2B' }}>13</b></span>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Training Schedule Widget ──────────────────────────────────────────────
+function TrainingWidget() {
+  const typeIcon = { Technical: 'target', Tactical: 'trending', Physical: 'activity', Match: 'zap' };
+  return (
+    <div style={{ background: 'var(--surface)', borderRadius: 12, border: '1px solid var(--border)', height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px 12px' }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Icon d={icons.calendar} size={14} color="#B6FF2B" /> Upcoming Schedule
+        </span>
+        <span style={{ fontSize: 11, color: '#B6FF2B', fontWeight: 600, cursor: 'pointer' }}>View all →</span>
+      </div>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4, padding: '0 10px 12px' }}>
+        {UPCOMING.map((ev, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px', background: i === 0 ? `${ev.color}0D` : 'var(--surface-2)', borderRadius: 9, border: `1px solid ${i === 0 ? ev.color + '35' : 'var(--border)'}`, cursor: 'pointer', transition: 'all .15s' }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = ev.color + '50'; e.currentTarget.style.background = `${ev.color}10`; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = i === 0 ? ev.color + '35' : 'var(--border)'; e.currentTarget.style.background = i === 0 ? `${ev.color}0D` : 'var(--surface-2)'; }}>
+            {/* Type icon */}
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: `${ev.color}15`, border: `1px solid ${ev.color}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Icon d={icons[typeIcon[ev.tag] || 'calendar']} size={14} color={ev.color} />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ev.label}</div>
+              <div style={{ fontSize: 10.5, color: 'var(--text-secondary)', marginTop: 2 }}>{ev.date} · {ev.time}</div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3, flexShrink: 0 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: ev.color, background: `${ev.color}15`, padding: '2px 7px', borderRadius: 5, border: `1px solid ${ev.color}25` }}>{ev.tag}</span>
+              <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{ev.duration}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Attendance Widget ─────────────────────────────────────────────────────
+function AttendanceWidget({ compact }) {
+  const avg = Math.round(SQUAD.reduce((s, p) => s + p.attendance, 0) / SQUAD.length);
+  return (
+    <div style={{ background: 'var(--surface)', borderRadius: 12, padding: 18, border: '1px solid var(--border)', height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Icon d={icons.users} size={15} color="#B6FF2B" /> Attendance
+        </span>
+        <span style={{ fontSize: 11, color: '#B6FF2B', fontWeight: 600, cursor: 'pointer' }}>Details →</span>
+      </div>
+      {/* Team average */}
+      <div style={{ background: 'linear-gradient(135deg, rgba(182,255,43,0.08), rgba(104,180,46,0.04))', borderRadius: 8, padding: '10px 12px', marginBottom: 12, border: '1px solid rgba(182,255,43,0.12)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Team Average (90 days)</span>
+          <span style={{ fontSize: 20, fontWeight: 800, fontFamily: 'var(--font-display)', color: avg >= 80 ? '#2ED47A' : avg >= 60 ? '#FFB020' : '#E5533D' }}>{avg}%</span>
+        </div>
+        <div style={{ height: 6, background: 'rgba(255,255,255,0.08)', borderRadius: 3, overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${avg}%`, background: avg >= 80 ? 'linear-gradient(90deg,#2ED47A,#68B42E)' : avg >= 60 ? '#FFB020' : '#E5533D', borderRadius: 3, transition: 'width 1s ease' }} />
+        </div>
+      </div>
+      {/* Alert */}
+      <div style={{ background: '#FFB02010', border: '1px solid #FFB02030', borderRadius: 8, padding: '8px 12px', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <Icon d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01" size={16} color="#FFB020" />
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#FFB020' }}>2 players below 80%</div>
+          <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>L. Santos · R. Al-Farsi</div>
+        </div>
+      </div>
+      {/* Player list */}
+      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {(compact ? SQUAD.slice(0,5) : SQUAD).map((p, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', background: p.attendance < 80 ? 'rgba(229,83,61,0.06)' : 'var(--surface-2)', borderRadius: 6, border: `1px solid ${p.attendance < 80 ? 'rgba(229,83,61,0.2)' : 'var(--border)'}` }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
+            <div style={{ fontSize: 10, color: 'var(--text-secondary)', minWidth: 24, textAlign: 'center' }}>{p.pos}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 60 }}>
+              <div style={{ flex: 1, height: 4, background: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${p.attendance}%`, background: p.attendance >= 80 ? '#2ED47A' : p.attendance >= 60 ? '#FFB020' : '#E5533D', borderRadius: 2 }} />
+              </div>
+              <span style={{ fontSize: 11, fontWeight: 700, color: p.attendance >= 80 ? '#2ED47A' : p.attendance >= 60 ? '#FFB020' : '#E5533D', minWidth: 28, textAlign: 'right' }}>{p.attendance}%</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Squad Overview Widget ─────────────────────────────────────────────────
+function SquadWidget() {
+  return (
+    <div style={{ background: 'var(--surface)', borderRadius: 12, padding: 18, border: '1px solid var(--border)', height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Icon d={icons.users} size={15} color="#B6FF2B" /> Squad Status
+        </span>
+        <span style={{ fontSize: 11, color: '#B6FF2B', fontWeight: 600, cursor: 'pointer' }}>Full squad →</span>
+      </div>
+      {/* Status summary */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+        {[['8', 'Available', '#2ED47A'], ['1', 'Late', '#FFB020'], ['2', 'Out', '#E5533D']].map(([n, l, c]) => (
+          <div key={l} style={{ flex: 1, background: `${c}10`, border: `1px solid ${c}25`, borderRadius: 8, padding: '8px', textAlign: 'center' }}>
+            <div style={{ fontSize: 20, fontWeight: 800, fontFamily: 'var(--font-display)', color: c }}>{n}</div>
+            <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 600 }}>{l}</div>
+          </div>
+        ))}
+      </div>
+      {/* Players */}
+      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {SQUAD.map((p, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 8px', background: 'var(--surface-2)', borderRadius: 8, border: '1px solid var(--border)', cursor: 'pointer', transition: 'border-color .15s' }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(182,255,43,0.3)'}
+            onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}>
+            <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(182,255,43,0.1)', border: '1px solid rgba(182,255,43,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <span style={{ fontSize: 9, fontWeight: 800, color: '#B6FF2B' }}>{p.name.split(' ').map(x=>x[0]).join('')}</span>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
+              <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{p.pos}</div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>W:{p.wellness}%</span>
+              <StatusBadge status={p.status} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Wellness Widget ───────────────────────────────────────────────────────
+function WellnessWidget() {
+  const avg = Math.round(SQUAD.reduce((s, p) => s + p.wellness, 0) / SQUAD.length);
+  const maxW = Math.max(...WELLNESS_DATA);
+  return (
+    <div style={{ background: 'var(--surface)', borderRadius: 12, padding: 18, border: '1px solid var(--border)', height: '100%' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Icon d={icons.heart} size={15} color="#B6FF2B" /> Wellness Summary
+        </span>
+        <span style={{ fontSize: 11, background: avg >= 75 ? '#2ED47A20' : '#FFB02020', color: avg >= 75 ? '#2ED47A' : '#FFB020', fontWeight: 700, padding: '2px 8px', borderRadius: 6 }}>{avg >= 75 ? 'Good' : 'Watch'}</span>
+      </div>
+      {/* Score */}
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, marginBottom: 16 }}>
+        <span style={{ fontSize: 42, fontWeight: 900, fontFamily: 'var(--font-display)', lineHeight: 1, color: avg >= 75 ? '#2ED47A' : '#FFB020' }}>{avg}</span>
+        <span style={{ fontSize: 16, color: 'var(--text-secondary)', marginBottom: 6 }}>/100</span>
+        <span style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8, marginLeft: 4 }}>team avg</span>
+      </div>
+      {/* Sparkline */}
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 40 }}>
+          {WELLNESS_DATA.map((v, i) => (
+            <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+              <div style={{ width: '100%', height: Math.round((v / maxW) * 36), background: i === 6 ? '#B6FF2B' : 'rgba(182,255,43,0.3)', borderRadius: '3px 3px 0 0', transition: 'height .5s ease' }} />
+            </div>
+          ))}
+        </div>
+        <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+          {WELLNESS_DAYS.map((d, i) => (
+            <div key={i} style={{ flex: 1, textAlign: 'center', fontSize: 10, color: i === 6 ? '#B6FF2B' : 'var(--text-secondary)', fontWeight: i === 6 ? 700 : 400 }}>{d}</div>
+          ))}
+        </div>
+      </div>
+      {/* Low alerts */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+        {SQUAD.filter(p => p.wellness < 70).map((p, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 10px', background: p.wellness < 60 ? '#E5533D12' : '#FFB02012', borderRadius: 7, border: `1px solid ${p.wellness < 60 ? '#E5533D25' : '#FFB02025'}` }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>{p.name}</span>
+            <span style={{ fontSize: 13, fontWeight: 800, fontFamily: 'var(--font-display)', color: p.wellness < 60 ? '#E5533D' : '#FFB020' }}>{p.wellness}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Quick Actions Widget ──────────────────────────────────────────────────
+function QuickActionsWidget() {
+  const primary = { label: 'New Session', icon: 'plus', color: '#121417', bg: 'linear-gradient(135deg,#B6FF2B,#68B42E)' };
+  const actions = [
+    { label: 'Send Availability', icon: 'bell', color: '#3FA9F5' },
+    { label: 'Log Match Result', icon: 'trophy', color: '#FFB020' },
+    { label: 'Add Player', icon: 'user', color: '#2ED47A' },
+    { label: 'Block Planner', icon: 'target', color: '#B6FF2B' },
+    { label: 'Team Chat', icon: 'message', color: '#8A8F98' },
+    { label: 'Video Analysis', icon: 'video', color: '#8A8F98' },
+    { label: 'Yearly Planner', icon: 'calRange', color: '#8A8F98' },
+    { label: 'Wellness Check', icon: 'heart', color: '#E5533D' },
+  ];
+  return (
+    <div style={{ background: 'var(--surface)', borderRadius: 12, border: '1px solid var(--border)', height: '100%', display: 'flex', flexDirection: 'column', padding: '14px 14px' }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <Icon d={icons.zap} size={14} color="#B6FF2B" /> Quick Actions
+      </div>
+      {/* Primary CTA */}
+      <button onClick={()=>{try{window.location.href='tfb-planner.html'}catch(e){}}} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px', background: primary.bg, border: 'none', borderRadius: 9, cursor: 'pointer', color: primary.color, fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 800, marginBottom: 10, transition: 'opacity .15s' }}
+        onMouseEnter={e => e.currentTarget.style.opacity = '0.9'}
+        onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
+        <Icon d={icons[primary.icon]} size={15} color="#121417" />
+        {primary.label}
+      </button>
+      {/* Grid of secondary actions */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, flex: 1 }}>
+        {actions.map((a, i) => (
+          <button key={i}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, cursor: 'pointer', color: 'var(--text-secondary)', fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 600, textAlign: 'left', transition: 'all .15s', whiteSpace: 'nowrap', overflow: 'hidden' }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = `${a.color}40`; e.currentTarget.style.background = `${a.color}0A`; e.currentTarget.style.color = a.color; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--surface-2)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}>
+            {Array.isArray(icons[a.icon])
+              ? <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>{icons[a.icon].map((p,j)=><path key={j} d={p}/>)}</svg>
+              : <Icon d={icons[a.icon]} size={13} color="currentColor" />}
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Recent Activity Widget ────────────────────────────────────────────────
+function ActivityWidget() {
+  const typeIcon = { wellness: 'heart', session: 'clipboard', injury: 'activity', rsvp: 'bell', system: 'settings' };
+  const typeColor = { wellness: '#2ED47A', session: '#B6FF2B', injury: '#E5533D', rsvp: '#FFB020', system: '#8A8F98' };
+  return (
+    <div style={{ background: 'var(--surface)', borderRadius: 12, border: '1px solid var(--border)', height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', padding: '14px 16px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Icon d={icons.activity} size={14} color="#B6FF2B" /> Recent Activity</span>
+        <span style={{ fontSize: 11, color: '#B6FF2B', fontWeight: 600, cursor: 'pointer' }}>View all →</span>
+      </div>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '0 14px 14px', position: 'relative' }}>
+        {/* Timeline line */}
+        <div style={{ position: 'absolute', left: 27, top: 0, bottom: 14, width: 1, background: 'var(--border)' }} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+          {ACTIVITY.map((a, i) => (
+            <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '8px 0', cursor: 'pointer' }}
+              onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
+              onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
+              <div style={{ width: 28, height: 28, borderRadius: '50%', background: `${typeColor[a.type]}15`, border: `1.5px solid ${typeColor[a.type]}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, zIndex: 1, marginTop: 1 }}>
+                <Icon d={icons[typeIcon[a.type]]} size={12} color={typeColor[a.type]} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0, paddingTop: 3 }}>
+                <div style={{ fontSize: 12.5, color: 'var(--text-primary)', lineHeight: 1.4 }}>
+                  <b style={{ fontWeight: 700 }}>{a.who}</b>{' '}
+                  <span style={{ color: 'var(--text-secondary)', fontWeight: 400 }}>{a.action}</span>
+                </div>
+                <div style={{ fontSize: 10.5, color: 'var(--text-secondary)', marginTop: 2 }}>{a.time}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Season Stats Widget ───────────────────────────────────────────────────
+function SeasonStatsWidget() {
+  const stats = [
+    { label: 'W', value: 4, color: '#2ED47A' },
+    { label: 'D', value: 1, color: '#FFB020' },
+    { label: 'L', value: 1, color: '#E5533D' },
+    { label: 'GF', value: 12, color: '#B6FF2B' },
+    { label: 'GA', value: 4, color: '#8A8F98' },
+    { label: 'Pts', value: 13, color: '#B6FF2B' },
+  ];
+  const leagueTable = [
+    { pos: 1, team: 'Hume City', p: 7, w: 6, d: 0, l: 1, pts: 18, current: false },
+    { pos: 2, team: 'Malvern City', p: 6, w: 4, d: 1, l: 1, pts: 13, current: true },
+    { pos: 3, team: 'Green Gully', p: 7, w: 4, d: 0, l: 3, pts: 12, current: false },
+    { pos: 4, team: 'Bulleen Lions', p: 7, w: 3, d: 2, l: 2, pts: 11, current: false },
+  ];
+  return (
+    <div style={{ background: 'var(--surface)', borderRadius: 12, border: '1px solid var(--border)', padding: '14px 16px' }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Icon d={icons.trophy} size={14} color="#B6FF2B" /> Season Stats</span>
+        <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>NPL Victoria 2025</span>
+      </div>
+      {/* Stat pills */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6, marginBottom: 14 }}>
+        {stats.map(s => (
+          <div key={s.label} style={{ background: `${s.color}0D`, border: `1px solid ${s.color}25`, borderRadius: 8, padding: '8px 4px', textAlign: 'center' }}>
+            <div style={{ fontSize: 20, fontWeight: 900, fontFamily: 'var(--font-display)', color: s.color, lineHeight: 1 }}>{s.value}</div>
+            <div style={{ fontSize: 9.5, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 3 }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+      {/* Mini league table */}
+      <div style={{ borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '24px 1fr 28px 28px 28px 32px', gap: 0, padding: '5px 10px', background: 'var(--surface-2)' }}>
+          {['#', 'Team', 'P', 'W', 'L', 'Pts'].map(h => (
+            <div key={h} style={{ fontSize: 9.5, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', textAlign: h === 'Team' ? 'left' : 'center' }}>{h}</div>
+          ))}
+        </div>
+        {leagueTable.map((row, i) => (
+          <div key={i} style={{ display: 'grid', gridTemplateColumns: '24px 1fr 28px 28px 28px 32px', padding: '7px 10px', background: row.current ? 'rgba(182,255,43,0.06)' : 'transparent', borderTop: '1px solid var(--border)' }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: row.pos <= 2 ? '#B6FF2B' : 'var(--text-secondary)', textAlign: 'center' }}>{row.pos}</div>
+            <div style={{ fontSize: 12, fontWeight: row.current ? 800 : 500, color: row.current ? '#B6FF2B' : 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.team}</div>
+            {[row.p, row.w, row.l].map((v, j) => (
+              <div key={j} style={{ fontSize: 12, color: 'var(--text-secondary)', textAlign: 'center' }}>{v}</div>
+            ))}
+            <div style={{ fontSize: 12, fontWeight: 800, color: row.current ? '#B6FF2B' : 'var(--text-primary)', textAlign: 'center' }}>{row.pts}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Widget Picker Modal ───────────────────────────────────────────────────
+const ALL_WIDGETS_CATALOG = [
+  // Matches
+  { id: 'nextMatch',     name: 'Next Match',         desc: 'Upcoming fixture + availability',     cat: 'Matches',  icon: '⚽', size:'wide',  pro:false },
+  { id: 'seasonStats',   name: 'Season Stats',       desc: 'League performance & form',           cat: 'Matches',  icon: '📈', size:'wide',  pro:false },
+  { id: 'leagueTable',   name: 'League Standings',   desc: 'Live league position & top 5',        cat: 'Matches',  icon: '🏆', size:'std',   pro:false },
+  { id: 'topScorers',    name: 'Top Scorers',        desc: 'Goals + assists leaderboard',         cat: 'Matches',  icon: '🥇', size:'std',   pro:false },
+  // Training
+  { id: 'schedule',      name: 'Training Schedule',  desc: 'Upcoming sessions & matches',         cat: 'Training', icon: '📅', size:'std',   pro:false },
+  { id: 'sessionDrills', name: 'Drill Library',      desc: 'Quick access to your drills',         cat: 'Training', icon: '🎯', size:'std',   pro:false },
+  { id: 'pillarBalance', name: 'Pillar Balance',     desc: '4-pillar training distribution',      cat: 'Training', icon: '🧱', size:'std',   pro:false },
+  // Squad
+  { id: 'attendance',    name: 'Attendance',         desc: 'Player attendance tracking',          cat: 'Squad',    icon: '✓',  size:'wide',  pro:false },
+  { id: 'squad',         name: 'Squad Status',       desc: 'Player status & wellness',            cat: 'Squad',    icon: '👥', size:'std',   pro:false },
+  { id: 'wellness',      name: 'Wellness',           desc: 'Team wellness heatmap',               cat: 'Squad',    icon: '💚', size:'std',   pro:false },
+  { id: 'injuryList',    name: 'Injury List',        desc: 'Currently injured players',           cat: 'Squad',    icon: '🩹', size:'std',   pro:false },
+  { id: 'birthdays',     name: 'Birthdays',          desc: 'Upcoming player birthdays',           cat: 'Squad',    icon: '🎂', size:'std',   pro:false },
+  // Overview
+  { id: 'quickActions',  name: 'Quick Actions',      desc: 'Common shortcuts',                    cat: 'Overview', icon: '⚡', size:'std',   pro:false },
+  { id: 'activity',      name: 'Recent Activity',    desc: 'Latest team activity feed',           cat: 'Overview', icon: '🔔', size:'std',   pro:false },
+  { id: 'announcement',  name: 'Announcement',       desc: 'Pinned message to squad',             cat: 'Overview', icon: '📢', size:'wide',  pro:false },
+  { id: 'weather',       name: 'Match-day Weather',  desc: 'Forecast for next match venue',       cat: 'Overview', icon: '⛅', size:'std',   pro:false },
+  { id: 'todoList',      name: 'My To-do',           desc: 'Personal task tracker',               cat: 'Overview', icon: '☑',  size:'std',   pro:false },
+];
+
+function WidgetPicker({ onClose, onAdd, current }) {
+  const [search, setSearch] = useState('');
+  const [activeCat, setActiveCat] = useState('All');
+  const cats = ['All', ...new Set(ALL_WIDGETS_CATALOG.map(w => w.cat))];
+  const filtered = ALL_WIDGETS_CATALOG.filter(w =>
+    (activeCat === 'All' || w.cat === activeCat) &&
+    (!search || w.name.toLowerCase().includes(search.toLowerCase()) || w.desc.toLowerCase().includes(search.toLowerCase()))
+  );
+  const isAdded = (id) => current && current.includes(id);
+  const available = ALL_WIDGETS_CATALOG;
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300, padding: 20 }} onClick={onClose}>
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, width: '100%', maxWidth: 540, maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.6)' }} onClick={e => e.stopPropagation()}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>Add Widget</span>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 4, borderRadius: 6, display: 'flex' }}>
+            <Icon d={icons.x} size={18} color="currentColor" />
+          </button>
+        </div>
+        <div style={{ padding: '14px 20px 0', borderBottom:'1px solid var(--border)' }}>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Search widgets..." style={{ width:'100%', padding:'9px 12px', background:'var(--surface-2)', border:'1px solid var(--border)', borderRadius:8, color:'var(--text-primary)', fontSize:13, marginBottom:10, fontFamily:'var(--font-body)', outline:'none' }} />
+          <div style={{ display:'flex', gap:6, overflowX:'auto', paddingBottom:10 }}>
+            {cats.map(c=>(
+              <button key={c} onClick={()=>setActiveCat(c)} style={{ padding:'5px 11px', background: activeCat===c?'rgba(182,255,43,0.15)':'transparent', border:`1px solid ${activeCat===c?'rgba(182,255,43,0.4)':'var(--border)'}`, borderRadius:7, fontSize:11.5, fontWeight:700, color:activeCat===c?'#B6FF2B':'var(--text-secondary)', cursor:'pointer', whiteSpace:'nowrap', fontFamily:'var(--font-body)', letterSpacing:'0.04em' }}>{c}</button>
+            ))}
+          </div>
+        </div>
+        <div style={{ padding: 16, overflowY: 'auto', flex:1 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:8 }}>
+            {filtered.map(w=>{
+              const added = isAdded(w.id);
+              return (
+                <button key={w.id} disabled={added} onClick={()=>{onAdd(w.id);}} style={{ display:'flex', gap:10, padding:'12px 14px', background:added?'rgba(46,212,122,0.06)':'var(--surface-2)', border:`1px solid ${added?'rgba(46,212,122,0.25)':'var(--border)'}`, borderRadius:10, cursor:added?'default':'pointer', textAlign:'left', transition:'all .15s', fontFamily:'var(--font-body)', position:'relative', opacity:added?0.7:1 }}
+                  onMouseEnter={e=>{if(!added){e.currentTarget.style.borderColor='rgba(182,255,43,0.4)';e.currentTarget.style.background='rgba(182,255,43,0.05)'}}}
+                  onMouseLeave={e=>{if(!added){e.currentTarget.style.borderColor='var(--border)';e.currentTarget.style.background='var(--surface-2)'}}}>
+                  <div style={{ fontSize:22, lineHeight:1, flexShrink:0 }}>{w.icon}</div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:3 }}>
+                      <div style={{ fontSize:13, fontWeight:700, color:'var(--text-primary)' }}>{w.name}</div>
+                      {w.pro && <span style={{ fontSize:8.5, fontWeight:800, letterSpacing:'0.1em', color:'#9B7FE8', background:'rgba(155,127,232,0.12)', padding:'1px 5px', borderRadius:3 }}>PRO</span>}
+                      {added && <span style={{ fontSize:8.5, fontWeight:800, letterSpacing:'0.1em', color:'#2ED47A', marginLeft:'auto' }}>✓ ADDED</span>}
+                    </div>
+                    <div style={{ fontSize:11, color:'var(--text-secondary)', lineHeight:1.4 }}>{w.desc}</div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          {filtered.length===0 && <div style={{ textAlign:'center', padding:'30px 0', color:'var(--text-secondary)', fontSize:13 }}>No widgets match "{search}"</div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+// ─── Extra widgets ──────────────────────────────────────────────────────────
+function LeagueTableWidget({compact}) {
+  const rows = [
+    {p:1,n:'Bentleigh',pts:21,form:'WWWDW',us:false},
+    {p:2,n:'South Melb',pts:19,form:'WWLWW',us:false},
+    {p:3,n:'Malvern City',pts:17,form:'WDWWL',us:true},
+    {p:4,n:'Heidelberg',pts:15,form:'LWDWW',us:false},
+    {p:5,n:'Hume City',pts:14,form:'DWLWD',us:false},
+  ];
+  return (
+    <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:12, padding:14, height:'100%' }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+        <div style={{ fontSize:11, color:'var(--text-secondary)', letterSpacing:'0.14em', textTransform:'uppercase', fontWeight:700 }}>League · NPL Vic</div>
+        <div style={{ fontSize:10, color:'#B6FF2B', fontWeight:700 }}>RD 7</div>
+      </div>
+      {rows.map(r=>(
+        <div key={r.n} style={{ display:'flex', alignItems:'center', gap:8, padding:'5px 0', borderTop:r.p>1?'1px dashed var(--border)':'none', background:r.us?'rgba(182,255,43,0.06)':'transparent', marginLeft:r.us?-6:0, marginRight:r.us?-6:0, paddingLeft:r.us?6:0, paddingRight:r.us?6:0, borderRadius:r.us?5:0 }}>
+          <div style={{ width:18, fontSize:11, fontWeight:800, color:r.us?'#B6FF2B':'var(--text-secondary)' }}>{r.p}</div>
+          <div style={{ flex:1, fontSize:12, fontWeight:r.us?800:600, color:'var(--text-primary)' }}>{r.n}</div>
+          <div style={{ fontSize:10, color:'var(--text-secondary)', fontFamily:'monospace' }}>{r.form}</div>
+          <div style={{ fontSize:12, fontWeight:800, color:r.us?'#B6FF2B':'var(--text-primary)', minWidth:18, textAlign:'right' }}>{r.pts}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+function TopScorersWidget(){
+  const rows=[{n:'Marcus Rivera',g:8,a:3,c:'#3FA9F5'},{n:'Jude Okafor',g:6,a:5,c:'#FFB020'},{n:'Liam Carter',g:5,a:7,c:'#B6FF2B'},{n:'Ethan Park',g:3,a:2,c:'#9B7FE8'}];
+  return (
+    <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:12, padding:14, height:'100%' }}>
+      <div style={{ fontSize:11, color:'var(--text-secondary)', letterSpacing:'0.14em', textTransform:'uppercase', fontWeight:700, marginBottom:10 }}>🥇 Top Scorers</div>
+      {rows.map((r,i)=>(
+        <div key={r.n} style={{ display:'flex', alignItems:'center', gap:8, padding:'7px 0', borderTop:i?'1px dashed var(--border)':'none' }}>
+          <div style={{ width:22, height:22, borderRadius:'50%', background:r.c, color:'#0A2E20', fontSize:10, fontWeight:800, display:'flex', alignItems:'center', justifyContent:'center' }}>{r.n.split(' ').map(x=>x[0]).join('')}</div>
+          <div style={{ flex:1, fontSize:12.5, fontWeight:600 }}>{r.n}</div>
+          <div style={{ fontSize:11, color:'var(--text-secondary)' }}>{r.g}G {r.a}A</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+function SessionDrillsWidget(){
+  const drills=[{n:'Rondo 4v2',min:15,p:'#B6FF2B'},{n:'Pressing trigger',min:20,p:'#3FA9F5'},{n:'Counter-press',min:15,p:'#FFB020'},{n:'Possession circuit',min:10,p:'#2ED47A'}];
+  return (
+    <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:12, padding:14, height:'100%' }}>
+      <div style={{ fontSize:11, color:'var(--text-secondary)', letterSpacing:'0.14em', textTransform:'uppercase', fontWeight:700, marginBottom:10 }}>🎯 Drill Library</div>
+      {drills.map((d,i)=>(
+        <div key={d.n} style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 0', borderTop:i?'1px dashed var(--border)':'none' }}>
+          <div style={{ width:4, height:24, background:d.p, borderRadius:2 }}/>
+          <div style={{ flex:1, fontSize:12.5, fontWeight:600 }}>{d.n}</div>
+          <div style={{ fontSize:11, color:'var(--text-secondary)' }}>{d.min}m</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+function PillarBalanceWidget(){
+  const pillars=[{n:'Technical',v:35,c:'#3FA9F5'},{n:'Tactical',v:28,c:'#B6FF2B'},{n:'Physical',v:25,c:'#FFB020'},{n:'Psychological',v:12,c:'#2ED47A'}];
+  return (
+    <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:12, padding:14, height:'100%' }}>
+      <div style={{ fontSize:11, color:'var(--text-secondary)', letterSpacing:'0.14em', textTransform:'uppercase', fontWeight:700, marginBottom:12 }}>🧱 Pillar Balance · This Week</div>
+      {pillars.map(p=>(
+        <div key={p.n} style={{ marginBottom:10 }}>
+          <div style={{ display:'flex', justifyContent:'space-between', fontSize:11.5, marginBottom:4 }}>
+            <span style={{ color:'var(--text-primary)', fontWeight:600 }}>{p.n}</span>
+            <span style={{ color:p.c, fontWeight:800 }}>{p.v}%</span>
+          </div>
+          <div style={{ height:6, background:'rgba(255,255,255,0.05)', borderRadius:3, overflow:'hidden' }}>
+            <div style={{ width:p.v+'%', height:'100%', background:p.c, borderRadius:3 }}/>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+function InjuryListWidget(){
+  const inj=[{n:'Tom Hardy',t:'Ankle sprain',w:'2 wks',c:'#FFB020'},{n:'Sam Lee',t:'Hamstring',w:'4 wks',c:'#E5533D'}];
+  return (
+    <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:12, padding:14, height:'100%' }}>
+      <div style={{ fontSize:11, color:'var(--text-secondary)', letterSpacing:'0.14em', textTransform:'uppercase', fontWeight:700, marginBottom:10 }}>🩹 Injury List</div>
+      {inj.length===0 ? <div style={{ fontSize:12, color:'#2ED47A', padding:'12px 0' }}>No injuries 💪</div> : inj.map((p,i)=>(
+        <div key={p.n} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 0', borderTop:i?'1px dashed var(--border)':'none' }}>
+          <div style={{ width:8, height:8, borderRadius:'50%', background:p.c }}/>
+          <div style={{ flex:1 }}>
+            <div style={{ fontSize:12.5, fontWeight:700 }}>{p.n}</div>
+            <div style={{ fontSize:10.5, color:'var(--text-secondary)' }}>{p.t}</div>
+          </div>
+          <div style={{ fontSize:10.5, color:p.c, fontWeight:700 }}>{p.w}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+function BirthdaysWidget(){
+  const b=[{n:'Liam Carter',d:'May 8',a:17},{n:'Ethan Park',d:'May 14',a:16},{n:'Marcus Rivera',d:'May 22',a:17}];
+  return (
+    <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:12, padding:14, height:'100%' }}>
+      <div style={{ fontSize:11, color:'var(--text-secondary)', letterSpacing:'0.14em', textTransform:'uppercase', fontWeight:700, marginBottom:10 }}>🎂 Upcoming Birthdays</div>
+      {b.map((p,i)=>(
+        <div key={p.n} style={{ display:'flex', alignItems:'center', gap:10, padding:'7px 0', borderTop:i?'1px dashed var(--border)':'none' }}>
+          <div style={{ fontSize:18 }}>🎂</div>
+          <div style={{ flex:1 }}>
+            <div style={{ fontSize:12.5, fontWeight:700 }}>{p.n}</div>
+            <div style={{ fontSize:10.5, color:'var(--text-secondary)' }}>turning {p.a+1}</div>
+          </div>
+          <div style={{ fontSize:11, color:'#B6FF2B', fontWeight:700 }}>{p.d}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+function AnnouncementWidget(){
+  return (
+    <div style={{ background:'linear-gradient(135deg,rgba(182,255,43,0.12),var(--surface))', border:'1px solid rgba(182,255,43,0.3)', borderRadius:12, padding:14, height:'100%', display:'flex', flexDirection:'column' }}>
+      <div style={{ fontSize:11, color:'#B6FF2B', letterSpacing:'0.14em', textTransform:'uppercase', fontWeight:800, marginBottom:6 }}>📢 Pinned Announcement</div>
+      <div style={{ fontFamily:'var(--font-display)', fontSize:18, fontWeight:900, lineHeight:1.15, marginBottom:8, textTransform:'uppercase' }}>Bring boots + shin pads Saturday — kick-off moved to 2pm</div>
+      <div style={{ fontSize:12, color:'var(--text-secondary)', flex:1 }}>Heads up team — referee shortage means our match against Bentleigh is now 2pm at home. Be there 1pm warm-up.</div>
+      <div style={{ fontSize:10.5, color:'var(--text-secondary)', marginTop:8, paddingTop:8, borderTop:'1px solid var(--border)' }}>Posted 12 mins ago by Coach Mitchell</div>
+    </div>
+  );
+}
+function WeatherWidget(){
+  return (
+    <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:12, padding:14, height:'100%' }}>
+      <div style={{ fontSize:11, color:'var(--text-secondary)', letterSpacing:'0.14em', textTransform:'uppercase', fontWeight:700, marginBottom:6 }}>⛅ Match-day Forecast</div>
+      <div style={{ fontSize:11, color:'var(--text-secondary)', marginBottom:10 }}>Sat 3 May · Hedgeley Dene</div>
+      <div style={{ display:'flex', alignItems:'center', gap:14, marginBottom:10 }}>
+        <div style={{ fontSize:42 }}>⛅</div>
+        <div>
+          <div style={{ fontFamily:'var(--font-display)', fontSize:30, fontWeight:900, lineHeight:1 }}>17°</div>
+          <div style={{ fontSize:11, color:'var(--text-secondary)' }}>Partly cloudy</div>
+        </div>
+      </div>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:6, fontSize:11 }}>
+        {[{l:'Wind',v:'12km/h'},{l:'Rain',v:'10%'},{l:'Pitch',v:'Firm'}].map(x=>(
+          <div key={x.l} style={{ padding:'6px 8px', background:'var(--surface-2)', borderRadius:6 }}>
+            <div style={{ color:'var(--text-secondary)', fontSize:9.5, letterSpacing:'0.1em', textTransform:'uppercase' }}>{x.l}</div>
+            <div style={{ fontWeight:800, marginTop:2 }}>{x.v}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+function TodoListWidget(){
+  const items=[{t:'Confirm Saturday lineup',d:false},{t:'Send fees reminder',d:false},{t:'Upload match-1 video',d:true},{t:'Order new training bibs',d:false}];
+  return (
+    <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:12, padding:14, height:'100%' }}>
+      <div style={{ fontSize:11, color:'var(--text-secondary)', letterSpacing:'0.14em', textTransform:'uppercase', fontWeight:700, marginBottom:10 }}>☑ My To-do</div>
+      {items.map((x,i)=>(
+        <div key={x.t} style={{ display:'flex', alignItems:'center', gap:9, padding:'6px 0', borderTop:i?'1px dashed var(--border)':'none' }}>
+          <div style={{ width:14, height:14, borderRadius:4, border:`1.5px solid ${x.d?'#2ED47A':'var(--border)'}`, background:x.d?'#2ED47A':'transparent', display:'flex', alignItems:'center', justifyContent:'center', fontSize:9, color:'#0A2E20', fontWeight:900 }}>{x.d?'✓':''}</div>
+          <div style={{ fontSize:12.5, color:x.d?'var(--text-secondary)':'var(--text-primary)', textDecoration:x.d?'line-through':'none', flex:1 }}>{x.t}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Dashboard Grid ────────────────────────────────────────────────────────
+const WIDGET_MAP = {
+  leagueTable: LeagueTableWidget,
+  topScorers: TopScorersWidget,
+  sessionDrills: SessionDrillsWidget,
+  pillarBalance: PillarBalanceWidget,
+  injuryList: InjuryListWidget,
+  birthdays: BirthdaysWidget,
+  announcement: AnnouncementWidget,
+  weather: WeatherWidget,
+  todoList: TodoListWidget,
+  nextMatch: NextMatchWidget,
+  schedule: TrainingWidget,
+  attendance: AttendanceWidget,
+  squad: SquadWidget,
+  wellness: WellnessWidget,
+  quickActions: QuickActionsWidget,
+  activity: ActivityWidget,
+  seasonStats: SeasonStatsWidget,
+};
+
+const DEFAULT_WIDGETS = ['nextMatch', 'schedule', 'attendance', 'squad', 'wellness', 'quickActions', 'activity', 'seasonStats'];
+
+// Role-based default widgets + stat cards
+const ROLE_WIDGET_DEFAULTS = {
+  'Coach':              ['nextMatch', 'schedule', 'attendance', 'squad', 'wellness', 'quickActions', 'activity', 'seasonStats'],
+  'Technical Director': ['squad', 'attendance', 'wellness', 'activity', 'seasonStats', 'quickActions'],
+  'Club Admin':         ['activity', 'quickActions', 'attendance', 'squad'],
+  'Player':             ['nextMatch', 'schedule', 'wellness', 'activity'],
+  'Parent':             ['nextMatch', 'schedule', 'activity'],
+};
+
+const ROLE_STAT_CARDS = {
+  'Coach': [
+    { accent: true, label: 'Next Match', value: 'Sat', subvalue: '3 May', icon: 'zap', iconColor: '#B6FF2B', iconBg: 'rgba(182,255,43,0.15)', change: '2 days', changeDir: 'up' },
+    { label: 'Active Sessions', value: '3', subvalue: 'this wk', icon: 'clipboard', iconColor: '#3FA9F5', iconBg: 'rgba(63,169,245,0.1)', change: '+1', changeDir: 'up' },
+    { label: 'Squad Available', value: '9', subvalue: '/ 11', icon: 'users', iconColor: '#2ED47A', iconBg: 'rgba(46,212,122,0.1)' },
+    { label: 'Team Wellness', value: '78', subvalue: '%', icon: 'heart', iconColor: '#FFB020', iconBg: 'rgba(255,176,32,0.1)', change: '-4%', changeDir: 'down' },
+  ],
+  'Technical Director': [
+    { accent: true, label: 'Total Players', value: '102', subvalue: 'registered', icon: 'users', iconColor: '#B6FF2B', iconBg: 'rgba(182,255,43,0.15)' },
+    { label: 'Avg Attendance', value: '87', subvalue: '%', icon: 'calendar', iconColor: '#2ED47A', iconBg: 'rgba(46,212,122,0.1)', change: '+3%', changeDir: 'up' },
+    { label: 'Avg Wellness', value: '83', subvalue: '%', icon: 'heart', iconColor: '#FFB020', iconBg: 'rgba(255,176,32,0.1)', change: '-2%', changeDir: 'down' },
+    { label: 'Active Teams', value: '6', subvalue: 'teams', icon: 'shield', iconColor: '#3FA9F5', iconBg: 'rgba(63,169,245,0.1)' },
+  ],
+  'Club Admin': [
+    { accent: true, label: 'Registrations', value: '14', subvalue: 'pending', icon: 'clipboard', iconColor: '#B6FF2B', iconBg: 'rgba(182,255,43,0.15)', change: '+3', changeDir: 'up' },
+    { label: 'Fees Owing', value: '4', subvalue: 'players', icon: 'users', iconColor: '#E5533D', iconBg: 'rgba(229,83,61,0.1)' },
+    { label: 'EOIs This Month', value: '8', subvalue: 'new', icon: 'trending', iconColor: '#2ED47A', iconBg: 'rgba(46,212,122,0.1)', change: '+2', changeDir: 'up' },
+    { label: 'Total Members', value: '134', subvalue: 'active', icon: 'shield', iconColor: '#3FA9F5', iconBg: 'rgba(63,169,245,0.1)' },
+  ],
+  'Player': [
+    { accent: true, label: 'Next Session', value: 'Thu', subvalue: '1 May', icon: 'zap', iconColor: '#B6FF2B', iconBg: 'rgba(182,255,43,0.15)' },
+    { label: 'My Wellness', value: '82', subvalue: '%', icon: 'heart', iconColor: '#2ED47A', iconBg: 'rgba(46,212,122,0.1)' },
+    { label: 'Goals', value: '2', subvalue: 'this season', icon: 'trophy', iconColor: '#B6FF2B', iconBg: 'rgba(182,255,43,0.1)' },
+    { label: 'Attendance', value: '87', subvalue: '%', icon: 'calendar', iconColor: '#3FA9F5', iconBg: 'rgba(63,169,245,0.1)' },
+  ],
+  'Parent': [
+    { accent: true, label: "Child's Next Match", value: 'Sat', subvalue: '3 May', icon: 'zap', iconColor: '#B6FF2B', iconBg: 'rgba(182,255,43,0.15)' },
+    { label: 'Attendance', value: '87', subvalue: '%', icon: 'calendar', iconColor: '#2ED47A', iconBg: 'rgba(46,212,122,0.1)' },
+    { label: 'Wellness', value: '82', subvalue: '%', icon: 'heart', iconColor: '#FFB020', iconBg: 'rgba(255,176,32,0.1)' },
+    { label: 'Fees Due', value: '$185', subvalue: 'Term 2', icon: 'clipboard', iconColor: '#3FA9F5', iconBg: 'rgba(63,169,245,0.1)' },
+  ],
+};
+
+const ROLE_GREETING = {
+  'Coach':              { name: 'Coach Tim', subtitle: 'Malvern City FC · U18 Men · NPL Victoria' },
+  'Technical Director': { name: 'Tim',       subtitle: 'Malvern City FC · Technical Director' },
+  'Club Admin':         { name: 'Tim',       subtitle: 'Malvern City FC · Club Administrator' },
+  'Player':             { name: 'Oscar',     subtitle: 'Malvern City U18 Men · LW · #11' },
+  'Parent':             { name: 'Sarah',     subtitle: "Oscar Petersen's parent · Malvern City U18 Men" },
+};
+
+// Role-specific identity for the header avatar / dropdown
+const ROLE_USER = {
+  'Coach':              { full: 'Tim Mitchell',  initials: 'TM', email: 'coach.tim@malverncity.com.au', plan: 'PRO',  planColor: '#B6FF2B' },
+  'Technical Director': { full: 'Tim Brand',     initials: 'TB', email: 'td@malverncity.com.au',        plan: 'PRO+', planColor: '#9B7FE8' },
+  'Club Admin':         { full: 'Jane Wilson',   initials: 'JW', email: 'admin@malverncity.com.au',     plan: 'CLUB', planColor: '#3FA9F5' },
+  'Player':             { full: 'Oscar Petersen',initials: 'OP', email: 'oscar.p@gmail.com',            plan: 'FREE', planColor: '#8A8F98' },
+  'Parent':             { full: 'Sarah Petersen',initials: 'SP', email: 'sarah.p@gmail.com',            plan: 'FREE', planColor: '#8A8F98' },
+};
+function getRoleUser(role){ return ROLE_USER[role] || ROLE_USER['Coach']; }
+
+const ROLE_CTA = {
+  'Coach':              { label: '+ New Session', href: 'tfb-planner.html' },
+  'Technical Director': { label: 'Club Overview', href: 'tfb-overview.html' },
+  'Club Admin':         { label: 'Manage Registrations', href: null },
+  'Player':             { label: '💚 Wellness Check-in', href: null },
+  'Parent':             { label: 'View Child Profile', href: null },
+};
+
+
+function Dashboard({ role, density }) {
+  const greetInfo = ROLE_GREETING[role] || ROLE_GREETING['Coach'];
+  const statCards = ROLE_STAT_CARDS[role] || ROLE_STAT_CARDS['Coach'];
+  const cta = ROLE_CTA[role] || ROLE_CTA['Coach'];
+  const roleWidgets = ROLE_WIDGET_DEFAULTS[role] || DEFAULT_WIDGETS;
+  const [widgets, setWidgets] = useState(DEFAULT_WIDGETS);
+  const [editing, setEditing] = useState(false);
+  const [showPicker, setShowPicker] = useState(false);
+  React.useEffect(() => {
+    setWidgets(ROLE_WIDGET_DEFAULTS[role] || DEFAULT_WIDGETS);
+  }, [role]);
+  const gap = density === 'compact' ? 10 : density === 'spacious' ? 20 : 14;
+  const greeting = (() => {
+    const h = new Date().getHours();
+    return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+  })();
+  return (
+    <div>
+      {/* Welcome */}
+      <div style={{ marginBottom: 22, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14 }}>
+        <div>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(182,255,43,0.08)', border: '1px solid rgba(182,255,43,0.18)', borderRadius: 8, padding: '4px 10px', marginBottom: 10 }}>
+            <Icon d={icons.calendar} size={12} color="#B6FF2B" />
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#B6FF2B', letterSpacing: '0.06em' }}>
+              {new Date().toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' }).toUpperCase()} · ROUND 7
+            </span>
+          </div>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 38, fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1, letterSpacing: '0.01em' }}>
+            {greeting}, <span style={{ color: '#B6FF2B' }}>{greetInfo.name}</span>!
+          </h1>
+          <div style={{ fontSize: 13.5, color: 'var(--text-secondary)', marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#2ED47A', display: 'inline-block', flexShrink: 0 }} />
+              <b style={{ color: 'var(--text-primary)', fontWeight: 600 }}>Malvern City FC</b>
+            </span>
+            <span style={{ color: 'rgba(255,255,255,0.2)' }}>·</span>
+            <span style={{ color: '#B6FF2B', fontWeight: 700, padding:'2px 8px', background:'rgba(182,255,43,0.1)', borderRadius:5, fontSize:12, letterSpacing:'0.05em', textTransform:'uppercase' }}>{role}</span>
+            <span style={{ color: 'rgba(255,255,255,0.2)' }}>·</span>
+            <span>{greetInfo.subtitle.split('·').slice(1).join('·').trim()}</span>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+          {editing ? (
+            <>
+              <button onClick={() => setShowPicker(true)}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'rgba(182,255,43,0.1)', border: '1px solid rgba(182,255,43,0.3)', borderRadius: 9, color: '#B6FF2B', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-body)', transition: 'background .15s' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(182,255,43,0.18)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'rgba(182,255,43,0.1)'}>
+                <Icon d={icons.plus} size={14} color="#B6FF2B" /> Add Widget
+              </button>
+              <button onClick={() => setEditing(false)}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: 'linear-gradient(135deg,#B6FF2B,#68B42E)', border: 'none', borderRadius: 9, color: '#121417', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'var(--font-body)', transition: 'opacity .15s' }}>
+                <Icon d={icons.check} size={14} color="#121417" /> Save Layout
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: 'linear-gradient(135deg,#B6FF2B,#68B42E)', border: 'none', borderRadius: 9, color: '#121417', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'var(--font-body)', transition: 'opacity .15s' }}
+                onMouseEnter={e => e.currentTarget.style.opacity = '0.9'}
+                onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
+                {cta.label}
+              </button>
+              <button onClick={() => setEditing(true)}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 9, color: 'var(--text-secondary)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-body)', transition: 'all .15s' }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(182,255,43,0.3)'; e.currentTarget.style.color = '#B6FF2B'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}>
+                <Icon d={icons.edit} size={14} color="currentColor" /> Customize
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Role-aware Stat Cards */}
+      <div className="stat-grid" style={{ marginBottom: gap }}>
+        {statCards.map((card, i) => (
+          <StatCard key={i} {...card} />
+        ))}
+      </div>
+
+      {/* Widget Grid */}
+      <div className="widget-grid">
+        {widgets.map((wid, i) => {
+          const Comp = WIDGET_MAP[wid];
+          if (!Comp) return null;
+          const isWide = ['nextMatch', 'attendance', 'seasonStats'].includes(wid);
+          return (
+            <div key={`${wid}-${i}`} style={{
+              gridColumn: isWide ? 'span 1' : 'span 1',
+              position: 'relative',
+              outline: editing ? '2px dashed rgba(182,255,43,0.3)' : 'none',
+              borderRadius: 12,
+            }}>
+              {editing && (
+                <button onClick={() => setWidgets(prev => prev.filter((_, j) => j !== i))}
+                  style={{ position: 'absolute', top: -8, right: -8, zIndex: 10, width: 22, height: 22, borderRadius: '50%', background: '#E5533D', border: '2px solid var(--carbon-black)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                  <Icon d={icons.x} size={11} color="#fff" />
+                </button>
+              )}
+              <Comp compact={true} />
+            </div>
+          );
+        })}
+      </div>
+      {showPicker && <WidgetPicker current={widgets} onClose={() => setShowPicker(false)} onAdd={id => setWidgets(prev => prev.includes(id)?prev:[...prev, id])} />}
+    </div>
+  );
+}
+
+// ─── App ───────────────────────────────────────────────────────────────────
+function App() {
+  const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+    "colorMode": "dark",
+    "role": "Coach",
+    "density": "comfortable",
+    "teamName": "Malvern City U16",
+    "accentColor": "#B6FF2B",
+    "sidebarColor": "#0F3D2E",
+    "fontScale": 100
+  }/*EDITMODE-END*/;
+
+  const [tweaks, setTweak] = window.useTweaks(TWEAK_DEFAULTS);
+
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [activeNav, setActiveNav] = useState('Dashboard');
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [userOpen, setUserOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    document.body.dataset.tfbHasOwnMenu = '1';
+    const handle = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handle);
+    return () => window.removeEventListener('resize', handle);
+  }, []);
+
+  // Apply color mode
+  useEffect(() => {
+    document.body.classList.toggle('light', tweaks.colorMode === 'light');
+  }, [tweaks.colorMode]);
+
+  // Apply accent + sidebar colour tokens
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty('--electric-lime', tweaks.accentColor);
+    root.style.setProperty('--accent', tweaks.accentColor);
+    root.style.setProperty('--pitch-green', tweaks.sidebarColor);
+    root.style.setProperty('--font-size-base', `${tweaks.fontScale}%`);
+  }, [tweaks.accentColor, tweaks.sidebarColor, tweaks.fontScale]);
+
+  // Apply font scale to html
+  useEffect(() => {
+    document.documentElement.style.fontSize = `${tweaks.fontScale}%`;
+  }, [tweaks.fontScale]);
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handle = () => { setNotifOpen(false); setUserOpen(false); };
+    document.addEventListener('click', handle);
+    return () => document.removeEventListener('click', handle);
+  }, []);
+
+  const sidebarW = isMobile ? 0 : (collapsed ? 64 : 240);
+
+  return (
+    <div style={{ height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <Header
+        collapsed={collapsed}
+        onToggle={() => setCollapsed(c => !c)}
+        onMobileMenu={isMobile ? () => setMobileOpen(m => !m) : undefined}
+        role={tweaks.role}
+        notifOpen={notifOpen}
+        setNotifOpen={(v) => { setNotifOpen(v); }}
+        userOpen={userOpen}
+        setUserOpen={(v) => { setUserOpen(v); }}
+      />
+
+      {/* Mobile sidebar overlay */}
+      {isMobile && mobileOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 49, backdropFilter: 'blur(2px)' }}
+          onClick={() => setMobileOpen(false)}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ width: 240, height: '100%', background: 'linear-gradient(180deg,#0A2E20,#0F3D2E)', marginTop: 'var(--header-h)', boxShadow: '4px 0 24px rgba(0,0,0,0.5)' }}>
+            <Sidebar collapsed={false} activeNav={activeNav} setActiveNav={n => { setActiveNav(n); setMobileOpen(false); }} teamName={tweaks.teamName} role={tweaks.role}/>
+          </div>
+        </div>
+      )}
+
+      {!isMobile && (
+        <Sidebar collapsed={collapsed} activeNav={activeNav} setActiveNav={setActiveNav} teamName={tweaks.teamName} role={tweaks.role}/>
+      )}
+
+      {/* Main */}
+      <main style={{
+        marginLeft: isMobile ? 0 : sidebarW,
+        marginTop: 'var(--header-h)',
+        height: `calc(100vh - var(--header-h) - ${isMobile ? 58 : 0}px)`,
+        overflowY: 'auto',
+        transition: 'margin-left .2s ease',
+        background: 'var(--carbon-black)',
+      }} className="main-content">>
+        <Dashboard role={tweaks.role} density={tweaks.density} />
+      </main>
+
+      {isMobile && <MobileNav activeNav={activeNav} setActiveNav={setActiveNav} />}
+
+      {/* Tweaks Panel */}
+      <TweaksPanel>
+        <TweakSection label="Theme" />
+        <TweakRadio label="Mode" value={tweaks.colorMode} options={['dark','light']} onChange={v => setTweak('colorMode', v)} />
+        <TweakRadio label="Density" value={tweaks.density} options={['compact','comfortable','spacious']} onChange={v => setTweak('density', v)} />
+        <TweakSlider label="Font Scale" value={tweaks.fontScale} min={80} max={120} step={5} unit="%" onChange={v => setTweak('fontScale', v)} />
+        <TweakSection label="Branding" />
+        <TweakColor label="Accent" value={tweaks.accentColor} onChange={v => setTweak('accentColor', v)} />
+        <TweakColor label="Sidebar" value={tweaks.sidebarColor} onChange={v => setTweak('sidebarColor', v)} />
+        <TweakSection label="Identity" />
+        <TweakSelect label="Role" value={tweaks.role} options={ROLES} onChange={v => setTweak('role', v)} />
+        <TweakText label="Team Name" value={tweaks.teamName} onChange={v => setTweak('teamName', v)} />
+      </TweaksPanel>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

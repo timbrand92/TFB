@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TFB – Wellness</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="tfb-responsive.jsx"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--lime:#B6FF2B;--green:#0F3D2E;--green-dark:#0A2E20;--bg:#111418;--s1:#1C2128;--s2:#242B33;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);--txt:#F0F2F4;--txt2:rgba(240,242,244,0.5);--txt3:rgba(240,242,244,0.28);--goal:#2ED47A;--amber:#FFB020;--red:#E5533D;--sky:#3FA9F5;--font-d:'Barlow Condensed',sans-serif;--font-b:'Barlow',sans-serif;--hh:54px;}
+html,body,#root{height:100%;overflow:hidden}body{font-family:var(--font-b);background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased}
+button,select{font-family:var(--font-b);color:inherit}::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:3px}
+</style>
+</head>
+<body><div id="root"></div>
+<script type="text/babel">
+const {useState}=React;
+const C={lime:'#B6FF2B',green:'#0F3D2E',greenDark:'#0A2E20',bg:'#111418',s1:'#1C2128',s2:'#242B33',border:'rgba(255,255,255,0.07)',border2:'rgba(255,255,255,0.13)',txt:'#F0F2F4',txt2:'rgba(240,242,244,0.5)',txt3:'rgba(240,242,244,0.28)',goal:'#2ED47A',amber:'#FFB020',red:'#E5533D',sky:'#3FA9F5'};
+const Ic=({d,size=16,color='currentColor',stroke=2,fill='none'})=>(<svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>{Array.isArray(d)?d.map((p,i)=><path key={i} d={p}/>):<path d={d}/> }</svg>);
+const P={back:'M15 18l-6-6 6-6',heart:'M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z',alert:'M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01',bell:'M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0'};
+
+const PLAYERS=[
+  {id:1,name:'J. Mitchell',pos:'GK',num:1,today:92,yesterday:88,week:[85,88,90,87,91,88,92],status:'good',notes:''},
+  {id:2,name:'A. Nguyen',pos:'RB',num:2,today:88,yesterday:85,week:[80,82,84,86,85,87,88],status:'good',notes:''},
+  {id:3,name:'M. Osei',pos:'CB',num:5,today:85,yesterday:86,week:[82,84,83,85,86,84,85],status:'good',notes:''},
+  {id:4,name:'T. Kovacs',pos:'CB',num:6,today:78,yesterday:80,week:[82,80,79,81,80,78,78],status:'watch',notes:'Slight knee soreness flagged'},
+  {id:5,name:'L. Santos',pos:'LB',num:3,today:null,yesterday:60,week:[75,70,65,62,60,null,null],status:'injured',notes:'Hamstring strain — week 3 of recovery'},
+  {id:6,name:'B. Tremblay',pos:'CM',num:8,today:90,yesterday:88,week:[85,87,88,90,88,89,90],status:'good',notes:''},
+  {id:7,name:'C. Walsh',pos:'CM',num:14,today:72,yesterday:70,week:[78,75,72,70,71,70,72],status:'watch',notes:'Low energy this week — check in'},
+  {id:8,name:'R. Al-Farsi',pos:'AM',num:10,today:88,yesterday:90,week:[88,90,91,89,90,89,88],status:'good',notes:''},
+  {id:9,name:'O. Petersen',pos:'LW',num:11,today:82,yesterday:80,week:[76,78,79,80,80,81,82],status:'good',notes:''},
+  {id:10,name:'K. Mensah',pos:'RW',num:7,today:77,yesterday:75,week:[72,74,75,76,75,76,77],status:'good',notes:''},
+  {id:11,name:'D. Kowalski',pos:'ST',num:9,today:91,yesterday:89,week:[87,88,90,89,88,90,91],status:'good',notes:''},
+];
+
+const scoreColor=v=>v>=80?C.goal:v>=65?C.amber:C.red;
+const teamAvg=Math.round(PLAYERS.filter(p=>p.today).reduce((s,p)=>s+(p.today||0),0)/PLAYERS.filter(p=>p.today).length);
+
+function Header({onBack}){return(<header style={{height:'var(--hh)',background:`linear-gradient(90deg,${C.greenDark},${C.green})`,borderBottom:'1px solid rgba(182,255,43,0.18)',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 20px',flexShrink:0,zIndex:50}}>
+  <div style={{display:'flex',alignItems:'center',gap:12}}>
+    <button onClick={onBack} style={{display:'flex',alignItems:'center',gap:6,padding:'6px 10px',background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,color:'rgba(255,255,255,0.7)',fontSize:12,fontWeight:600,cursor:'pointer'}} onMouseEnter={e=>{e.currentTarget.style.background='rgba(182,255,43,0.12)';e.currentTarget.style.color='#B6FF2B'}} onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,0.07)';e.currentTarget.style.color='rgba(255,255,255,0.7)'}}>
+      <Ic d={P.back} size={14} color="currentColor"/> Dashboard
+    </button>
+    <div style={{width:1,height:24,background:'rgba(255,255,255,0.12)'}}/>
+    <svg width="28" height="28" viewBox="0 0 40 40" fill="none"><polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="#0F3D2E" stroke="#B6FF2B" strokeWidth="1.5"/><text x="20" y="26" textAnchor="middle" fill="#B6FF2B" fontFamily="Barlow Condensed" fontWeight="900" fontSize="13">TFB</text></svg>
+    <div><div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:17,color:'#fff',letterSpacing:'0.04em',lineHeight:1}}>WELLNESS</div><div style={{fontSize:9.5,color:'rgba(182,255,43,0.65)',fontWeight:700,letterSpacing:'0.1em'}}>Team Health Dashboard · Today</div></div>
+  </div>
+  <button style={{display:'flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(46,212,122,0.12)',border:'1px solid rgba(46,212,122,0.3)',borderRadius:8,fontSize:12,fontWeight:700,color:C.goal,cursor:'pointer'}}>
+    <Ic d={P.bell} size={13} color={C.goal}/> Send Check-in Request
+  </button>
+</header>);}
+
+function App(){
+  const [selected,setSelected]=useState(null);
+  const needsAttention=PLAYERS.filter(p=>p.status!=='good');
+  const notSubmitted=PLAYERS.filter(p=>!p.today);
+
+  return(<div style={{height:'100vh',display:'flex',flexDirection:'column',background:C.bg,overflow:'hidden'}}>
+    <Header onBack={()=>{try{window.location.href='tfb-dashboard.html'}catch(e){}}}/>
+    <div style={{flex:1,overflowY:'auto',padding:'20px'}}>
+      {/* Team avg + alerts */}
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:14,marginBottom:20}}>
+        <div style={{background:`linear-gradient(135deg,${C.greenDark},${C.green})`,borderRadius:12,padding:'16px',border:'1px solid rgba(182,255,43,0.2)',gridColumn:'span 1'}}>
+          <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:40,color:scoreColor(teamAvg),lineHeight:1}}>{teamAvg}</div>
+          <div style={{fontSize:10,color:'rgba(255,255,255,0.4)',fontWeight:700,marginTop:4,textTransform:'uppercase',letterSpacing:'0.06em'}}>Team Avg · Today</div>
+          <div style={{height:4,background:'rgba(255,255,255,0.1)',borderRadius:2,overflow:'hidden',marginTop:8}}>
+            <div style={{height:'100%',width:`${teamAvg}%`,background:scoreColor(teamAvg),borderRadius:2}}/>
+          </div>
+        </div>
+        {[
+          {label:'Submitted',value:`${PLAYERS.filter(p=>p.today).length}/${PLAYERS.length}`,color:C.goal},
+          {label:'Need Attention',value:needsAttention.length,color:C.amber},
+          {label:'Injured / Out',value:PLAYERS.filter(p=>p.status==='injured').length,color:C.red},
+        ].map(({label,value,color})=>(
+          <div key={label} style={{background:C.s1,borderRadius:12,padding:'16px',border:`1px solid ${C.border}`,display:'flex',flexDirection:'column',gap:8}}>
+            <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:32,color,lineHeight:1}}>{value}</div>
+            <div style={{fontSize:10,color:C.txt3,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.06em'}}>{label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Alerts */}
+      {needsAttention.length>0&&(<div style={{background:'rgba(255,176,32,0.07)',border:'1px solid rgba(255,176,32,0.2)',borderRadius:12,padding:'12px 16px',marginBottom:16}}>
+        <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:8}}><Ic d={P.alert} size={14} color={C.amber}/><span style={{fontSize:12,fontWeight:700,color:C.amber}}>Players needing attention</span></div>
+        <div style={{display:'flex',flexDirection:'column',gap:5}}>
+          {needsAttention.map(p=>(
+            <div key={p.id} style={{display:'flex',alignItems:'center',gap:10,fontSize:12}}>
+              <span style={{fontWeight:700,color:C.txt,minWidth:100}}>{p.name}</span>
+              <span style={{color:p.status==='injured'?C.red:C.amber,fontWeight:700,background:`${p.status==='injured'?C.red:C.amber}12`,border:`1px solid ${p.status==='injured'?C.red:C.amber}30`,borderRadius:4,padding:'1px 7px',fontSize:10,textTransform:'uppercase'}}>{p.status==='injured'?'INJURED':'WATCH'}</span>
+              {p.today&&<span style={{color:scoreColor(p.today),fontWeight:700}}>{p.today}/100</span>}
+              {p.notes&&<span style={{color:C.txt3,fontStyle:'italic'}}>{p.notes}</span>}
+            </div>
+          ))}
+        </div>
+      </div>)}
+
+      {/* Player wellness grid */}
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
+        {/* Left: player list */}
+        <div style={{background:C.s1,borderRadius:12,border:`1px solid ${C.border}`,overflow:'hidden'}}>
+          <div style={{padding:'10px 14px',borderBottom:`1px solid ${C.border}`,fontSize:12,fontWeight:700,color:C.txt}}>Today's Wellness Scores</div>
+          <div style={{display:'flex',flexDirection:'column'}}>
+            {PLAYERS.map(p=>{
+              const sc=scoreColor(p.today||0);
+              const isSelected=selected?.id===p.id;
+              return(<div key={p.id} onClick={()=>setSelected(isSelected?null:p)} style={{display:'flex',alignItems:'center',gap:10,padding:'9px 14px',borderBottom:`1px solid ${C.border}`,cursor:'pointer',background:isSelected?'rgba(182,255,43,0.05)':'transparent',transition:'background .12s'}} onMouseEnter={e=>{if(!isSelected)e.currentTarget.style.background='rgba(255,255,255,0.02)'}} onMouseLeave={e=>{if(!isSelected)e.currentTarget.style.background='transparent'}}>
+                <div style={{width:30,height:30,borderRadius:'50%',background:`${p.status==='injured'?C.red:sc}15`,border:`1.5px solid ${p.status==='injured'?C.red:sc}40`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                  <span style={{fontSize:10,fontWeight:900,color:p.status==='injured'?C.red:sc,fontFamily:'var(--font-d)'}}>{p.num}</span>
+                </div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:12.5,fontWeight:600,color:isSelected?C.lime:C.txt,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{p.name}</div>
+                  <div style={{fontSize:10,color:C.txt3}}>{p.pos}</div>
+                </div>
+                {p.today?(
+                  <div style={{display:'flex',alignItems:'center',gap:6,minWidth:100}}>
+                    <div style={{flex:1,height:4,background:'rgba(255,255,255,0.07)',borderRadius:2,overflow:'hidden'}}>
+                      <div style={{height:'100%',width:`${p.today}%`,background:sc,borderRadius:2}}/>
+                    </div>
+                    <span style={{fontSize:12,fontWeight:800,color:sc,minWidth:28,textAlign:'right'}}>{p.today}</span>
+                  </div>
+                ):<span style={{fontSize:10,color:C.txt3,fontStyle:'italic'}}>Not submitted</span>}
+              </div>);
+            })}
+          </div>
+        </div>
+
+        {/* Right: selected player detail or heatmap */}
+        <div>
+          {selected?(
+            <div style={{background:C.s1,borderRadius:12,border:`1px solid rgba(182,255,43,0.2)`,padding:'16px'}}>
+              <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:16}}>
+                <div style={{width:40,height:40,borderRadius:'50%',background:`${scoreColor(selected.today||0)}18`,border:`2px solid ${scoreColor(selected.today||0)}40`,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                  <span style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:15,color:scoreColor(selected.today||0)}}>{selected.num}</span>
+                </div>
+                <div>
+                  <div style={{fontSize:15,fontWeight:700,color:C.txt}}>{selected.name}</div>
+                  <div style={{fontSize:11,color:C.txt3}}>{selected.pos} · {selected.status.toUpperCase()}</div>
+                </div>
+                {selected.today&&<div style={{marginLeft:'auto',textAlign:'center'}}>
+                  <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:32,color:scoreColor(selected.today),lineHeight:1}}>{selected.today}</div>
+                  <div style={{fontSize:9,color:C.txt3}}>TODAY</div>
+                </div>}
+              </div>
+              <div style={{fontSize:10,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:8}}>7-Day Trend</div>
+              <div style={{display:'flex',flexDirection:'column',gap:4,marginBottom:14}}>
+                <div style={{display:'flex',alignItems:'flex-end',gap:5,height:60}}>
+                  {selected.week.map((v,i)=>v?(
+                    <div key={i} style={{flex:1,height:`${(v/100)*58}px`,background:i===6?scoreColor(v):`${scoreColor(v)}50`,borderRadius:'3px 3px 0 0'}}/>
+                  ):<div key={i} style={{flex:1,height:4,background:'rgba(255,255,255,0.06)',borderRadius:2,marginBottom:'auto'}}/>)}
+                </div>
+                <div style={{display:'flex',gap:5}}>
+                  {['M','T','W','T','F','S','T'].map((d,i)=>(
+                    <div key={i} style={{flex:1,textAlign:'center',fontSize:9,color:i===6?C.lime:C.txt3}}>{d}</div>
+                  ))}
+                </div>
+              </div>
+              {selected.notes&&(<div style={{background:'rgba(255,176,32,0.08)',border:'1px solid rgba(255,176,32,0.2)',borderRadius:8,padding:'10px 12px',fontSize:12,color:C.amber}}>{selected.notes}</div>)}
+            </div>
+          ):(
+            <div style={{background:C.s1,borderRadius:12,border:`1px solid ${C.border}`,padding:'16px'}}>
+              <div style={{fontSize:12,fontWeight:700,color:C.txt,marginBottom:12}}>Team Wellness Heatmap (7 days)</div>
+              <div style={{display:'grid',gridTemplateColumns:'80px repeat(7,1fr)',gap:3}}>
+                <div/>
+                {['Mon','Tue','Wed','Thu','Fri','Sat','Today'].map(d=>(<div key={d} style={{textAlign:'center',fontSize:9,color:C.txt3,fontWeight:700,padding:'2px 0'}}>{d}</div>))}
+                {PLAYERS.slice(0,8).map(p=>[
+                  <div key={`name-${p.id}`} style={{fontSize:10,color:C.txt2,display:'flex',alignItems:'center',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',paddingRight:4}}>{p.name.split('.')[1]?.trim()||p.name}</div>,
+                  ...p.week.map((v,i)=>(<div key={i} style={{height:22,borderRadius:4,background:v?`${scoreColor(v)}${Math.round((v/100)*99).toString(16).padStart(2,'0')}`:'rgba(255,255,255,0.04)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                    {v&&<span style={{fontSize:8,fontWeight:700,color:'rgba(0,0,0,0.5)'}}>{v}</span>}
+                  </div>))
+                ])}
+              </div>
+              <div style={{marginTop:10,display:'flex',gap:10,alignItems:'center',fontSize:10,color:C.txt3}}>
+                <div style={{width:12,height:8,borderRadius:2,background:C.goal}}/><span>Good (80+)</span>
+                <div style={{width:12,height:8,borderRadius:2,background:C.amber}}/><span>Watch (65–79)</span>
+                <div style={{width:12,height:8,borderRadius:2,background:C.red}}/><span>Concern (&lt;65)</span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  </div>);}
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script></body></html>

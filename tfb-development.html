@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TFB – Player Development</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="tfb-responsive.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --lime:#B6FF2B;--green:#0F3D2E;--green-dark:#0A2E20;
+  --bg:#111418;--s1:#1C2128;--s2:#242B33;--s3:#2D3640;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --txt:#F0F2F4;--txt2:rgba(240,242,244,0.5);--txt3:rgba(240,242,244,0.28);
+  --goal:#2ED47A;--amber:#FFB020;--red:#E5533D;--sky:#3FA9F5;
+  --font-d:'Barlow Condensed',sans-serif;--font-b:'Barlow',sans-serif;--hh:54px;
+}
+html,body,#root{height:100%;overflow:hidden}
+body{font-family:var(--font-b);background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font-family:var(--font-b);color:inherit}
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:3px}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn .2s ease forwards}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useCallback} = React;
+
+const C = {
+  lime:'#B6FF2B',green:'#0F3D2E',greenDark:'#0A2E20',
+  bg:'#111418',s1:'#1C2128',s2:'#242B33',s3:'#2D3640',
+  border:'rgba(255,255,255,0.07)',border2:'rgba(255,255,255,0.13)',
+  txt:'#F0F2F4',txt2:'rgba(240,242,244,0.5)',txt3:'rgba(240,242,244,0.28)',
+  goal:'#2ED47A',amber:'#FFB020',red:'#E5533D',sky:'#3FA9F5',
+};
+
+const PILLAR_COLORS = {Technical:'#3FA9F5',Tactical:'#B6FF2B',Physical:'#FFB020',Psychological:'#2ED47A'};
+const PILLARS = ['Technical','Tactical','Physical','Psychological'];
+
+const Ic = ({d,size=16,color='currentColor',stroke=2,fill='none'}) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>
+    {Array.isArray(d)?d.map((p,i)=><path key={i} d={p}/>):<path d={d}/>}
+  </svg>
+);
+const P = {
+  back:'M15 18l-6-6 6-6',plus:'M12 5v14M5 12h14',x:'M18 6L6 18M6 6l12 12',
+  check:'M20 6L9 17l-5-5',edit:'M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z',
+  search:'M21 21l-6-6m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0z',
+  user:'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z',
+  trending:'M23 6l-9.5 9.5-5-5L1 18',
+  target:'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zm0-6a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0-2a2 2 0 1 0 0-4 2 2 0 0 0 0 4',
+  chevD:'M6 9l6 6 6-6',chevR:'M9 18l6-6-6-6',
+  filter:'M22 3H2l8 9.46V19l4 2v-8.54L22 3',
+  award:'M12 15a7 7 0 1 0 0-14 7 7 0 0 0 0 14zm0 0v6m-3-3h6',
+  trash:'M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6',
+  heart:'M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z',
+};
+
+// ── Data ─────────────────────────────────────────────────────────────────────
+const PLAYERS = [
+  {id:1,name:'Jamie Mitchell',pos:'GK',num:1,wellness:92,attendance:96,
+    goals:[
+      {id:1,title:'Improve distribution under pressure',pillar:'Technical',progress:80,done:false,priority:'high',notes:'Good progress — focus on weak foot'},
+      {id:2,title:'Command the penalty area vocally',pillar:'Psychological',progress:60,done:false,priority:'medium',notes:''},
+      {id:3,title:'Aerial dominance in box',pillar:'Technical',progress:100,done:true,priority:'high',notes:'Achieved in training block 2'},
+    ]},
+  {id:2,name:'Alex Nguyen',pos:'RB',num:2,wellness:88,attendance:90,
+    goals:[
+      {id:1,title:'Overlapping runs — timing & recovery',pillar:'Tactical',progress:75,done:false,priority:'high',notes:''},
+      {id:2,title:'Cross accuracy to 70%+',pillar:'Technical',progress:55,done:false,priority:'high',notes:''},
+      {id:3,title:'Defensive 1v1 positioning',pillar:'Tactical',progress:90,done:false,priority:'medium',notes:'Major improvement this block'},
+      {id:4,title:'Sprint endurance sessions',pillar:'Physical',progress:100,done:true,priority:'medium',notes:''},
+    ]},
+  {id:3,name:'Marcus Osei',pos:'CB',num:5,wellness:85,attendance:92,
+    goals:[
+      {id:1,title:'Long diagonal passing range',pillar:'Technical',progress:70,done:false,priority:'high',notes:'Work on left foot'},
+      {id:2,title:'Leadership — captain communication',pillar:'Psychological',progress:85,done:false,priority:'high',notes:'Captain material'},
+      {id:3,title:'High defensive line confidence',pillar:'Tactical',progress:100,done:true,priority:'medium',notes:''},
+    ]},
+  {id:4,name:'Beau Tremblay',pos:'CM',num:8,wellness:90,attendance:95,
+    goals:[
+      {id:1,title:'Passing accuracy 90%+ in tight spaces',pillar:'Technical',progress:88,done:false,priority:'high',notes:'Best in squad currently'},
+      {id:2,title:'Goals from midfield — 5+ per season',pillar:'Technical',progress:40,done:false,priority:'medium',notes:'2 goals so far'},
+      {id:3,title:'Press triggers — recognition speed',pillar:'Tactical',progress:95,done:false,priority:'high',notes:''},
+      {id:4,title:'Recovery run discipline',pillar:'Physical',progress:100,done:true,priority:'low',notes:''},
+      {id:5,title:'Mentor younger squad members',pillar:'Psychological',progress:60,done:false,priority:'low',notes:''},
+    ]},
+  {id:5,name:'Oscar Petersen',pos:'LW',num:11,wellness:82,attendance:87,
+    goals:[
+      {id:1,title:'Final ball delivery — crossing accuracy',pillar:'Technical',progress:100,done:true,priority:'high',notes:'Achieved'},
+      {id:2,title:'Pressing intensity off the ball',pillar:'Tactical',progress:100,done:true,priority:'high',notes:''},
+      {id:3,title:'Lead team warm-up twice/month',pillar:'Psychological',progress:60,done:false,priority:'low',notes:''},
+      {id:4,title:'Avg 10+ sprints per session',pillar:'Physical',progress:75,done:false,priority:'medium',notes:''},
+      {id:5,title:'Video analysis participation',pillar:'Tactical',progress:20,done:false,priority:'low',notes:''},
+    ]},
+  {id:6,name:'Damian Kowalski',pos:'ST',num:9,wellness:91,attendance:94,
+    goals:[
+      {id:1,title:'10+ goals this season',pillar:'Technical',progress:80,done:false,priority:'high',notes:'8 goals so far — on track'},
+      {id:2,title:'Link-up play with AM',pillar:'Tactical',progress:70,done:false,priority:'high',notes:''},
+      {id:3,title:'Aerial heading accuracy',pillar:'Technical',progress:60,done:false,priority:'medium',notes:''},
+    ]},
+  {id:7,name:'Rami Al-Farsi',pos:'AM',num:10,wellness:88,attendance:91,
+    goals:[
+      {id:1,title:'Through-ball vision — 3+ key passes/game',pillar:'Technical',progress:65,done:false,priority:'high',notes:''},
+      {id:2,title:'Work rate off the ball',pillar:'Physical',progress:50,done:false,priority:'high',notes:'Needs improvement'},
+      {id:3,title:'Set piece delivery quality',pillar:'Technical',progress:80,done:false,priority:'medium',notes:''},
+    ]},
+  {id:8,name:'Luis Santos',pos:'LB',num:3,wellness:60,attendance:72,
+    goals:[
+      {id:1,title:'Hamstring rehab — return to play',pillar:'Physical',progress:65,done:false,priority:'high',notes:'Week 3 of recovery program'},
+      {id:2,title:'Left foot crossing under pressure',pillar:'Technical',progress:40,done:false,priority:'medium',notes:'On hold during injury'},
+    ]},
+];
+
+// ── Header ─────────────────────────────────────────────────────────────────────
+function Header({onBack}) {
+  return (
+    <header style={{height:'var(--hh)',background:`linear-gradient(90deg,${C.greenDark},${C.green})`,borderBottom:'1px solid rgba(182,255,43,0.18)',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 20px',flexShrink:0,boxShadow:'0 2px 12px rgba(0,0,0,0.3)',zIndex:50}}>
+      <div style={{display:'flex',alignItems:'center',gap:12}}>
+        <button onClick={onBack} style={{display:'flex',alignItems:'center',gap:6,padding:'6px 10px',background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,color:'rgba(255,255,255,0.7)',fontSize:12,fontWeight:600,cursor:'pointer',transition:'all .15s',whiteSpace:'nowrap'}}
+          onMouseEnter={e=>{e.currentTarget.style.background='rgba(182,255,43,0.12)';e.currentTarget.style.color='#B6FF2B'}}
+          onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,0.07)';e.currentTarget.style.color='rgba(255,255,255,0.7)'}}>
+          <Ic d={P.back} size={14} color="currentColor"/> Dashboard
+        </button>
+        <div style={{width:1,height:24,background:'rgba(255,255,255,0.12)'}}/>
+        <div style={{display:'flex',alignItems:'center',gap:10}}>
+          <svg width="28" height="28" viewBox="0 0 40 40" fill="none">
+            <polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="#0F3D2E" stroke="#B6FF2B" strokeWidth="1.5"/>
+            <text x="20" y="26" textAnchor="middle" fill="#B6FF2B" fontFamily="Barlow Condensed" fontWeight="900" fontSize="13">TFB</text>
+          </svg>
+          <div>
+            <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:17,color:'#fff',letterSpacing:'0.04em',lineHeight:1}}>PLAYER DEVELOPMENT</div>
+            <div style={{fontSize:9.5,color:'rgba(182,255,43,0.65)',fontWeight:700,letterSpacing:'0.1em'}}>Individual Development Plans · Malvern City U18 Men</div>
+          </div>
+        </div>
+      </div>
+      <div style={{display:'flex',alignItems:'center',gap:10}}>
+        <div style={{fontSize:12,color:'rgba(255,255,255,0.5)',fontWeight:600}}>
+          <span style={{color:C.lime,fontWeight:800}}>{PLAYERS.length}</span> players · Season 2025
+        </div>
+        <div style={{width:30,height:30,borderRadius:'50%',background:`linear-gradient(135deg,${C.lime},#68B42E)`,display:'flex',alignItems:'center',justifyContent:'center'}}>
+          <span style={{fontSize:12,fontWeight:900,color:C.green,fontFamily:'var(--font-d)'}}>TB</span>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+// ── Progress Bar ─────────────────────────────────────────────────────────────
+function ProgressBar({value,color,height=4}) {
+  return (
+    <div style={{height,background:'rgba(255,255,255,0.07)',borderRadius:height,overflow:'hidden',flex:1}}>
+      <div style={{height:'100%',width:`${value}%`,background:color,borderRadius:height,transition:'width .4s ease'}}/>
+    </div>
+  );
+}
+
+// ── Goal Card ─────────────────────────────────────────────────────────────────
+function GoalCard({goal,onEdit,onToggle,onDelete}) {
+  const pc = PILLAR_COLORS[goal.pillar]||C.lime;
+  const priorityColor = {high:C.red,medium:C.amber,low:C.txt3}[goal.priority]||C.txt3;
+  return (
+    <div style={{background:goal.done?'rgba(255,255,255,0.02)':C.s2,borderRadius:10,padding:'12px 14px',border:`1px solid ${goal.done?C.border:`${pc}25`}`,transition:'border-color .15s',opacity:goal.done?0.65:1}}
+      onMouseEnter={e=>{if(!goal.done)e.currentTarget.style.borderColor=`${pc}50`}}
+      onMouseLeave={e=>{if(!goal.done)e.currentTarget.style.borderColor=`${pc}25`}}>
+      <div style={{display:'flex',alignItems:'flex-start',gap:10}}>
+        {/* Check button */}
+        <button onClick={()=>onToggle(goal.id)}
+          style={{width:22,height:22,borderRadius:'50%',background:goal.done?`${C.goal}20`:'rgba(255,255,255,0.05)',border:`2px solid ${goal.done?C.goal:'rgba(255,255,255,0.15)'}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0,marginTop:1,transition:'all .15s'}}>
+          {goal.done&&<Ic d={P.check} size={11} color={C.goal}/>}
+        </button>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:8,marginBottom:6}}>
+            <div style={{fontSize:13,fontWeight:600,color:goal.done?C.txt2:C.txt,textDecoration:goal.done?'line-through':'none',lineHeight:1.4}}>{goal.title}</div>
+            <div style={{display:'flex',gap:4,flexShrink:0}}>
+              <span style={{fontSize:9,fontWeight:800,color:priorityColor,background:`${priorityColor}15`,border:`1px solid ${priorityColor}30`,borderRadius:4,padding:'2px 6px',textTransform:'uppercase',letterSpacing:'0.05em'}}>{goal.priority}</span>
+              <span style={{fontSize:9,fontWeight:800,color:pc,background:`${pc}15`,border:`1px solid ${pc}30`,borderRadius:4,padding:'2px 6px'}}>{goal.pillar}</span>
+            </div>
+          </div>
+          {!goal.done && (
+            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:goal.notes?6:0}}>
+              <ProgressBar value={goal.progress} color={pc}/>
+              <span style={{fontSize:11,fontWeight:700,color:pc,minWidth:32,textAlign:'right'}}>{goal.progress}%</span>
+            </div>
+          )}
+          {goal.notes&&<div style={{fontSize:11,color:C.txt3,fontStyle:'italic',lineHeight:1.4}}>"{goal.notes}"</div>}
+        </div>
+        <div style={{display:'flex',gap:3,flexShrink:0}}>
+          <button onClick={()=>onEdit(goal)} style={{background:'transparent',border:'none',color:C.txt3,cursor:'pointer',padding:3,display:'flex',transition:'color .15s'}}
+            onMouseEnter={e=>e.currentTarget.style.color=C.lime}
+            onMouseLeave={e=>e.currentTarget.style.color=C.txt3}>
+            <Ic d={P.edit} size={13} color="currentColor"/>
+          </button>
+          <button onClick={()=>onDelete(goal.id)} style={{background:'transparent',border:'none',color:C.txt3,cursor:'pointer',padding:3,display:'flex',transition:'color .15s'}}
+            onMouseEnter={e=>e.currentTarget.style.color=C.red}
+            onMouseLeave={e=>e.currentTarget.style.color=C.txt3}>
+            <Ic d={P.trash} size={13} color="currentColor"/>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Add/Edit Goal Modal ───────────────────────────────────────────────────────
+function GoalModal({goal,playerName,onClose,onSave}) {
+  const [title,setTitle] = useState(goal?.title||'');
+  const [pillar,setPillar] = useState(goal?.pillar||'Technical');
+  const [priority,setPriority] = useState(goal?.priority||'medium');
+  const [progress,setProgress] = useState(goal?.progress||0);
+  const [notes,setNotes] = useState(goal?.notes||'');
+
+  const SUGGESTIONS = {
+    Technical:['Improve first touch','Passing accuracy 85%+','Crossing accuracy','Weak foot development','Ball mastery drills'],
+    Tactical:['Pressing triggers','Defensive shape','Transition speed','Positional awareness','Set piece delivery'],
+    Physical:['Sprint endurance','Strength training','Recovery sessions','Acceleration','Injury prevention'],
+    Psychological:['Leadership development','Communication on pitch','Mental resilience','Team mentoring','Video analysis'],
+  };
+
+  return (
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.82)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:200,padding:16,backdropFilter:'blur(4px)'}} onClick={onClose}>
+      <div className="fade-in" style={{background:C.s1,border:`1px solid ${C.border2}`,borderRadius:16,width:'100%',maxWidth:480,maxHeight:'88vh',display:'flex',flexDirection:'column',boxShadow:'0 24px 64px rgba(0,0,0,0.7)',overflow:'hidden'}} onClick={e=>e.stopPropagation()}>
+        <div style={{padding:'14px 18px',borderBottom:`1px solid ${C.border}`,display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0,background:'rgba(182,255,43,0.04)'}}>
+          <div>
+            <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:17,color:C.lime}}>{goal?'Edit Goal':'Add IDP Goal'}</div>
+            <div style={{fontSize:11,color:C.txt3,marginTop:2}}>For: <b style={{color:C.txt}}>{playerName}</b></div>
+          </div>
+          <button onClick={onClose} style={{background:'transparent',border:'none',color:C.txt2,cursor:'pointer',display:'flex'}}><Ic d={P.x} size={18} color="currentColor"/></button>
+        </div>
+        <div style={{flex:1,overflowY:'auto',padding:'16px 18px',display:'flex',flexDirection:'column',gap:14}}>
+          {/* Pillar */}
+          <div>
+            <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:7}}>Training Pillar</div>
+            <div style={{display:'flex',gap:6}}>
+              {PILLARS.map(p=>(
+                <button key={p} onClick={()=>{setPillar(p);setTitle('');}}
+                  style={{flex:1,padding:'7px 4px',background:pillar===p?`${PILLAR_COLORS[p]}18`:'transparent',border:`1px solid ${pillar===p?PILLAR_COLORS[p]+'50':C.border}`,borderRadius:7,fontSize:11,fontWeight:700,color:pillar===p?PILLAR_COLORS[p]:C.txt2,cursor:'pointer',transition:'all .12s',textAlign:'center'}}>
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
+          {/* Title */}
+          <div>
+            <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:7}}>Goal</div>
+            <input value={title} onChange={e=>setTitle(e.target.value)} placeholder="Describe the development goal…"
+              style={{width:'100%',padding:'9px 12px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:8,color:C.txt,fontSize:13,outline:'none'}}/>
+            <div style={{display:'flex',flexWrap:'wrap',gap:5,marginTop:8}}>
+              {(SUGGESTIONS[pillar]||[]).map(s=>(
+                <button key={s} onClick={()=>setTitle(s)}
+                  style={{padding:'3px 9px',background:title===s?`${PILLAR_COLORS[pillar]}18`:C.s2,border:`1px solid ${title===s?PILLAR_COLORS[pillar]+'40':C.border}`,borderRadius:5,fontSize:11,fontWeight:600,color:title===s?PILLAR_COLORS[pillar]:C.txt2,cursor:'pointer',transition:'all .12s'}}>
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+          {/* Priority + Progress */}
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+            <div>
+              <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:7}}>Priority</div>
+              <div style={{display:'flex',gap:5}}>
+                {['high','medium','low'].map(p=>{
+                  const pc = {high:C.red,medium:C.amber,low:C.txt3}[p];
+                  return (
+                    <button key={p} onClick={()=>setPriority(p)}
+                      style={{flex:1,padding:'6px 4px',background:priority===p?`${pc}18`:'transparent',border:`1px solid ${priority===p?pc+'50':C.border}`,borderRadius:7,fontSize:11,fontWeight:700,color:priority===p?pc:C.txt2,cursor:'pointer',transition:'all .12s',textTransform:'capitalize',textAlign:'center'}}>
+                      {p}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div>
+              <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:7}}>Progress: {progress}%</div>
+              <input type="range" min={0} max={100} step={5} value={progress} onChange={e=>setProgress(parseInt(e.target.value))}
+                style={{width:'100%',accentColor:PILLAR_COLORS[pillar]||C.lime}}/>
+            </div>
+          </div>
+          {/* Notes */}
+          <div>
+            <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:7}}>Coach Notes</div>
+            <textarea value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Coaching observations, context, next steps…"
+              style={{width:'100%',height:70,background:C.s2,border:`1px solid ${C.border2}`,borderRadius:8,color:C.txt,fontSize:12,lineHeight:1.6,padding:'9px 12px',resize:'none',outline:'none'}}/>
+          </div>
+        </div>
+        <div style={{padding:'12px 18px',borderTop:`1px solid ${C.border}`,flexShrink:0}}>
+          <button onClick={()=>{if(title.trim())onSave({...goal,title,pillar,priority,progress,notes,done:goal?.done||false});}}
+            disabled={!title.trim()}
+            style={{width:'100%',padding:'11px',background:title.trim()?`linear-gradient(135deg,${C.lime},#68B42E)`:'rgba(255,255,255,0.07)',border:'none',borderRadius:10,fontSize:14,fontWeight:800,color:title.trim()?C.green:C.txt3,cursor:title.trim()?'pointer':'not-allowed',fontFamily:'var(--font-b)',transition:'opacity .15s'}}>
+            {goal?'Update Goal':'Add Goal'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Player Row ────────────────────────────────────────────────────────────────
+function PlayerRow({player,expanded,onToggle,onAddGoal,onEditGoal,onToggleGoal,onDeleteGoal}) {
+  const totalGoals = player.goals.length;
+  const doneGoals = player.goals.filter(g=>g.done).length;
+  const pct = totalGoals>0?Math.round((doneGoals/totalGoals)*100):0;
+  const avgProgress = totalGoals>0?Math.round(player.goals.reduce((s,g)=>s+g.progress,0)/totalGoals):0;
+  const pillarCounts = {};
+  player.goals.forEach(g=>{pillarCounts[g.pillar]=(pillarCounts[g.pillar]||0)+1;});
+
+  return (
+    <div style={{background:C.s1,borderRadius:12,border:`1px solid ${expanded?'rgba(182,255,43,0.2)':C.border}`,overflow:'hidden',transition:'border-color .15s'}}>
+      {/* Player header row */}
+      <div style={{display:'flex',alignItems:'center',gap:12,padding:'12px 16px',cursor:'pointer',transition:'background .12s'}}
+        onClick={onToggle}
+        onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.02)'}
+        onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+        {/* Expand chevron */}
+        <Ic d={expanded?P.chevD:P.chevR} size={14} color={C.txt3}/>
+        {/* Avatar */}
+        <div style={{width:36,height:36,borderRadius:'50%',background:'rgba(182,255,43,0.1)',border:'1.5px solid rgba(182,255,43,0.25)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+          <span style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:12,color:C.lime}}>{player.name.split(' ').map(x=>x[0]).join('')}</span>
+        </div>
+        {/* Name + pos */}
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{display:'flex',alignItems:'center',gap:7}}>
+            <span style={{fontSize:14,fontWeight:700,color:expanded?C.lime:C.txt,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{player.name}</span>
+            <span style={{fontSize:10,color:C.txt3,fontWeight:600}}>#{player.num}</span>
+            <span style={{fontSize:10,fontWeight:700,color:C.txt2,background:C.s2,border:`1px solid ${C.border}`,borderRadius:4,padding:'1px 6px'}}>{player.pos}</span>
+          </div>
+          {/* Pillar pills */}
+          <div style={{display:'flex',gap:4,marginTop:4,flexWrap:'wrap'}}>
+            {Object.entries(pillarCounts).map(([p,n])=>(
+              <span key={p} style={{fontSize:9,fontWeight:700,color:PILLAR_COLORS[p],background:`${PILLAR_COLORS[p]}12`,border:`1px solid ${PILLAR_COLORS[p]}25`,borderRadius:3,padding:'1px 5px'}}>{p.slice(0,4).toUpperCase()} ×{n}</span>
+            ))}
+          </div>
+        </div>
+        {/* Stats */}
+        <div style={{display:'flex',gap:16,alignItems:'center',flexShrink:0}}>
+          <div style={{textAlign:'center',minWidth:48}}>
+            <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:18,color:pct>=80?C.goal:pct>=50?C.amber:C.red,lineHeight:1}}>{pct}%</div>
+            <div style={{fontSize:9,color:C.txt3,fontWeight:600,marginTop:2}}>COMPLETE</div>
+          </div>
+          <div style={{textAlign:'center',minWidth:40}}>
+            <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:18,color:C.txt2,lineHeight:1}}>{doneGoals}/{totalGoals}</div>
+            <div style={{fontSize:9,color:C.txt3,fontWeight:600,marginTop:2}}>GOALS</div>
+          </div>
+          <div style={{width:80}}>
+            <div style={{display:'flex',alignItems:'center',gap:5}}>
+              <ProgressBar value={avgProgress} color={avgProgress>=80?C.goal:avgProgress>=50?C.amber:C.red}/>
+              <span style={{fontSize:10,fontWeight:700,color:C.txt2,minWidth:28,textAlign:'right'}}>{avgProgress}%</span>
+            </div>
+            <div style={{fontSize:9,color:C.txt3,fontWeight:600,marginTop:3}}>AVG PROGRESS</div>
+          </div>
+          <div style={{textAlign:'center',minWidth:44}}>
+            <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:18,color:player.wellness>=80?C.goal:C.amber,lineHeight:1}}>{player.wellness}%</div>
+            <div style={{fontSize:9,color:C.txt3,fontWeight:600,marginTop:2}}>WELLNESS</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Expanded goals */}
+      {expanded && (
+        <div style={{borderTop:`1px solid ${C.border}`,padding:'12px 16px',background:'rgba(0,0,0,0.15)'}}>
+          {/* Overall progress bar */}
+          <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12,padding:'8px 12px',background:'rgba(182,255,43,0.04)',borderRadius:8,border:'1px solid rgba(182,255,43,0.1)'}}>
+            <span style={{fontSize:11,color:C.txt3,fontWeight:600,whiteSpace:'nowrap'}}>IDP Progress</span>
+            <ProgressBar value={pct} color={`linear-gradient(90deg,${C.lime},#68B42E)`} height={6}/>
+            <span style={{fontSize:12,fontWeight:800,color:C.lime,minWidth:36,textAlign:'right'}}>{pct}%</span>
+            <span style={{fontSize:11,color:C.txt3,whiteSpace:'nowrap'}}>{doneGoals}/{totalGoals} complete</span>
+          </div>
+
+          {/* Goals grid */}
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:10}}>
+            {player.goals.map(goal=>(
+              <GoalCard key={goal.id} goal={goal}
+                onEdit={g=>onEditGoal(player.id,g)}
+                onToggle={gid=>onToggleGoal(player.id,gid)}
+                onDelete={gid=>onDeleteGoal(player.id,gid)}/>
+            ))}
+          </div>
+
+          {/* Add goal button */}
+          <button onClick={()=>onAddGoal(player.id)}
+            style={{display:'flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(182,255,43,0.08)',border:'1px solid rgba(182,255,43,0.2)',borderRadius:8,fontSize:12,fontWeight:700,color:C.lime,cursor:'pointer',transition:'background .15s'}}
+            onMouseEnter={e=>e.currentTarget.style.background='rgba(182,255,43,0.15)'}
+            onMouseLeave={e=>e.currentTarget.style.background='rgba(182,255,43,0.08)'}>
+            <Ic d={P.plus} size={14} color={C.lime}/> Add IDP Goal
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Squad Overview bar ────────────────────────────────────────────────────────
+function SquadOverview({players}) {
+  const totalGoals = players.reduce((t,p)=>t+p.goals.length,0);
+  const doneGoals = players.reduce((t,p)=>t+p.goals.filter(g=>g.done).length,0);
+  const pct = Math.round((doneGoals/totalGoals)*100);
+  const pillarTotals = {};
+  players.forEach(p=>p.goals.forEach(g=>{pillarTotals[g.pillar]=(pillarTotals[g.pillar]||0)+1;}));
+  const maxPillar = Object.entries(pillarTotals).sort((a,b)=>b[1]-a[1])[0]?.[0]||'Technical';
+
+  return (
+    <div style={{background:`linear-gradient(135deg,${C.greenDark},${C.green})`,borderRadius:14,padding:'16px 20px',marginBottom:16,border:'1px solid rgba(182,255,43,0.18)',display:'flex',gap:20,alignItems:'center',flexWrap:'wrap'}}>
+      <div>
+        <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:28,color:C.lime,lineHeight:1}}>{pct}%</div>
+        <div style={{fontSize:11,color:'rgba(255,255,255,0.5)',fontWeight:600,marginTop:3,textTransform:'uppercase',letterSpacing:'0.06em'}}>Squad IDP Complete</div>
+      </div>
+      <div style={{flex:1,minWidth:160}}>
+        <div style={{height:8,background:'rgba(255,255,255,0.1)',borderRadius:4,overflow:'hidden',marginBottom:6}}>
+          <div style={{height:'100%',width:`${pct}%`,background:`linear-gradient(90deg,${C.lime},#68B42E)`,borderRadius:4,transition:'width .5s ease'}}/>
+        </div>
+        <div style={{fontSize:11,color:'rgba(255,255,255,0.4)'}}>{doneGoals} of {totalGoals} goals achieved this season</div>
+      </div>
+      <div style={{display:'flex',gap:16,flexShrink:0}}>
+        {[
+          {label:'Players',value:players.length,color:C.txt},
+          {label:'Total Goals',value:totalGoals,color:C.sky},
+          {label:'Achieved',value:doneGoals,color:C.goal},
+          {label:'Focus Pillar',value:maxPillar.slice(0,4),color:PILLAR_COLORS[maxPillar]||C.lime},
+        ].map(({label,value,color})=>(
+          <div key={label} style={{textAlign:'center'}}>
+            <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:20,color,lineHeight:1}}>{value}</div>
+            <div style={{fontSize:9.5,color:'rgba(255,255,255,0.4)',fontWeight:600,marginTop:3,textTransform:'uppercase',letterSpacing:'0.04em',whiteSpace:'nowrap'}}>{label}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── App ───────────────────────────────────────────────────────────────────────
+function App() {
+  const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{"filter":"all","sortBy":"name"}/*EDITMODE-END*/;
+  const [tweaks,setTweak] = window.useTweaks(TWEAK_DEFAULTS);
+
+  const [players,setPlayers] = useState(PLAYERS);
+  const [expanded,setExpanded] = useState({1:false,2:false,3:false,4:true,5:true,6:false,7:false,8:false});
+  const [search,setSearch] = useState('');
+  const [pillarFilter,setPillarFilter] = useState('All');
+  const [modal,setModal] = useState(null); // {playerId, goal?}
+
+  const toggleExpand = useCallback(id=>{
+    setExpanded(prev=>({...prev,[id]:!prev[id]}));
+  },[]);
+
+  const handleAddGoal = useCallback(playerId=>{
+    setModal({playerId,goal:null});
+  },[]);
+
+  const handleEditGoal = useCallback((playerId,goal)=>{
+    setModal({playerId,goal});
+  },[]);
+
+  const handleSaveGoal = useCallback((newGoal)=>{
+    if(!modal) return;
+    setPlayers(prev=>prev.map(p=>{
+      if(p.id!==modal.playerId) return p;
+      if(modal.goal) {
+        return {...p,goals:p.goals.map(g=>g.id===modal.goal.id?{...newGoal,id:g.id}:g)};
+      } else {
+        return {...p,goals:[...p.goals,{...newGoal,id:Date.now()}]};
+      }
+    }));
+    setModal(null);
+  },[modal]);
+
+  const handleToggleGoal = useCallback((playerId,goalId)=>{
+    setPlayers(prev=>prev.map(p=>{
+      if(p.id!==playerId) return p;
+      return {...p,goals:p.goals.map(g=>g.id===goalId?{...g,done:!g.done,progress:g.done?g.progress:100}:g)};
+    }));
+  },[]);
+
+  const handleDeleteGoal = useCallback((playerId,goalId)=>{
+    setPlayers(prev=>prev.map(p=>{
+      if(p.id!==playerId) return p;
+      return {...p,goals:p.goals.filter(g=>g.id!==goalId)};
+    }));
+  },[]);
+
+  const filtered = players.filter(p=>{
+    const q = search.toLowerCase();
+    const matchSearch = !q||p.name.toLowerCase().includes(q)||p.pos.toLowerCase().includes(q);
+    const matchPillar = pillarFilter==='All'||p.goals.some(g=>g.pillar===pillarFilter);
+    return matchSearch && matchPillar;
+  }).sort((a,b)=>{
+    if(tweaks.sortBy==='name') return a.name.localeCompare(b.name);
+    if(tweaks.sortBy==='progress') {
+      const pa = a.goals.length?Math.round(a.goals.reduce((s,g)=>s+g.progress,0)/a.goals.length):0;
+      const pb = b.goals.length?Math.round(b.goals.reduce((s,g)=>s+g.progress,0)/b.goals.length):0;
+      return pb-pa;
+    }
+    if(tweaks.sortBy==='wellness') return b.wellness-a.wellness;
+    return 0;
+  });
+
+  const modalPlayer = modal?players.find(p=>p.id===modal.playerId):null;
+
+  return (
+    <div style={{height:'100vh',display:'flex',flexDirection:'column',background:C.bg,overflow:'hidden'}}>
+      <Header onBack={()=>{try{window.location.href='tfb-dashboard.html'}catch(e){}}}/>
+
+      {/* Toolbar */}
+      <div style={{background:C.s1,borderBottom:`1px solid ${C.border}`,padding:'10px 20px',display:'flex',alignItems:'center',gap:10,flexShrink:0}}>
+        {/* Search */}
+        <div style={{display:'flex',alignItems:'center',gap:7,background:C.s2,border:`1px solid ${C.border2}`,borderRadius:9,padding:'7px 12px',flex:1,maxWidth:280}}>
+          <Ic d={P.search} size={14} color={C.txt3}/>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search players…"
+            style={{background:'transparent',border:'none',outline:'none',fontSize:13,color:C.txt,flex:1}}/>
+        </div>
+        {/* Pillar filter */}
+        <div style={{display:'flex',gap:5}}>
+          {['All',...PILLARS].map(p=>(
+            <button key={p} onClick={()=>setPillarFilter(p)}
+              style={{padding:'5px 12px',background:pillarFilter===p?(p==='All'?'rgba(182,255,43,0.12)':`${PILLAR_COLORS[p]}18`):'transparent',border:`1px solid ${pillarFilter===p?(p==='All'?'rgba(182,255,43,0.35)':`${PILLAR_COLORS[p]}45`):C.border}`,borderRadius:6,fontSize:11,fontWeight:700,color:pillarFilter===p?(p==='All'?C.lime:PILLAR_COLORS[p]):C.txt2,cursor:'pointer',transition:'all .12s'}}>
+              {p==='All'?'All Pillars':p}
+            </button>
+          ))}
+        </div>
+        <div style={{flex:1}}/>
+        {/* Sort */}
+        <div style={{display:'flex',gap:4,alignItems:'center'}}>
+          <span style={{fontSize:11,color:C.txt3}}>Sort:</span>
+          {[['name','Name'],['progress','Progress'],['wellness','Wellness']].map(([k,l])=>(
+            <button key={k} onClick={()=>setTweak('sortBy',k)}
+              style={{padding:'4px 10px',background:tweaks.sortBy===k?'rgba(182,255,43,0.1)':'transparent',border:`1px solid ${tweaks.sortBy===k?'rgba(182,255,43,0.3)':C.border}`,borderRadius:5,fontSize:11,fontWeight:700,color:tweaks.sortBy===k?C.lime:C.txt3,cursor:'pointer',transition:'all .12s'}}>
+              {l}
+            </button>
+          ))}
+        </div>
+        {/* Expand/collapse all */}
+        <button onClick={()=>setExpanded(Object.fromEntries(players.map(p=>[p.id,true])))}
+          style={{padding:'5px 10px',background:'transparent',border:`1px solid ${C.border2}`,borderRadius:6,fontSize:11,fontWeight:600,color:C.txt2,cursor:'pointer',transition:'color .15s'}}
+          onMouseEnter={e=>e.currentTarget.style.color=C.txt}
+          onMouseLeave={e=>e.currentTarget.style.color=C.txt2}>Expand All</button>
+        <button onClick={()=>setExpanded(Object.fromEntries(players.map(p=>[p.id,false])))}
+          style={{padding:'5px 10px',background:'transparent',border:`1px solid ${C.border2}`,borderRadius:6,fontSize:11,fontWeight:600,color:C.txt2,cursor:'pointer',transition:'color .15s'}}
+          onMouseEnter={e=>e.currentTarget.style.color=C.txt}
+          onMouseLeave={e=>e.currentTarget.style.color=C.txt2}>Collapse All</button>
+      </div>
+
+      {/* Main */}
+      <div style={{flex:1,overflowY:'auto',padding:'16px 20px'}}>
+        <SquadOverview players={players}/>
+        <div style={{display:'flex',flexDirection:'column',gap:8}}>
+          {filtered.map(player=>(
+            <PlayerRow
+              key={player.id}
+              player={player}
+              expanded={!!expanded[player.id]}
+              onToggle={()=>toggleExpand(player.id)}
+              onAddGoal={handleAddGoal}
+              onEditGoal={handleEditGoal}
+              onToggleGoal={handleToggleGoal}
+              onDeleteGoal={handleDeleteGoal}
+            />
+          ))}
+          {filtered.length===0&&(
+            <div style={{padding:'40px',textAlign:'center',color:C.txt3,fontSize:14}}>No players match your search</div>
+          )}
+        </div>
+      </div>
+
+      {/* Goal modal */}
+      {modal&&modalPlayer&&(
+        <GoalModal
+          goal={modal.goal}
+          playerName={modalPlayer.name}
+          onClose={()=>setModal(null)}
+          onSave={handleSaveGoal}
+        />
+      )}
+
+      <TweaksPanel>
+        <TweakSection label="View"/>
+        <TweakSelect label="Sort By" value={tweaks.sortBy} options={['name','progress','wellness']} onChange={v=>setTweak('sortBy',v)}/>
+      </TweaksPanel>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

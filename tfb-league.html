@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TFB – League</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="tfb-responsive.jsx"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--lime:#B6FF2B;--green:#0F3D2E;--green-dark:#0A2E20;--bg:#111418;--s1:#1C2128;--s2:#242B33;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);--txt:#F0F2F4;--txt2:rgba(240,242,244,0.5);--txt3:rgba(240,242,244,0.28);--goal:#2ED47A;--amber:#FFB020;--red:#E5533D;--sky:#3FA9F5;--font-d:'Barlow Condensed',sans-serif;--font-b:'Barlow',sans-serif;--hh:54px;}
+html,body,#root{height:100%;overflow:hidden}body{font-family:var(--font-b);background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased}
+button,input,select{font-family:var(--font-b);color:inherit}::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:3px}
+</style>
+</head>
+<body><div id="root"></div>
+<script type="text/babel">
+const {useState}=React;
+const C={lime:'#B6FF2B',green:'#0F3D2E',greenDark:'#0A2E20',bg:'#111418',s1:'#1C2128',s2:'#242B33',border:'rgba(255,255,255,0.07)',border2:'rgba(255,255,255,0.13)',txt:'#F0F2F4',txt2:'rgba(240,242,244,0.5)',txt3:'rgba(240,242,244,0.28)',goal:'#2ED47A',amber:'#FFB020',red:'#E5533D',sky:'#3FA9F5'};
+const Ic=({d,size=16,color='currentColor',stroke=2,fill='none'})=>(<svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>{Array.isArray(d)?d.map((p,i)=><path key={i} d={p}/>):<path d={d}/> }</svg>);
+const P={back:'M15 18l-6-6 6-6',trophy:'M6 9H4.5a2.5 2.5 0 0 1 0-5H6m12 5h1.5a2.5 2.5 0 0 0 0-5H18m-6 14v-4m-4 4h8M12 9a6 6 0 1 1 0-12 6 6 0 0 1 0 12',chevD:'M6 9l6 6 6-6'};
+
+const STANDINGS=[
+  {pos:1,team:'Hume City',p:7,w:6,d:0,l:1,gf:18,ga:5,gd:13,pts:18,form:['W','W','W','D','W'],current:false},
+  {pos:2,team:'Malvern City',p:6,w:4,d:1,l:1,gf:12,ga:4,gd:8,pts:13,form:['W','W','D','L','W'],current:true},
+  {pos:3,team:'Green Gully',p:7,w:4,d:0,l:3,gf:11,ga:9,gd:2,pts:12,form:['W','L','W','W','L'],current:false},
+  {pos:4,team:'Bulleen Lions',p:7,w:3,d:2,l:2,gf:10,ga:8,gd:2,pts:11,form:['D','W','L','D','W'],current:false},
+  {pos:5,team:'NorthCote City',p:7,w:3,d:1,l:3,gf:9,ga:10,gd:-1,pts:10,form:['L','W','W','L','D'],current:false},
+  {pos:6,team:'Box Hill',p:7,w:2,d:3,l:2,gf:8,ga:8,gd:0,pts:9,form:['D','D','W','L','D'],current:false},
+  {pos:7,team:'Glen Eira',p:7,w:2,d:2,l:3,gf:7,ga:10,gd:-3,pts:8,form:['L','D','W','D','L'],current:false},
+  {pos:8,team:'Bentleigh Greens',p:6,w:2,d:1,l:3,gf:7,ga:11,gd:-4,pts:7,form:['L','W','L','D','L'],current:false},
+  {pos:9,team:'South Melbourne',p:7,w:1,d:2,l:4,gf:6,ga:13,gd:-7,pts:5,form:['L','L','D','W','L'],current:false},
+  {pos:10,team:'Avondale',p:6,w:1,d:0,l:5,gf:4,ga:14,gd:-10,pts:3,form:['L','L','W','L','L'],current:false},
+];
+
+const RESULTS=[
+  {round:6,date:'26 Apr',home:'Malvern City',away:'Hume City',score:'2–1',result:'W',scorers:'D. Kowalski 24\', O. Petersen 67\''},
+  {round:5,date:'19 Apr',home:'NorthCote',away:'Malvern City',score:'1–1',result:'D',scorers:'B. Tremblay 55\''},
+  {round:4,date:'12 Apr',home:'Malvern City',away:'Box Hill',score:'3–0',result:'W',scorers:'D. Kowalski 12\', 34\' R. Al-Farsi 78\''},
+  {round:3,date:'5 Apr',home:'Glen Eira',away:'Malvern City',score:'2–0',result:'L',scorers:'—'},
+  {round:2,date:'29 Mar',home:'Malvern City',away:'South Melbourne',score:'2–0',result:'W',scorers:'D. Kowalski 45\', O. Petersen 88\''},
+  {round:1,date:'22 Mar',home:'Bentleigh',away:'Malvern City',score:'1–1',result:'D',scorers:'R. Al-Farsi 33\''},
+];
+
+const FIXTURES=[
+  {round:7,date:'Sat 3 May',home:'Malvern City',away:'Bulleen Lions',kickoff:'2:00 PM',venue:'Tally Ho Park'},
+  {round:8,date:'Sat 10 May',home:'Green Gully',away:'Malvern City',kickoff:'11:00 AM',venue:'Green Gully SC'},
+  {round:9,date:'Sat 17 May',home:'Malvern City',away:'NorthCote City',kickoff:'3:00 PM',venue:'Tally Ho Park'},
+  {round:10,date:'Sat 24 May',home:'Hume City',away:'Malvern City',kickoff:'4:00 PM',venue:'Cooper St Reserve'},
+];
+
+function Header({onBack}){return(<header style={{height:'var(--hh)',background:`linear-gradient(90deg,${C.greenDark},${C.green})`,borderBottom:'1px solid rgba(182,255,43,0.18)',display:'flex',alignItems:'center',padding:'0 20px',gap:12,flexShrink:0,zIndex:50}}>
+  <button onClick={onBack} style={{display:'flex',alignItems:'center',gap:6,padding:'6px 10px',background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,color:'rgba(255,255,255,0.7)',fontSize:12,fontWeight:600,cursor:'pointer',transition:'all .15s'}} onMouseEnter={e=>{e.currentTarget.style.background='rgba(182,255,43,0.12)';e.currentTarget.style.color='#B6FF2B'}} onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,0.07)';e.currentTarget.style.color='rgba(255,255,255,0.7)'}}>
+    <Ic d={P.back} size={14} color="currentColor"/> Dashboard
+  </button>
+  <div style={{width:1,height:24,background:'rgba(255,255,255,0.12)'}}/>
+  <svg width="28" height="28" viewBox="0 0 40 40" fill="none"><polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="#0F3D2E" stroke="#B6FF2B" strokeWidth="1.5"/><text x="20" y="26" textAnchor="middle" fill="#B6FF2B" fontFamily="Barlow Condensed" fontWeight="900" fontSize="13">TFB</text></svg>
+  <div><div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:17,color:'#fff',letterSpacing:'0.04em',lineHeight:1}}>LEAGUE</div><div style={{fontSize:9.5,color:'rgba(182,255,43,0.65)',fontWeight:700,letterSpacing:'0.1em'}}>NPL Victoria · U18 Men · 2025</div></div>
+</header>);}
+
+const formColor={W:C.goal,D:C.amber,L:C.red};
+
+function App(){
+  const [tab,setTab]=useState('standings');
+  return(<div style={{height:'100vh',display:'flex',flexDirection:'column',background:C.bg,overflow:'hidden'}}>
+    <Header onBack={()=>{try{window.location.href='tfb-dashboard.html'}catch(e){}}}/>
+    <div style={{background:C.s1,borderBottom:`1px solid ${C.border}`,padding:'0 20px',display:'flex',gap:0,flexShrink:0}}>
+      {[['standings','Standings'],['results','Results'],['fixtures','Upcoming Fixtures'],['stats','Top Scorers']].map(([t,l])=>(
+        <button key={t} onClick={()=>setTab(t)} style={{padding:'11px 18px',background:'transparent',border:'none',borderBottom:`2px solid ${tab===t?C.lime:'transparent'}`,color:tab===t?C.lime:C.txt2,fontSize:13,fontWeight:700,cursor:'pointer',transition:'color .15s,border-color .15s'}}>{l}</button>
+      ))}
+    </div>
+    <div style={{flex:1,overflowY:'auto',padding:'20px'}}>
+      {/* My team summary */}
+      <div style={{background:`linear-gradient(135deg,${C.greenDark},${C.green})`,borderRadius:14,padding:'16px 20px',border:'1px solid rgba(182,255,43,0.2)',marginBottom:18}}>
+        <div style={{display:'flex',gap:20,alignItems:'center',flexWrap:'wrap'}}>
+          <div style={{textAlign:'center'}}>
+            <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:40,color:C.lime,lineHeight:1}}>2nd</div>
+            <div style={{fontSize:10,color:'rgba(255,255,255,0.4)',fontWeight:600,marginTop:3}}>POSITION</div>
+          </div>
+          {[['13','Points'],['4','Wins'],['1','Draws'],['1','Loss'],['12','GF'],['4','GA']].map(([v,l])=>(
+            <div key={l} style={{textAlign:'center'}}>
+              <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:24,color:'#fff',lineHeight:1}}>{v}</div>
+              <div style={{fontSize:10,color:'rgba(255,255,255,0.4)',fontWeight:600,marginTop:3,textTransform:'uppercase',letterSpacing:'0.04em'}}>{l}</div>
+            </div>
+          ))}
+          <div>
+            <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.4)',marginBottom:5,textTransform:'uppercase',letterSpacing:'0.06em'}}>Recent Form</div>
+            <div style={{display:'flex',gap:4}}>
+              {['W','W','D','L','W'].map((r,i)=>(
+                <div key={i} style={{width:24,height:24,borderRadius:5,background:`${formColor[r]}20`,border:`1px solid ${formColor[r]}40`,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                  <span style={{fontSize:11,fontWeight:900,color:formColor[r]}}>{r}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Standings table */}
+      {tab==='standings'&&(<div style={{background:C.s1,borderRadius:12,border:`1px solid ${C.border}`,overflow:'hidden'}}>
+        <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
+          <thead><tr style={{background:C.s2}}>
+            {['#','Team','P','W','D','L','GF','GA','GD','Pts','Form'].map(h=>(
+              <th key={h} style={{padding:'10px 12px',textAlign:h==='Team'?'left':'center',color:C.txt3,fontWeight:700,fontSize:10,textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}}>{h}</th>
+            ))}
+          </tr></thead>
+          <tbody>{STANDINGS.map((row,i)=>(
+            <tr key={i} style={{borderTop:`1px solid ${C.border}`,background:row.current?'rgba(182,255,43,0.04)':'transparent',transition:'background .12s'}} onMouseEnter={e=>e.currentTarget.style.background=row.current?'rgba(182,255,43,0.08)':'rgba(255,255,255,0.02)'} onMouseLeave={e=>e.currentTarget.style.background=row.current?'rgba(182,255,43,0.04)':'transparent'}>
+              <td style={{padding:'11px 12px',textAlign:'center'}}><span style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:15,color:row.pos<=2?C.lime:row.pos<=4?C.txt:C.txt3}}>{row.pos}</span></td>
+              <td style={{padding:'11px 12px',textAlign:'left'}}><div style={{display:'flex',alignItems:'center',gap:7}}>
+                {row.current&&<div style={{width:6,height:6,borderRadius:'50%',background:C.lime,flexShrink:0}}/>}
+                <span style={{fontSize:13,fontWeight:row.current?800:600,color:row.current?C.lime:C.txt}}>{row.team}</span>
+                {row.current&&<span style={{fontSize:9,color:C.lime,background:'rgba(182,255,43,0.12)',border:'1px solid rgba(182,255,43,0.25)',borderRadius:3,padding:'1px 5px',fontWeight:700}}>YOU</span>}
+              </div></td>
+              {[row.p,row.w,row.d,row.l,row.gf,row.ga].map((v,j)=>(
+                <td key={j} style={{padding:'11px 8px',textAlign:'center',color:C.txt2,fontSize:12}}>{v}</td>
+              ))}
+              <td style={{padding:'11px 8px',textAlign:'center'}}><span style={{fontSize:12,color:row.gd>0?C.goal:row.gd<0?C.red:C.txt3,fontWeight:600}}>{row.gd>0?`+${row.gd}`:row.gd}</span></td>
+              <td style={{padding:'11px 8px',textAlign:'center'}}><span style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:16,color:row.current?C.lime:C.txt}}>{row.pts}</span></td>
+              <td style={{padding:'11px 12px'}}><div style={{display:'flex',gap:3,justifyContent:'center'}}>
+                {row.form.map((r,j)=>(<div key={j} style={{width:18,height:18,borderRadius:3,background:`${formColor[r]}18`,border:`1px solid ${formColor[r]}35`,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                  <span style={{fontSize:9,fontWeight:800,color:formColor[r]}}>{r}</span>
+                </div>))}
+              </div></td>
+            </tr>
+          ))}</tbody>
+        </table>
+        <div style={{padding:'8px 14px',borderTop:`1px solid ${C.border}`,display:'flex',gap:12,fontSize:10,color:C.txt3}}>
+          <span style={{color:C.lime}}>■</span> Promotion zone
+          <span>Top 2 = finals</span>
+          <span>Updated after Round 6</span>
+        </div>
+      </div>)}
+
+      {/* Results */}
+      {tab==='results'&&(<div style={{display:'flex',flexDirection:'column',gap:8}}>
+        {RESULTS.map((r,i)=>{
+          const rc=r.result==='W'?C.goal:r.result==='D'?C.amber:C.red;
+          return(<div key={i} style={{background:C.s1,borderRadius:12,border:`1px solid ${C.border}`,padding:'14px 18px',display:'flex',alignItems:'center',gap:14}}>
+            <div style={{width:36,height:36,borderRadius:8,background:`${rc}15`,border:`1px solid ${rc}30`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+              <span style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:18,color:rc}}>{r.result}</span>
+            </div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:4}}>
+                <span style={{fontSize:13.5,fontWeight:700,color:C.txt}}>{r.home} <span style={{color:C.txt3,fontWeight:400}}>vs</span> {r.away}</span>
+                <span style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:18,color:rc}}>{r.score}</span>
+              </div>
+              <div style={{fontSize:11,color:C.txt3}}>Round {r.round} · {r.date}{r.scorers&&r.scorers!=='—'?` · ⚽ ${r.scorers}`:''}</div>
+            </div>
+          </div>);
+        })}
+      </div>)}
+
+      {/* Fixtures */}
+      {tab==='fixtures'&&(<div style={{display:'flex',flexDirection:'column',gap:8}}>
+        {FIXTURES.map((f,i)=>(
+          <div key={i} style={{background:i===0?`linear-gradient(135deg,${C.greenDark},${C.green})`:C.s1,borderRadius:12,border:`1px solid ${i===0?'rgba(182,255,43,0.25)':C.border}`,padding:'16px 20px'}}>
+            <div style={{fontSize:10,fontWeight:700,color:i===0?'rgba(182,255,43,0.7)':C.txt3,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:10}}>Round {f.round} · {f.date} · {f.kickoff}</div>
+            <div style={{display:'flex',alignItems:'center',gap:12}}>
+              <div style={{flex:1,textAlign:'right'}}>
+                <div style={{fontSize:15,fontWeight:800,color:f.home==='Malvern City'?(i===0?C.lime:C.lime):C.txt}}>{f.home}</div>
+                {f.home==='Malvern City'&&<div style={{fontSize:10,color:i===0?'rgba(255,255,255,0.5)':C.txt3}}>HOME</div>}
+              </div>
+              <div style={{padding:'6px 14px',background:'rgba(0,0,0,0.3)',borderRadius:8,fontFamily:'var(--font-d)',fontWeight:900,fontSize:20,color:i===0?C.lime:C.txt2,letterSpacing:2}}>VS</div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:15,fontWeight:800,color:f.away==='Malvern City'?(i===0?C.lime:C.lime):C.txt}}>{f.away}</div>
+                {f.away==='Malvern City'&&<div style={{fontSize:10,color:i===0?'rgba(255,255,255,0.5)':C.txt3}}>AWAY</div>}
+              </div>
+            </div>
+            <div style={{marginTop:8,fontSize:11,color:i===0?'rgba(255,255,255,0.4)':C.txt3}}>{f.venue}</div>
+            {i===0&&<div style={{marginTop:10}}><button onClick={()=>{try{window.location.href='tfb-gameday.html'}catch(e){}}} style={{padding:'7px 16px',background:`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:8,fontSize:12,fontWeight:800,color:C.green,cursor:'pointer'}}>⚡ Open Gameday</button></div>}
+          </div>
+        ))}
+      </div>)}
+
+      {/* Top scorers */}
+      {tab==='stats'&&(<div style={{background:C.s1,borderRadius:12,border:`1px solid ${C.border}`,overflow:'hidden'}}>
+        <div style={{padding:'12px 16px',borderBottom:`1px solid ${C.border}`,fontSize:13,fontWeight:700,color:C.txt}}>Top Scorers — NPL Victoria U18 Men</div>
+        <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
+          <thead><tr style={{background:C.s2}}>{['#','Player','Club','Goals','Assists'].map(h=>(<th key={h} style={{padding:'8px 12px',textAlign:h==='Player'||h==='Club'?'left':'center',color:C.txt3,fontWeight:700,fontSize:10,textTransform:'uppercase',letterSpacing:'0.06em'}}>{h}</th>))}</tr></thead>
+          <tbody>{[
+            [1,'D. Kowalski','Malvern City',8,3,true],[2,'S. Nguyen','Hume City',7,2,false],[3,'M. Russo','Green Gully',6,4,false],[4,'O. Petersen','Malvern City',5,4,true],[5,'B. Clarke','Bulleen Lions',5,1,false],[6,'J. Park','NorthCote',4,2,false],[7,'R. Al-Farsi','Malvern City',3,5,true],[8,'B. Tremblay','Malvern City',2,6,true],
+          ].map(([pos,name,club,g,a,ours],i)=>(
+            <tr key={i} style={{borderTop:`1px solid ${C.border}`,background:ours?'rgba(182,255,43,0.03)':'transparent'}}>
+              <td style={{padding:'10px 12px',textAlign:'center'}}><span style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:15,color:pos<=3?C.lime:C.txt3}}>{pos}</span></td>
+              <td style={{padding:'10px 12px'}}><span style={{fontSize:13,fontWeight:ours?700:500,color:ours?C.lime:C.txt}}>{name}</span></td>
+              <td style={{padding:'10px 12px'}}><span style={{fontSize:12,color:C.txt2}}>{club}</span></td>
+              <td style={{padding:'10px 12px',textAlign:'center'}}><span style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:16,color:C.goal}}>{g}</span></td>
+              <td style={{padding:'10px 12px',textAlign:'center'}}><span style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:16,color:C.sky}}>{a}</span></td>
+            </tr>
+          ))}</tbody>
+        </table>
+      </div>)}
+    </div>
+  </div>);}
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script></body></html>

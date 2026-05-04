@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TFB – Settings</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="tfb-responsive.jsx"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--lime:#B6FF2B;--green:#0F3D2E;--green-dark:#0A2E20;--bg:#111418;--s1:#1C2128;--s2:#242B33;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);--txt:#F0F2F4;--txt2:rgba(240,242,244,0.5);--txt3:rgba(240,242,244,0.28);--goal:#2ED47A;--amber:#FFB020;--red:#E5533D;--sky:#3FA9F5;--font-d:'Barlow Condensed',sans-serif;--font-b:'Barlow',sans-serif;--hh:54px;}
+html,body,#root{height:100%;overflow:hidden}
+body{font-family:var(--font-b);background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font-family:var(--font-b);color:inherit}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:3px}
+
+/* Responsive */
+@media (max-width: 1023px) {
+  html,body,#root { height:auto; overflow:auto }
+}
+@media (max-width: 639px) {
+  /* Force any 2-3 col grids inside settings tab content to stack */
+  #root [style*="gridTemplateColumns"][style*="1fr 1fr"]:not([data-keep-grid]) { grid-template-columns: 1fr !important; }
+  /* Force fixed-width inputs/selects to fluid */
+  #root input[type="text"], #root input[type="email"], #root input[type="tel"], #root input[type="password"], #root select, #root textarea { max-width:100%; }
+  /* Sticky save button on mobile becomes full-width */
+  .hide-scrollbar::-webkit-scrollbar { display:none; }
+}
+</style>
+</head>
+<body><div id="root"></div>
+<script type="text/babel">
+const {useState} = React;
+const C={lime:'#B6FF2B',green:'#0F3D2E',greenDark:'#0A2E20',bg:'#111418',s1:'#1C2128',s2:'#242B33',border:'rgba(255,255,255,0.07)',border2:'rgba(255,255,255,0.13)',txt:'#F0F2F4',txt2:'rgba(240,242,244,0.5)',txt3:'rgba(240,242,244,0.28)',goal:'#2ED47A',amber:'#FFB020',red:'#E5533D',sky:'#3FA9F5'};
+
+const Ic=({d,size=16,color='currentColor',stroke=2,fill='none'})=>(<svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>{Array.isArray(d)?d.map((p,i)=><path key={i} d={p}/>):<path d={d}/> }</svg>);
+const P={
+  back:'M15 18l-6-6 6-6',user:'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z',
+  building:'M2 20h20M4 20V8l8-6 8 6v12M9 20V12h6v8',bell:'M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0',
+  shield:'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z',credit:'M21 4H3a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm-9 11H6M4 10h16',
+  palette:'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c.55 0 1-.45 1-1 0-.26-.1-.5-.26-.68-.36-.38-.36-.96 0-1.34.16-.18.26-.42.26-.68 0-.55-.45-1-1-1H10c-2.76 0-5-2.24-5-5 0-3.87 3.57-7 8-7s8 3.13 8 7c0 1.11-.25 2.16-.68 3.11-.22.49-.1 1.07.3 1.44.4.37.98.44 1.44.2C22.58 17.05 23 14.61 23 12c0-5.52-4.48-10-10-10z',
+  chevR:'M9 18l6-6-6-6',check:'M20 6L9 17l-5-5',
+  logout:'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9',
+  globe:'M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm0 0c-2.76 0-5 4.48-5 10s2.24 10 5 10 5-4.48 5-10-2.24-10-5-10zM2 12h20',
+  download:'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3',
+  trash:'M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6',
+  eye:'M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z',
+};
+
+// Detect logged-in role from dashboard tweaks (localStorage or inline JSON)
+function getCurrentRole(){
+  try{const v=localStorage.getItem('tfb_role');if(v)return v;
+    const m=document.documentElement.innerHTML.match(/EDITMODE-BEGIN\*\/([\s\S]*?)\/\*EDITMODE-END/);
+    if(m)return JSON.parse(m[1]).role||'Coach';
+  }catch(e){} return 'Coach';
+}
+const ROLE_USER = {
+  'Coach':              { full:'Tim Mitchell',  initials:'TM', email:'coach.tim@malverncity.com.au', phone:'0412 345 678', roleLabel:'Head Coach',          team:'Malvern City U18 Men' },
+  'Assistant Coach':    { full:'Marco Russo',   initials:'MR', email:'marco.r@malverncity.com.au',   phone:'0413 778 442', roleLabel:'Assistant Coach',     team:'Malvern City U18 Men' },
+  'Team Manager':       { full:'Lisa Tran',     initials:'LT', email:'lisa.t@malverncity.com.au',    phone:'0414 332 991', roleLabel:'Team Manager',        team:'Malvern City U18 Men' },
+  'Technical Director': { full:'Tim Brand',     initials:'TB', email:'td@malverncity.com.au',        phone:'0412 998 221', roleLabel:'Technical Director',   team:'All Teams' },
+  'Club Admin':         { full:'Jane Wilson',   initials:'JW', email:'admin@malverncity.com.au',     phone:'0411 222 333', roleLabel:'Club Administrator',   team:'All Teams' },
+  'Player':             { full:'Oscar Petersen',initials:'OP', email:'oscar.p@gmail.com',            phone:'0422 555 111', roleLabel:'Player · #11 LW',     team:'Malvern City U18 Men' },
+  'Parent':             { full:'Sarah Petersen',initials:'SP', email:'sarah.p@gmail.com',            phone:'0433 887 654', roleLabel:"Parent of Oscar Petersen",team:'Malvern City U18 Men' },
+};
+// Tabs visible per role
+// Tab visibility per role.
+// - Subscription: only Technical Director + Club Admin (billing decision-makers)
+// - Club & Team: only TD + Club Admin (club-level config)
+// - Data Export: only TD + Club Admin (own the data) + Coach (own session data)
+// - Branding: only TD + Club Admin
+const ROLE_TABS = {
+  'Coach':              ['profile','display','notifications','privacy','data'],
+  'Assistant Coach':    ['profile','display','notifications','privacy'],
+  'Team Manager':       ['profile','display','notifications','privacy','data'],
+  'Technical Director': ['profile','display','club','users','permissions','features','branding','subscription','notifications','privacy','data'],
+  'Club Admin':         ['profile','display','club','users','permissions','features','branding','subscription','notifications','privacy','data'],
+  'Player':             ['profile','display','notifications','privacy'],
+  'Parent':             ['profile','display','children','notifications','privacy'],
+};
+const P2 = {
+  users:'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
+  lock:'M5 11h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2zM7 11V7a5 5 0 0 1 10 0v4',
+  layers:'M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
+  sliders:'M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6',
+  child:'M12 2a4 4 0 1 1-4 4 4 4 0 0 1 4-4zM18 22v-6a3 3 0 0 0-3-3H9a3 3 0 0 0-3 3v6',
+  plus:'M12 5v14M5 12h14',
+  mail:'M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM22 6l-10 7L2 6',
+};
+const SETTINGS_TABS=[
+  {id:'profile',label:'Profile',icon:P.user},
+  {id:'display',label:'Display & Density',icon:P2.sliders},
+  {id:'club',label:'Club & Team',icon:P.building},
+  {id:'users',label:'User Management',icon:P2.users},
+  {id:'permissions',label:'Roles & Permissions',icon:P2.lock},
+  {id:'features',label:'Modules & Features',icon:P2.layers},
+  {id:'children',label:'My Children',icon:P2.child},
+  {id:'notifications',label:'Notifications',icon:P.bell},
+  {id:'privacy',label:'Privacy & Security',icon:P.shield},
+  {id:'branding',label:'Branding',icon:P.palette},
+  {id:'subscription',label:'Subscription',icon:P.credit},
+  {id:'data',label:'Data & Export',icon:P.download},
+];
+
+function Header({onBack}){return(<header style={{height:'var(--hh)',background:`linear-gradient(90deg,${C.greenDark},${C.green})`,borderBottom:'1px solid rgba(182,255,43,0.18)',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 20px',flexShrink:0,zIndex:50}}>
+  <div style={{display:'flex',alignItems:'center',gap:12}}>
+    <button onClick={onBack} style={{display:'flex',alignItems:'center',gap:6,padding:'6px 10px',background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,color:'rgba(255,255,255,0.7)',fontSize:12,fontWeight:600,cursor:'pointer',transition:'all .15s'}} onMouseEnter={e=>{e.currentTarget.style.background='rgba(182,255,43,0.12)';e.currentTarget.style.color='#B6FF2B'}} onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,0.07)';e.currentTarget.style.color='rgba(255,255,255,0.7)'}}>
+      <Ic d={P.back} size={14} color="currentColor"/> Dashboard
+    </button>
+    <div style={{width:1,height:24,background:'rgba(255,255,255,0.12)'}}/>
+    <div style={{display:'flex',alignItems:'center',gap:10}}>
+      <svg width="28" height="28" viewBox="0 0 40 40" fill="none"><polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="#0F3D2E" stroke="#B6FF2B" strokeWidth="1.5"/><text x="20" y="26" textAnchor="middle" fill="#B6FF2B" fontFamily="Barlow Condensed" fontWeight="900" fontSize="13">TFB</text></svg>
+      <div><div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:17,color:'#fff',letterSpacing:'0.04em',lineHeight:1}}>SETTINGS</div><div style={{fontSize:9.5,color:'rgba(182,255,43,0.65)',fontWeight:700,letterSpacing:'0.1em'}}>Account & Club Configuration</div></div>
+    </div>
+  </div>
+</header>);}
+
+function Toggle({value,onChange}){return(<button onClick={()=>onChange(!value)} style={{position:'relative',width:40,height:22,borderRadius:11,background:value?`linear-gradient(135deg,${C.lime},#68B42E)`:'rgba(255,255,255,0.12)',border:'none',cursor:'pointer',transition:'background .2s',padding:0,flexShrink:0}}>
+  <div style={{position:'absolute',top:2,left:value?'calc(100% - 20px)':2,width:18,height:18,borderRadius:'50%',background:'#fff',boxShadow:'0 1px 3px rgba(0,0,0,0.3)',transition:'left .2s'}}/>
+</button>);}
+
+function Field({label,value,onChange,type='text',placeholder,hint}){
+  const [v,setV]=useState(value);
+  return(<div>
+    <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:5}}>{label}</div>
+    <input type={type} value={v} onChange={e=>{setV(e.target.value);onChange&&onChange(e.target.value);}} placeholder={placeholder}
+      style={{width:'100%',padding:'9px 12px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:8,color:C.txt,fontSize:13,outline:'none',transition:'border-color .15s'}}
+      onFocus={e=>e.target.style.borderColor='rgba(182,255,43,0.4)'} onBlur={e=>e.target.style.borderColor=C.border2}/>
+    {hint&&<div style={{fontSize:11,color:C.txt3,marginTop:4}}>{hint}</div>}
+  </div>);}
+
+function Section({title,children}){return(<div style={{background:C.s1,borderRadius:12,border:`1px solid ${C.border}`,overflow:'hidden',marginBottom:16}}>
+  <div style={{padding:'12px 16px',borderBottom:`1px solid ${C.border}`,background:'rgba(182,255,43,0.03)'}}>
+    <div style={{fontSize:13,fontWeight:700,color:C.txt}}>{title}</div>
+  </div>
+  <div style={{padding:'16px',display:'flex',flexDirection:'column',gap:14}}>{children}</div>
+</div>);}
+
+function Row({label,desc,children}){return(<div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
+  <div style={{flex:1}}>
+    <div style={{fontSize:13,fontWeight:600,color:C.txt}}>{label}</div>
+    {desc&&<div style={{fontSize:11,color:C.txt3,marginTop:2}}>{desc}</div>}
+  </div>
+  {children}
+</div>);}
+
+// ── Tab content ───────────────────────────────────────────────────────────────
+function ProfileTab({user, role}){
+  const [first, last] = (user.full||'').split(' ');
+  return(<div>
+    <Section title="Personal Information">
+      <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:4}}>
+        <div style={{width:64,height:64,borderRadius:'50%',background:`linear-gradient(135deg,${C.lime},#68B42E)`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+          <span style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:22,color:C.green}}>{user.initials}</span>
+        </div>
+        <div>
+          <div style={{fontSize:14,fontWeight:700,color:C.txt,marginBottom:2}}>{user.full}</div>
+          <div style={{fontSize:12,color:C.txt3}}>{user.email}</div>
+          <button style={{marginTop:6,padding:'4px 12px',background:'rgba(255,255,255,0.07)',border:`1px solid ${C.border2}`,borderRadius:7,fontSize:11,fontWeight:700,color:C.txt2,cursor:'pointer'}}>Change Photo</button>
+        </div>
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+        <Field label="First Name" value={first||''} placeholder="First name"/>
+        <Field label="Last Name" value={last||''} placeholder="Last name"/>
+      </div>
+      <Field label="Email Address" type="email" value={user.email} hint="Used for login and notifications"/>
+      <Field label="Phone Number" type="tel" value={user.phone}/>
+      <div>
+        <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:5}}>Role</div>
+        <div style={{padding:'9px 12px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:8,fontSize:13,color:C.txt,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+          <span>{user.roleLabel}</span>
+          <span style={{fontSize:10,fontWeight:700,color:C.goal,background:'rgba(46,212,122,0.12)',border:'1px solid rgba(46,212,122,0.25)',borderRadius:4,padding:'2px 7px'}}>ACTIVE</span>
+        </div>
+      </div>
+    </Section>
+    <Section title="Change Password">
+      <Field label="Current Password" type="password" value="" placeholder="Enter current password"/>
+      <Field label="New Password" type="password" value="" placeholder="Min. 8 characters"/>
+      <Field label="Confirm New Password" type="password" value="" placeholder="Repeat new password"/>
+      <button style={{padding:'10px 20px',background:`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:9,fontSize:13,fontWeight:800,color:C.green,cursor:'pointer',alignSelf:'flex-start'}}>Update Password</button>
+    </Section>
+    <Section title="Danger Zone">
+      <Row label="Deactivate Account" desc="Temporarily disable your account. Your data will be preserved.">
+        <button style={{padding:'7px 14px',background:'transparent',border:`1px solid rgba(255,176,32,0.4)`,borderRadius:8,fontSize:12,fontWeight:700,color:C.amber,cursor:'pointer'}}>Deactivate</button>
+      </Row>
+      <Row label="Delete Account" desc="Permanently delete your account and all associated data. This cannot be undone.">
+        <button style={{padding:'7px 14px',background:'transparent',border:`1px solid rgba(229,83,61,0.4)`,borderRadius:8,fontSize:12,fontWeight:700,color:C.red,cursor:'pointer'}}>Delete Account</button>
+      </Row>
+    </Section>
+  </div>);}
+
+function ClubTab(){
+  return(<div>
+    <Section title="Club Information">
+      <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:4}}>
+        <div style={{width:56,height:56,borderRadius:12,background:`linear-gradient(135deg,${C.lime},#68B42E)`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+          <span style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:16,color:C.green}}>MCC</span>
+        </div>
+        <div>
+          <div style={{fontSize:14,fontWeight:700,color:C.txt}}>Malvern City FC</div>
+          <div style={{fontSize:12,color:C.txt3}}>NPL Victoria · Est. 2010</div>
+          <button style={{marginTop:5,padding:'4px 12px',background:'rgba(255,255,255,0.07)',border:`1px solid ${C.border2}`,borderRadius:7,fontSize:11,fontWeight:700,color:C.txt2,cursor:'pointer'}}>Change Logo</button>
+        </div>
+      </div>
+      <Field label="Club Name" value="Malvern City FC"/>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+        <Field label="Home Ground" value="Tally Ho Park"/>
+        <Field label="Ground Address" value="East Burwood VIC 3151"/>
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+        <Field label="League/Competition" value="NPL Victoria"/>
+        <Field label="FFA Club ID" value="FFA-VIC-2847"/>
+      </div>
+    </Section>
+    <Section title="Team Configuration">
+      {[{name:'U18 Men',coach:'Tim Brand',age:'U18',gender:'Men',format:'11v11'},{name:'U16 Men',coach:'Sarah Chen',age:'U16',gender:'Men',format:'11v11'},{name:'U14 Boys',coach:"James O'Brien",age:'U14',gender:'Boys',format:'9v9'}].map((t,i)=>(
+        <div key={i} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 12px',background:C.s2,borderRadius:9,border:`1px solid ${C.border}`}}>
+          <div style={{width:8,height:8,borderRadius:'50%',background:i===0?C.lime:i===1?C.sky:C.goal,flexShrink:0}}/>
+          <div style={{flex:1}}>
+            <div style={{fontSize:13,fontWeight:700,color:C.txt}}>{t.name}</div>
+            <div style={{fontSize:11,color:C.txt3}}>Coach: {t.coach} · {t.format}</div>
+          </div>
+          <button style={{padding:'4px 10px',background:'transparent',border:`1px solid ${C.border2}`,borderRadius:6,fontSize:11,fontWeight:600,color:C.txt2,cursor:'pointer'}}>Edit</button>
+        </div>
+      ))}
+      <button style={{display:'flex',alignItems:'center',gap:6,padding:'8px 14px',background:'rgba(182,255,43,0.08)',border:'1px solid rgba(182,255,43,0.2)',borderRadius:8,fontSize:12,fontWeight:700,color:C.lime,cursor:'pointer',alignSelf:'flex-start'}}>
+        + Add Team
+      </button>
+    </Section>
+  </div>);}
+
+function NotificationsTab(){
+  const [prefs,setPrefs]=useState({email_match:true,email_availability:true,email_wellness:false,email_chat:false,push_match:true,push_availability:true,push_wellness:true,push_chat:true,digest:true,digest_freq:'daily'});
+  const set=(k,v)=>setPrefs(p=>({...p,[k]:v}));
+  return(<div>
+    <Section title="Email Notifications">
+      {[['email_match','Match & fixture updates','Upcoming matches, results, and changes'],['email_availability','Availability requests','When availability requests are sent or responses received'],['email_wellness','Wellness alerts','When players submit or flag wellness concerns'],['email_chat','Team chat messages','Direct messages and @mentions in team chat']].map(([k,label,desc])=>(
+        <Row key={k} label={label} desc={desc}><Toggle value={prefs[k]} onChange={v=>set(k,v)}/></Row>
+      ))}
+    </Section>
+    <Section title="Push Notifications">
+      {[['push_match','Match alerts'],['push_availability','Availability responses'],['push_wellness','Wellness check-in reminders'],['push_chat','Chat messages']].map(([k,label])=>(
+        <Row key={k} label={label}><Toggle value={prefs[k]} onChange={v=>set(k,v)}/></Row>
+      ))}
+    </Section>
+    <Section title="Weekly Digest">
+      <Row label="Send weekly digest" desc="Summary of team activity, upcoming schedule and player health">
+        <Toggle value={prefs.digest} onChange={v=>set('digest',v)}/>
+      </Row>
+      {prefs.digest&&<div>
+        <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:6}}>Frequency</div>
+        <div style={{display:'flex',gap:6}}>
+          {['daily','weekly'].map(f=>(
+            <button key={f} onClick={()=>set('digest_freq',f)} style={{flex:1,padding:'7px',background:prefs.digest_freq===f?'rgba(182,255,43,0.12)':'transparent',border:`1px solid ${prefs.digest_freq===f?'rgba(182,255,43,0.35)':C.border}`,borderRadius:7,fontSize:12,fontWeight:700,color:prefs.digest_freq===f?C.lime:C.txt2,cursor:'pointer',textTransform:'capitalize'}}>{f}</button>
+          ))}
+        </div>
+      </div>}
+    </Section>
+  </div>);}
+
+function PrivacyTab(){
+  const [s,setS]=useState({two_factor:false,session_timeout:'30min',data_sharing:true,analytics:true,login_alerts:true});
+  const set=(k,v)=>setS(p=>({...p,[k]:v}));
+  return(<div>
+    <Section title="Account Security">
+      <Row label="Two-Factor Authentication" desc="Add an extra layer of security with SMS or authenticator app">
+        <Toggle value={s.two_factor} onChange={v=>set('two_factor',v)}/>
+      </Row>
+      <div>
+        <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:6}}>Session Timeout</div>
+        <select value={s.session_timeout} onChange={e=>set('session_timeout',e.target.value)} style={{width:'100%',padding:'9px 12px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:8,color:C.txt,fontSize:13,outline:'none'}}>
+          {['15min','30min','1hour','4hours','Never'].map(o=><option key={o} value={o}>{o}</option>)}
+        </select>
+      </div>
+      <Row label="Login Alerts" desc="Email me when a new device logs into my account">
+        <Toggle value={s.login_alerts} onChange={v=>set('login_alerts',v)}/>
+      </Row>
+    </Section>
+    <Section title="Privacy Settings">
+      <Row label="Data Sharing" desc="Share anonymised usage data to help improve TFB">
+        <Toggle value={s.data_sharing} onChange={v=>set('data_sharing',v)}/>
+      </Row>
+      <Row label="Analytics" desc="Help us understand how you use the platform">
+        <Toggle value={s.analytics} onChange={v=>set('analytics',v)}/>
+      </Row>
+    </Section>
+    <Section title="Active Sessions">
+      {[{device:'MacBook Pro · Chrome',location:'Melbourne, VIC',time:'Current session',current:true},{device:'iPhone 14 · Safari',location:'Melbourne, VIC',time:'2 hours ago',current:false}].map((sess,i)=>(
+        <div key={i} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 12px',background:C.s2,borderRadius:8,border:`1px solid ${sess.current?'rgba(182,255,43,0.2)':C.border}`}}>
+          <div style={{flex:1}}>
+            <div style={{fontSize:12.5,fontWeight:600,color:C.txt}}>{sess.device}</div>
+            <div style={{fontSize:11,color:C.txt3}}>{sess.location} · {sess.time}</div>
+          </div>
+          {sess.current?<span style={{fontSize:10,fontWeight:700,color:C.goal,background:'rgba(46,212,122,0.12)',border:'1px solid rgba(46,212,122,0.25)',borderRadius:4,padding:'2px 7px'}}>ACTIVE</span>:
+            <button style={{padding:'4px 10px',background:'transparent',border:`1px solid rgba(229,83,61,0.3)`,borderRadius:6,fontSize:11,fontWeight:700,color:C.red,cursor:'pointer'}}>Revoke</button>}
+        </div>
+      ))}
+    </Section>
+  </div>);}
+
+function BrandingTab(){
+  const [primary,setPrimary]=useState('#0F3D2E');
+  const [accent,setAccent]=useState('#B6FF2B');
+  const [clubName,setClubName]=useState('Malvern City FC');
+  return(<div>
+    <Section title="Club Branding">
+      <div style={{background:`linear-gradient(135deg,${primary},${primary}cc)`,borderRadius:12,padding:'16px 20px',border:`1px solid ${accent}30`,marginBottom:4}}>
+        <div style={{display:'flex',alignItems:'center',gap:10}}>
+          <div style={{width:42,height:42,borderRadius:10,background:`${accent}20`,border:`2px solid ${accent}40`,display:'flex',alignItems:'center',justifyContent:'center'}}>
+            <span style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:14,color:accent}}>MCC</span>
+          </div>
+          <div>
+            <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:18,color:'#fff',letterSpacing:'0.04em'}}>{clubName}</div>
+            <div style={{fontSize:10,color:accent,fontWeight:700,letterSpacing:'0.1em'}}>COACHING PLATFORM</div>
+          </div>
+        </div>
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+        <div>
+          <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:6}}>Primary Colour</div>
+          <div style={{display:'flex',gap:8,alignItems:'center'}}>
+            <input type="color" value={primary} onChange={e=>setPrimary(e.target.value)} style={{width:40,height:36,border:`1px solid ${C.border2}`,borderRadius:7,background:'transparent',cursor:'pointer',padding:2}}/>
+            <div style={{flex:1,padding:'8px 10px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:7,fontSize:12,color:C.txt,fontFamily:'monospace'}}>{primary}</div>
+          </div>
+        </div>
+        <div>
+          <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:6}}>Accent Colour</div>
+          <div style={{display:'flex',gap:8,alignItems:'center'}}>
+            <input type="color" value={accent} onChange={e=>setAccent(e.target.value)} style={{width:40,height:36,border:`1px solid ${C.border2}`,borderRadius:7,background:'transparent',cursor:'pointer',padding:2}}/>
+            <div style={{flex:1,padding:'8px 10px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:7,fontSize:12,color:C.txt,fontFamily:'monospace'}}>{accent}</div>
+          </div>
+        </div>
+      </div>
+      <Field label="Club Display Name" value={clubName} onChange={setClubName}/>
+      <div style={{padding:'10px 12px',background:'rgba(63,169,245,0.08)',border:'1px solid rgba(63,169,245,0.2)',borderRadius:8,fontSize:12,color:C.sky}}>
+        💡 Custom branding is available on Pro and Club plans. Your colours replace TFB defaults across the app.
+      </div>
+    </Section>
+  </div>);}
+
+function SubscriptionTab(){
+  return(<div>
+    <div style={{background:`linear-gradient(135deg,${C.greenDark},${C.green})`,borderRadius:14,padding:'20px 24px',border:'1px solid rgba(182,255,43,0.2)',marginBottom:16}}>
+      <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between'}}>
+        <div>
+          <div style={{display:'inline-flex',alignItems:'center',gap:6,background:'rgba(182,255,43,0.15)',border:'1px solid rgba(182,255,43,0.35)',borderRadius:7,padding:'4px 12px',marginBottom:10}}>
+            <div style={{width:6,height:6,borderRadius:'50%',background:C.lime}}/>
+            <span style={{fontSize:11,fontWeight:800,color:C.lime,letterSpacing:'0.06em'}}>PRO PLAN</span>
+          </div>
+          <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:26,color:'#fff',marginBottom:4}}>$49 / month</div>
+          <div style={{fontSize:12,color:'rgba(255,255,255,0.5)'}}>Next billing: 1 June 2025 · Auto-renews</div>
+        </div>
+        <div style={{textAlign:'right'}}>
+          <div style={{fontSize:12,color:'rgba(255,255,255,0.5)',marginBottom:4}}>Member since</div>
+          <div style={{fontSize:14,fontWeight:700,color:'#fff'}}>Jan 2025</div>
+        </div>
+      </div>
+    </div>
+    <Section title="Current Plan Features">
+      {[['Unlimited session planning','Pro'],['Block planner (6-week blocks)','Pro'],['Video analysis','Pro'],['Player development (IDP)','Pro'],['Custom club branding','Pro'],['Club Overview (multi-team)','Club'],['Recruitment & EOI management','Club'],['Advanced analytics','Club']].map(([f,plan])=>(
+        <div key={f} style={{display:'flex',alignItems:'center',gap:8}}>
+          <Ic d={P.check} size={14} color={plan==='Pro'?C.lime:C.txt3} fill="none"/>
+          <span style={{fontSize:12,color:plan==='Pro'?C.txt:C.txt3,flex:1}}>{f}</span>
+          <span style={{fontSize:10,fontWeight:700,color:plan==='Pro'?C.lime:C.txt3,background:`${plan==='Pro'?C.lime:C.txt3}15`,border:`1px solid ${plan==='Pro'?C.lime:C.txt3}30`,borderRadius:4,padding:'1px 6px'}}>{plan}</span>
+        </div>
+      ))}
+    </Section>
+    <Section title="Billing">
+      <Row label="Payment Method" desc="Visa •••• 4242"><button style={{padding:'5px 12px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:7,fontSize:11,fontWeight:600,color:C.txt2,cursor:'pointer'}}>Update</button></Row>
+      <Row label="Billing Email" desc="accounts@malverncity.com.au"><button style={{padding:'5px 12px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:7,fontSize:11,fontWeight:600,color:C.txt2,cursor:'pointer'}}>Change</button></Row>
+      <button style={{width:'100%',padding:'10px',background:'transparent',border:`1px solid rgba(255,176,32,0.3)`,borderRadius:9,fontSize:12,fontWeight:700,color:C.amber,cursor:'pointer'}}>Cancel Subscription</button>
+    </Section>
+  </div>);}
+
+function IntegrationsSection(){
+  const [conn, setConn] = useState(()=>{
+    try{ return JSON.parse(localStorage.getItem('tfb_integrations')||'{"playhq":true}'); }catch(e){ return {playhq:true}; }
+  });
+  const [modal, setModal] = useState(null);
+  const save = (next)=>{ setConn(next); try{localStorage.setItem('tfb_integrations',JSON.stringify(next));}catch(e){} };
+  
+  const integrations = [
+    {id:'gcal', name:'Google Calendar', icon:'📅', desc:'Sync sessions, matches, and team events to your Google Calendar', scope:'See and add events to your primary calendar', provider:'Google', color:'#4285F4'},
+    {id:'hudl', name:'Hudl', icon:'🎥', desc:'Upload match footage and analysis clips directly to Hudl', scope:'Upload videos to your team library', provider:'Hudl', color:'#FF6900'},
+    {id:'playhq', name:'PlayHQ', icon:'🏆', desc:'Link to Football Australia registration system', scope:'Read fixture and player registration data', provider:'PlayHQ', color:'#00A651'},
+  ];
+  
+  return (<>
+    <Section title="Integrations">
+      {integrations.map(it => {
+        const isConnected = !!conn[it.id];
+        return (
+          <Row key={it.id} label={<span style={{display:'flex',alignItems:'center',gap:8}}><span style={{fontSize:18}}>{it.icon}</span> {it.name}</span>} desc={it.desc}>
+            {isConnected ? (
+              <div style={{display:'flex',gap:6,alignItems:'center'}}>
+                <span style={{fontSize:10,fontWeight:700,color:C.goal,background:'rgba(46,212,122,0.12)',border:'1px solid rgba(46,212,122,0.25)',borderRadius:5,padding:'3px 10px'}}>✓ Connected</span>
+                <button onClick={()=>save({...conn,[it.id]:false})} style={{padding:'4px 10px',background:'transparent',border:`1px solid ${C.border2}`,borderRadius:6,fontSize:10.5,fontWeight:700,color:C.txt3,cursor:'pointer'}}>Disconnect</button>
+              </div>
+            ) : (
+              <button onClick={()=>setModal(it)} style={{padding:'5px 12px',background:'rgba(182,255,43,0.1)',border:'1px solid rgba(182,255,43,0.25)',borderRadius:7,fontSize:11,fontWeight:700,color:C.lime,cursor:'pointer'}}>Connect</button>
+            )}
+          </Row>
+        );
+      })}
+    </Section>
+    {modal && (
+      <div onClick={()=>setModal(null)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',backdropFilter:'blur(8px)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:300,padding:20}}>
+        <div onClick={e=>e.stopPropagation()} style={{background:C.s1,border:`1px solid ${C.border2}`,borderRadius:16,width:'100%',maxWidth:440,boxShadow:'0 24px 64px rgba(0,0,0,0.5)',overflow:'hidden'}}>
+          <div style={{padding:'18px 22px',borderBottom:`1px solid ${C.border}`,display:'flex',alignItems:'center',gap:12}}>
+            <div style={{width:48,height:48,borderRadius:12,background:`${modal.color}20`,border:`1px solid ${modal.color}40`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:24}}>{modal.icon}</div>
+            <div>
+              <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:18,color:C.txt,letterSpacing:'0.03em'}}>Connect to {modal.name}</div>
+              <div style={{fontSize:11,color:C.txt3}}>by {modal.provider}</div>
+            </div>
+          </div>
+          <div style={{padding:'18px 22px'}}>
+            <div style={{fontSize:13,color:C.txt2,marginBottom:14,lineHeight:1.5}}>{modal.desc}</div>
+            <div style={{padding:'12px 14px',background:C.s2,borderRadius:10,marginBottom:16}}>
+              <div style={{fontSize:10,fontWeight:700,color:C.txt3,letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:6}}>This will allow TFB to:</div>
+              <div style={{display:'flex',gap:8,alignItems:'flex-start'}}>
+                <span style={{color:C.goal,marginTop:1}}>✓</span>
+                <div style={{fontSize:12.5,color:C.txt}}>{modal.scope}</div>
+              </div>
+            </div>
+            <div style={{fontSize:11,color:C.txt3,lineHeight:1.5,marginBottom:14}}>
+              You'll be redirected to {modal.provider} to sign in and approve access. You can disconnect at any time from this page.
+            </div>
+            <div style={{display:'flex',gap:8}}>
+              <button onClick={()=>setModal(null)} style={{flex:1,padding:'10px',background:'transparent',border:`1px solid ${C.border2}`,borderRadius:9,fontSize:13,fontWeight:700,color:C.txt2,cursor:'pointer'}}>Cancel</button>
+              <button onClick={()=>{save({...conn,[modal.id]:true}); setModal(null);}} style={{flex:1,padding:'10px',background:`linear-gradient(135deg,${modal.color},${modal.color}cc)`,border:'none',borderRadius:9,fontSize:13,fontWeight:800,color:'#fff',cursor:'pointer'}}>Continue with {modal.provider}</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+  </>);
+}
+
+function DataTab(){
+  return(<div>
+    <Section title="Export Data">
+      {[['Player Data (CSV)','All player profiles, wellness, and IDP data'],['Session Library (PDF)','All sessions and training drills'],['Season Report (PDF)','Attendance, wellness, and performance summary'],['Full Data Export (ZIP)','Complete club data archive']].map(([label,desc])=>(
+        <Row key={label} label={label} desc={desc}>
+          <button style={{padding:'6px 14px',background:'rgba(182,255,43,0.1)',border:'1px solid rgba(182,255,43,0.25)',borderRadius:7,fontSize:11,fontWeight:700,color:C.lime,cursor:'pointer',display:'flex',alignItems:'center',gap:5,transition:'background .15s'}} onMouseEnter={e=>e.currentTarget.style.background='rgba(182,255,43,0.18)'} onMouseLeave={e=>e.currentTarget.style.background='rgba(182,255,43,0.1)'}>
+            <Ic d={P.download} size={12} color={C.lime}/> Export
+          </button>
+        </Row>
+      ))}
+    </Section>
+    <IntegrationsSection/>
+    <Section title="Data Management">
+      <Row label="Clear Session Cache" desc="Remove locally cached session data"><button style={{padding:'5px 12px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:7,fontSize:11,fontWeight:700,color:C.txt2,cursor:'pointer'}}>Clear</button></Row>
+      <Row label="Reset Dashboard Layout" desc="Restore default widget layout"><button style={{padding:'5px 12px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:7,fontSize:11,fontWeight:700,color:C.txt2,cursor:'pointer'}}>Reset</button></Row>
+    </Section>
+  </div>);}
+
+function DisplayTab(){
+  const initial = (()=>{ try{return localStorage.getItem('tfb_density')||'standard';}catch(e){return 'standard';} })();
+  const [density,setDensity]=useState(initial);
+  const [theme,setTheme]=useState(()=>{try{return localStorage.getItem('tfb_theme')||'dark';}catch(e){return 'dark';}});
+  const [showHints,setShowHints]=useState(true);
+  const [animations,setAnimations]=useState(true);
+  const apply=(d)=>{ setDensity(d); try{localStorage.setItem('tfb_density',d);}catch(e){} };
+  const applyT=(t)=>{ setTheme(t); try{localStorage.setItem('tfb_theme',t);}catch(e){} };
+  
+  const modes=[
+    {id:'simple',label:'Simple',tag:'For new users',desc:'Hide advanced widgets, larger text, simplified layouts. Show only essential information.',
+      shows:['Dashboard core widgets','Today\'s schedule','Match results','Wellness summary'],hides:['Advanced analytics','Multi-team views','Block planner details','Tactical breakdowns']},
+    {id:'standard',label:'Standard',tag:'Recommended',desc:'Balanced layout with all main features visible. Good for most coaches and managers.',
+      shows:['All standard widgets','Stats & analytics','Tactical tools','Block planner'],hides:['Power-user shortcuts','Raw data tables']},
+    {id:'pro',label:'Pro',tag:'For power users',desc:'Maximum information density. Compact layouts, all widgets visible, keyboard shortcuts enabled.',
+      shows:['Everything','Compact tables','Multi-pane views','Keyboard shortcuts','Raw stats'],hides:[]},
+  ];
+  
+  return(<div>
+    <Section title="Information Density">
+      <div style={{fontSize:12.5,color:C.txt2,lineHeight:1.5,marginBottom:6}}>
+        Choose how much information is shown across the app. You can change this anytime — it affects every screen.
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10}}>
+        {modes.map(m=>{
+          const active=density===m.id;
+          return(<button key={m.id} onClick={()=>apply(m.id)} style={{padding:'14px 14px',background:active?'rgba(182,255,43,0.08)':C.s2,border:`1.5px solid ${active?'rgba(182,255,43,0.45)':C.border}`,borderRadius:11,cursor:'pointer',textAlign:'left',transition:'all .15s',display:'flex',flexDirection:'column',gap:6}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+              <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:18,color:active?C.lime:C.txt,letterSpacing:'0.04em'}}>{m.label.toUpperCase()}</div>
+              {active && <div style={{width:18,height:18,borderRadius:'50%',background:C.lime,display:'flex',alignItems:'center',justifyContent:'center'}}><Ic d={P.check} size={11} color={C.green} stroke={3}/></div>}
+            </div>
+            <div style={{fontSize:10,fontWeight:700,color:active?C.lime:C.txt3,letterSpacing:'0.08em',textTransform:'uppercase'}}>{m.tag}</div>
+            <div style={{fontSize:11.5,color:C.txt2,lineHeight:1.45,minHeight:48}}>{m.desc}</div>
+            {/* visual preview */}
+            <div style={{marginTop:4,padding:8,background:'rgba(0,0,0,0.25)',borderRadius:6,display:'flex',flexDirection:'column',gap:m.id==='simple'?6:m.id==='standard'?3:1.5}}>
+              {Array.from({length:m.id==='simple'?3:m.id==='standard'?5:8}).map((_,i)=>(
+                <div key={i} style={{height:m.id==='simple'?6:m.id==='standard'?4:2.5,background:'rgba(182,255,43,0.18)',borderRadius:2,width:`${70+Math.random()*30}%`}}/>
+              ))}
+            </div>
+          </button>);
+        })}
+      </div>
+    </Section>
+    
+    <Section title={`What ${modes.find(m=>m.id===density).label} shows`}>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
+        <div>
+          <div style={{fontSize:11,fontWeight:700,color:C.goal,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8}}>✓ Visible</div>
+          <div style={{display:'flex',flexDirection:'column',gap:6}}>
+            {modes.find(m=>m.id===density).shows.map(s=>(
+              <div key={s} style={{fontSize:12,color:C.txt,padding:'6px 10px',background:'rgba(46,212,122,0.06)',border:'1px solid rgba(46,212,122,0.18)',borderRadius:6}}>{s}</div>
+            ))}
+          </div>
+        </div>
+        <div>
+          <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8}}>✗ Hidden</div>
+          {modes.find(m=>m.id===density).hides.length===0?
+            <div style={{fontSize:11.5,color:C.txt3,fontStyle:'italic',padding:'6px 0'}}>Nothing hidden — Pro mode shows everything</div>:
+            <div style={{display:'flex',flexDirection:'column',gap:6}}>
+              {modes.find(m=>m.id===density).hides.map(s=>(
+                <div key={s} style={{fontSize:12,color:C.txt3,padding:'6px 10px',background:'rgba(255,255,255,0.03)',border:`1px dashed ${C.border}`,borderRadius:6,textDecoration:'line-through'}}>{s}</div>
+              ))}
+            </div>
+          }
+        </div>
+      </div>
+    </Section>
+    
+    <Section title="Appearance">
+      <div>
+        <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8}}>Theme</div>
+        <div style={{display:'flex',gap:8}}>
+          {[{id:'dark',label:'Dark',bg:'#111418',accent:'#B6FF2B'},{id:'light',label:'Light',bg:'#F5F6F8',accent:'#0F3D2E'},{id:'auto',label:'Auto (System)',bg:'linear-gradient(90deg,#111418 50%,#F5F6F8 50%)',accent:'#B6FF2B'}].map(t=>(
+            <button key={t.id} onClick={()=>applyT(t.id)} style={{flex:1,padding:'12px 8px',background:theme===t.id?'rgba(182,255,43,0.08)':C.s2,border:`1.5px solid ${theme===t.id?'rgba(182,255,43,0.4)':C.border}`,borderRadius:9,cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:8}}>
+              <div style={{width:'100%',height:30,background:t.bg,borderRadius:5,position:'relative',border:`1px solid ${C.border}`}}>
+                <div style={{position:'absolute',top:6,left:6,right:6,height:4,background:t.accent,borderRadius:2,opacity:0.7}}/>
+                <div style={{position:'absolute',top:14,left:6,width:'40%',height:3,background:t.accent,borderRadius:2,opacity:0.4}}/>
+              </div>
+              <div style={{fontSize:12,fontWeight:700,color:theme===t.id?C.lime:C.txt}}>{t.label}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+      <Row label="Show contextual hints" desc="Display tips and explanations on new screens">
+        <Toggle value={showHints} onChange={setShowHints}/>
+      </Row>
+      <Row label="Reduce animations" desc="Minimise transitions and motion effects (better for accessibility)">
+        <Toggle value={!animations} onChange={v=>setAnimations(!v)}/>
+      </Row>
+    </Section>
+    
+    <Section title="Module Visibility (override global mode)">
+      <div style={{fontSize:12,color:C.txt2,lineHeight:1.5,marginBottom:4}}>
+        Force individual modules on/off regardless of density mode. Useful if you want simple mode but still need access to specific advanced features.
+      </div>
+      {[['Block Planner','tactical periodisation tools',true],['Tactics Board','formations & match plans',true],['Wellness Reports','player health tracking',true],['Player Development (IDP)','individual development plans',true],['Video Analysis','match footage tagging',false],['Recruitment','EOI & trial management',false]].map(([n,d,on])=>{
+        const [v,sV]=useState(on);
+        return(<Row key={n} label={n} desc={d}><Toggle value={v} onChange={sV}/></Row>);
+      })}
+    </Section>
+  </div>);}
+
+// ────────────────────────────────────────────────────────────────────────────
+function UserManagementTab(){
+  const [showInvite,setShowInvite]=useState(false);
+  const [tab,setTab]=useState('active');
+  const users=[
+    {n:'Tim Brand',e:'td@malverncity.com.au',r:'Technical Director',t:'All Teams',s:'active',last:'2h ago',i:'TB',c:C.lime},
+    {n:'Jane Wilson',e:'admin@malverncity.com.au',r:'Club Admin',t:'All Teams',s:'active',last:'10m ago',i:'JW',c:C.sky},
+    {n:'Tim Mitchell',e:'coach.tim@malverncity.com.au',r:'Head Coach',t:'U18 Men',s:'active',last:'1h ago',i:'TM',c:C.lime},
+    {n:'Marco Russo',e:'marco.r@malverncity.com.au',r:'Assistant Coach',t:'U18 Men',s:'active',last:'4h ago',i:'MR',c:C.amber},
+    {n:'Lisa Tran',e:'lisa.t@malverncity.com.au',r:'Team Manager',t:'U18 Men',s:'active',last:'30m ago',i:'LT',c:'#C77DFF'},
+    {n:'Sarah Chen',e:'sarah.c@malverncity.com.au',r:'Head Coach',t:'U16 Men',s:'active',last:'1d ago',i:'SC',c:C.lime},
+    {n:"James O'Brien",e:'james.o@malverncity.com.au',r:'Head Coach',t:'U14 Boys',s:'active',last:'3d ago',i:'JO',c:C.lime},
+    {n:'Daniel Hartley',e:'physio@malverncity.com.au',r:'Physio',t:'All Teams',s:'active',last:'2d ago',i:'DH',c:C.red},
+  ];
+  const pending=[
+    {n:'Stephen Wright',e:'s.wright@gmail.com',r:'Assistant Coach',t:'U16 Men',sent:'2 days ago',i:'SW'},
+    {n:'Maria Lopez',e:'maria.l@gmail.com',r:'Team Manager',t:'U14 Boys',sent:'5 hours ago',i:'ML'},
+    {n:'(invite link only)',e:'parent.signup@malverncity.com.au',r:'Parent',t:'U18 Men',sent:'Reusable link',i:'??'},
+  ];
+  return(<div>
+    {/* Header card */}
+    <div style={{background:`linear-gradient(135deg,${C.greenDark},${C.green})`,border:'1px solid rgba(182,255,43,0.2)',borderRadius:12,padding:'16px 20px',marginBottom:16,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+      <div>
+        <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:22,color:'#fff',letterSpacing:'0.03em',marginBottom:2}}>Organisation Members</div>
+        <div style={{fontSize:12,color:'rgba(255,255,255,0.55)'}}>{users.length} active · {pending.length} pending invitations</div>
+      </div>
+      <button onClick={()=>setShowInvite(true)} style={{display:'flex',alignItems:'center',gap:6,padding:'10px 18px',background:`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:9,fontSize:13,fontWeight:800,color:C.green,cursor:'pointer'}}>
+        <Ic d={P2.plus} size={14} color={C.green} stroke={3}/> Invite Members
+      </button>
+    </div>
+    
+    {/* Tabs */}
+    <div style={{display:'flex',gap:4,marginBottom:14,padding:4,background:C.s1,borderRadius:9,border:`1px solid ${C.border}`}}>
+      {[['active',`Active (${users.length})`],['pending',`Pending (${pending.length})`],['suspended','Suspended (0)']].map(([id,l])=>(
+        <button key={id} onClick={()=>setTab(id)} style={{flex:1,padding:'8px',background:tab===id?'rgba(182,255,43,0.1)':'transparent',border:'none',borderRadius:7,fontSize:12,fontWeight:700,color:tab===id?C.lime:C.txt2,cursor:'pointer'}}>{l}</button>
+      ))}
+    </div>
+    
+    {tab==='active' && <Section title="Active Members">
+      {users.map(u=>(
+        <div key={u.e} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 12px',background:C.s2,borderRadius:9,border:`1px solid ${C.border}`}}>
+          <div style={{width:36,height:36,borderRadius:'50%',background:`${u.c}20`,border:`1px solid ${u.c}40`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+            <span style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:13,color:u.c}}>{u.i}</span>
+          </div>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:13,fontWeight:700,color:C.txt,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{u.n}</div>
+            <div style={{fontSize:11,color:C.txt3,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{u.e}</div>
+          </div>
+          <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:2,flexShrink:0}}>
+            <span style={{fontSize:10.5,fontWeight:700,color:u.c,background:`${u.c}15`,border:`1px solid ${u.c}30`,borderRadius:4,padding:'2px 7px',whiteSpace:'nowrap'}}>{u.r}</span>
+            <span style={{fontSize:10.5,color:C.txt3,whiteSpace:'nowrap'}}>{u.t}</span>
+          </div>
+          <div style={{fontSize:11,color:C.txt3,width:60,textAlign:'right'}}>{u.last}</div>
+          <button style={{padding:'5px 10px',background:'transparent',border:`1px solid ${C.border2}`,borderRadius:6,fontSize:11,fontWeight:600,color:C.txt2,cursor:'pointer'}}>Manage</button>
+        </div>
+      ))}
+    </Section>}
+    
+    {tab==='pending' && <Section title="Pending Invitations">
+      {pending.map(u=>(
+        <div key={u.e} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 12px',background:C.s2,borderRadius:9,border:'1px dashed rgba(255,176,32,0.25)'}}>
+          <div style={{width:36,height:36,borderRadius:'50%',background:'rgba(255,176,32,0.1)',border:'1px solid rgba(255,176,32,0.3)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+            <Ic d={P2.mail} size={15} color={C.amber}/>
+          </div>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:13,fontWeight:700,color:C.txt}}>{u.n}</div>
+            <div style={{fontSize:11,color:C.txt3}}>{u.e}</div>
+          </div>
+          <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:2,flexShrink:0}}>
+            <span style={{fontSize:10.5,fontWeight:700,color:C.amber,background:'rgba(255,176,32,0.12)',border:'1px solid rgba(255,176,32,0.3)',borderRadius:4,padding:'2px 7px',whiteSpace:'nowrap'}}>{u.r}</span>
+            <span style={{fontSize:10.5,color:C.txt3,whiteSpace:'nowrap'}}>{u.t}</span>
+          </div>
+          <div style={{fontSize:11,color:C.txt3,width:90,textAlign:'right'}}>Sent {u.sent}</div>
+          <button style={{padding:'5px 10px',background:'rgba(63,169,245,0.1)',border:'1px solid rgba(63,169,245,0.25)',borderRadius:6,fontSize:11,fontWeight:600,color:C.sky,cursor:'pointer'}}>Resend</button>
+          <button style={{padding:'5px 10px',background:'transparent',border:'1px solid rgba(229,83,61,0.3)',borderRadius:6,fontSize:11,fontWeight:600,color:C.red,cursor:'pointer'}}>Revoke</button>
+        </div>
+      ))}
+    </Section>}
+    
+    {tab==='suspended' && <Section title="Suspended Members">
+      <div style={{textAlign:'center',padding:'24px',color:C.txt3,fontSize:12.5}}>No suspended members.</div>
+    </Section>}
+    
+    {/* Bulk invite */}
+    <Section title="Bulk Operations">
+      <Row label="Import members from CSV" desc="Upload a CSV file with name, email, role, team to invite many people at once">
+        <button style={{padding:'7px 14px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:7,fontSize:11,fontWeight:700,color:C.txt2,cursor:'pointer'}}>Upload CSV</button>
+      </Row>
+      <Row label="Reusable signup link" desc="Share a link that anyone can use to request to join your club (admin must approve)">
+        <button style={{padding:'7px 14px',background:'rgba(182,255,43,0.1)',border:'1px solid rgba(182,255,43,0.25)',borderRadius:7,fontSize:11,fontWeight:700,color:C.lime,cursor:'pointer'}}>Copy Link</button>
+      </Row>
+    </Section>
+    
+    {/* Invite modal */}
+    {showInvite && <InviteModal onClose={()=>setShowInvite(false)}/>}
+  </div>);}
+
+function InviteModal({onClose}){
+  const [rows,setRows]=useState([{email:'',role:'Assistant Coach',team:'U18 Men'}]);
+  const roles=['Head Coach','Assistant Coach','Team Manager','Technical Director','Club Admin','Physio','Analyst','Player','Parent'];
+  const teams=['U18 Men','U16 Men','U14 Boys','U12 Boys','All Teams'];
+  return(<div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',backdropFilter:'blur(8px)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:300,padding:20}}>
+    <div onClick={e=>e.stopPropagation()} style={{background:C.s1,border:`1px solid ${C.border2}`,borderRadius:14,width:'100%',maxWidth:680,maxHeight:'85vh',overflow:'hidden',display:'flex',flexDirection:'column',boxShadow:'0 24px 64px rgba(0,0,0,0.5)'}}>
+      <div style={{padding:'18px 22px',borderBottom:`1px solid ${C.border}`,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+        <div>
+          <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:20,color:C.txt,letterSpacing:'0.03em'}}>INVITE MEMBERS</div>
+          <div style={{fontSize:11.5,color:C.txt3}}>They'll receive an email with a sign-up link. Roles can be changed later.</div>
+        </div>
+        <button onClick={onClose} style={{width:30,height:30,borderRadius:7,background:'transparent',border:`1px solid ${C.border2}`,color:C.txt2,fontSize:16,cursor:'pointer'}}>×</button>
+      </div>
+      <div style={{flex:1,overflowY:'auto',padding:'16px 22px'}}>
+        {rows.map((r,i)=>(
+          <div key={i} style={{display:'grid',gridTemplateColumns:'1fr 160px 140px 30px',gap:8,marginBottom:8,alignItems:'center'}}>
+            <input type="email" placeholder="email@example.com" value={r.email} onChange={e=>{const n=[...rows];n[i].email=e.target.value;setRows(n);}} style={{padding:'9px 11px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:7,color:C.txt,fontSize:13,outline:'none'}}/>
+            <select value={r.role} onChange={e=>{const n=[...rows];n[i].role=e.target.value;setRows(n);}} style={{padding:'9px 11px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:7,color:C.txt,fontSize:12.5,outline:'none'}}>
+              {roles.map(o=><option key={o}>{o}</option>)}
+            </select>
+            <select value={r.team} onChange={e=>{const n=[...rows];n[i].team=e.target.value;setRows(n);}} style={{padding:'9px 11px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:7,color:C.txt,fontSize:12.5,outline:'none'}}>
+              {teams.map(o=><option key={o}>{o}</option>)}
+            </select>
+            <button onClick={()=>setRows(rows.filter((_,j)=>j!==i))} style={{width:30,height:34,background:'transparent',border:`1px solid ${C.border}`,borderRadius:7,color:C.txt3,fontSize:14,cursor:'pointer'}}>×</button>
+          </div>
+        ))}
+        <button onClick={()=>setRows([...rows,{email:'',role:'Assistant Coach',team:'U18 Men'}])} style={{display:'flex',alignItems:'center',gap:6,padding:'8px 14px',background:'transparent',border:`1px dashed ${C.border2}`,borderRadius:7,fontSize:12,fontWeight:700,color:C.txt2,cursor:'pointer',marginTop:4}}>
+          <Ic d={P2.plus} size={12} color="currentColor" stroke={3}/> Add another
+        </button>
+        <div style={{marginTop:18,padding:'12px 14px',background:'rgba(63,169,245,0.06)',border:'1px solid rgba(63,169,245,0.18)',borderRadius:8}}>
+          <div style={{fontSize:11.5,fontWeight:700,color:C.sky,marginBottom:5}}>💡 Inviting parents?</div>
+          <div style={{fontSize:11.5,color:C.txt2,lineHeight:1.5}}>Parents will be prompted to link their account to a child during sign-up. You can also link them now from the player profile.</div>
+        </div>
+        <div>
+          <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',margin:'14px 0 6px'}}>Personal message (optional)</div>
+          <textarea placeholder="Welcome to Malvern City FC! Click the link below to set up your account..." style={{width:'100%',minHeight:60,padding:'9px 11px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:7,color:C.txt,fontSize:12.5,outline:'none',resize:'vertical',fontFamily:'inherit'}}/>
+        </div>
+      </div>
+      <div style={{padding:'14px 22px',borderTop:`1px solid ${C.border}`,display:'flex',gap:10,justifyContent:'flex-end'}}>
+        <button onClick={onClose} style={{padding:'9px 18px',background:'transparent',border:`1px solid ${C.border2}`,borderRadius:8,fontSize:12.5,fontWeight:700,color:C.txt2,cursor:'pointer'}}>Cancel</button>
+        <button onClick={onClose} style={{padding:'9px 22px',background:`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:8,fontSize:13,fontWeight:800,color:C.green,cursor:'pointer'}}>Send {rows.filter(r=>r.email).length||rows.length} {rows.length===1?'Invitation':'Invitations'}</button>
+      </div>
+    </div>
+  </div>);
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+function PermissionsTab(){
+  const [selectedRole,setSelectedRole]=useState('Team Manager');
+  const roles=[
+    {id:'Club Admin',c:C.sky,desc:'Full access to all club operations and billing'},
+    {id:'Technical Director',c:C.lime,desc:'Cross-team oversight, sets technical direction'},
+    {id:'Head Coach',c:C.lime,desc:'Full access to assigned team(s)'},
+    {id:'Assistant Coach',c:C.amber,desc:'Edit sessions and tactics, view-only on admin'},
+    {id:'Team Manager',c:'#C77DFF',desc:'Logistics, fixtures, comms — no tactical access'},
+    {id:'Physio',c:C.red,desc:'Wellness, injuries, medical clearance only'},
+    {id:'Player',c:C.txt2,desc:'Own profile, availability, wellness check-ins'},
+    {id:'Parent',c:C.txt2,desc:'Linked child(ren) only — view-only'},
+  ];
+  // permissions matrix per role
+  const perms = {
+    'Club Admin':         {dashboard:'full',sessions:'full',tactics:'full',team:'full',wellness:'full',development:'full',meetings:'full',fixtures:'full',billing:'full',users:'full',branding:'full'},
+    'Technical Director': {dashboard:'full',sessions:'full',tactics:'full',team:'full',wellness:'full',development:'full',meetings:'full',fixtures:'full',billing:'view',users:'full',branding:'full'},
+    'Head Coach':         {dashboard:'full',sessions:'full',tactics:'full',team:'full',wellness:'full',development:'full',meetings:'full',fixtures:'edit',billing:'none',users:'view',branding:'none'},
+    'Assistant Coach':    {dashboard:'full',sessions:'edit',tactics:'edit',team:'view',wellness:'view',development:'view',meetings:'view',fixtures:'view',billing:'none',users:'none',branding:'none'},
+    'Team Manager':       {dashboard:'full',sessions:'view',tactics:'none',team:'edit',wellness:'view',development:'none',meetings:'edit',fixtures:'full',billing:'none',users:'view',branding:'none'},
+    'Physio':             {dashboard:'view',sessions:'view',tactics:'none',team:'view',wellness:'full',development:'view',meetings:'view',fixtures:'view',billing:'none',users:'none',branding:'none'},
+    'Player':             {dashboard:'self',sessions:'view',tactics:'view',team:'view',wellness:'self',development:'self',meetings:'view',fixtures:'view',billing:'none',users:'none',branding:'none'},
+    'Parent':             {dashboard:'self',sessions:'view',tactics:'none',team:'view',wellness:'self',development:'self',meetings:'none',fixtures:'view',billing:'self',users:'none',branding:'none'},
+  };
+  const features=[
+    {id:'dashboard',l:'Dashboard'},{id:'sessions',l:'Sessions & Block Planner'},{id:'tactics',l:'Tactics & Gameday'},
+    {id:'team',l:'Team Management'},{id:'wellness',l:'Wellness Reports'},{id:'development',l:'Player Development'},
+    {id:'meetings',l:'Meetings'},{id:'fixtures',l:'Fixtures & Results'},{id:'billing',l:'Billing & Subscription'},
+    {id:'users',l:'User Management'},{id:'branding',l:'Branding & Club Config'},
+  ];
+  const Pill = ({lvl})=>{
+    const cfg={
+      full:{l:'Full',c:C.goal,bg:'rgba(46,212,122,0.12)',br:'rgba(46,212,122,0.3)'},
+      edit:{l:'Edit',c:C.lime,bg:'rgba(182,255,43,0.1)',br:'rgba(182,255,43,0.3)'},
+      view:{l:'View',c:C.sky,bg:'rgba(63,169,245,0.1)',br:'rgba(63,169,245,0.3)'},
+      self:{l:'Self only',c:C.amber,bg:'rgba(255,176,32,0.1)',br:'rgba(255,176,32,0.3)'},
+      none:{l:'No access',c:C.txt3,bg:'rgba(255,255,255,0.03)',br:C.border},
+    }[lvl];
+    return <span style={{fontSize:10.5,fontWeight:700,color:cfg.c,background:cfg.bg,border:`1px solid ${cfg.br}`,borderRadius:5,padding:'3px 9px',whiteSpace:'nowrap'}}>{cfg.l}</span>;
+  };
+  return(<div>
+    <Section title="Roles">
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:8}}>
+        {roles.map(r=>{
+          const active=selectedRole===r.id;
+          return(<button key={r.id} onClick={()=>setSelectedRole(r.id)} style={{padding:'10px 12px',background:active?'rgba(182,255,43,0.06)':C.s2,border:`1.5px solid ${active?'rgba(182,255,43,0.4)':C.border}`,borderRadius:9,cursor:'pointer',textAlign:'left'}}>
+            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
+              <div style={{width:8,height:8,borderRadius:'50%',background:r.c}}/>
+              <div style={{fontSize:13,fontWeight:700,color:active?C.lime:C.txt}}>{r.id}</div>
+            </div>
+            <div style={{fontSize:11,color:C.txt3,lineHeight:1.4}}>{r.desc}</div>
+          </button>);
+        })}
+      </div>
+    </Section>
+    
+    <Section title={`${selectedRole} — Permissions`}>
+      <div style={{fontSize:12.5,color:C.txt2,marginBottom:6,lineHeight:1.5}}>
+        Adjust what this role can do across each section of the app. Changes apply to all members assigned this role.
+      </div>
+      <div style={{display:'flex',flexDirection:'column',gap:0,background:C.s2,borderRadius:9,border:`1px solid ${C.border}`,overflow:'hidden'}}>
+        {features.map((f,i)=>(
+          <div key={f.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'11px 14px',borderTop:i?`1px solid ${C.border}`:'none'}}>
+            <div style={{fontSize:13,fontWeight:600,color:C.txt}}>{f.l}</div>
+            <div style={{display:'flex',gap:4}}>
+              {['full','edit','view','self','none'].map(lvl=>{
+                const current=perms[selectedRole][f.id]===lvl;
+                return(<button key={lvl} style={{padding:'4px 10px',background:current?'rgba(182,255,43,0.08)':'transparent',border:`1px solid ${current?'rgba(182,255,43,0.35)':C.border}`,borderRadius:5,fontSize:10.5,fontWeight:700,color:current?C.lime:C.txt3,cursor:'pointer',textTransform:'capitalize'}}>{lvl==='self'?'Self':lvl==='none'?'—':lvl}</button>);
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    </Section>
+    
+    <Section title="Custom Roles">
+      <Row label="Create custom role" desc="Define a role with bespoke permissions for your club">
+        <button style={{padding:'7px 14px',background:'rgba(182,255,43,0.1)',border:'1px solid rgba(182,255,43,0.3)',borderRadius:7,fontSize:11.5,fontWeight:700,color:C.lime,cursor:'pointer'}}>+ New Role</button>
+      </Row>
+    </Section>
+  </div>);}
+
+// ────────────────────────────────────────────────────────────────────────────
+function FeaturesTab(){
+  const [plan,setPlan]=useState('Pro');
+  const modules=[
+    {id:'core',n:'Core',price:0,inc:'Included',req:true,desc:'Dashboard, team management, fixtures, basic comms',feats:['Dashboard','Squad list','Fixtures & results','Team chat','Basic stats']},
+    {id:'sessions',n:'Sessions',price:15,inc:'addon',desc:'Session builder, drill library, training schedule',feats:['Session builder','Drill library','Block planner','Training calendar','Attendance']},
+    {id:'tactics',n:'Tactics',price:20,inc:'addon',desc:'Formations, match plans, tactical breakdowns',feats:['Tactics board','Formation library','Match plans','Set pieces','Opposition reports']},
+    {id:'wellness',n:'Wellness',price:12,inc:'addon',desc:'Health check-ins, injuries, exports',feats:['Wellness check-ins','Injury tracking','Workload monitoring','Wellness reports','PDF exports']},
+    {id:'development',n:'Development',price:18,inc:'addon',desc:'Individual development plans, growth tracking',feats:['IDPs','Skill assessments','Progress reports','Parent portal','1-on-1 reviews']},
+    {id:'analysis',n:'Video Analysis',price:25,inc:'pro',desc:'Match footage, clipping, opposition scouting',feats:['Video upload','Clip tagging','Hudl integration','Opposition scout','Highlight reels']},
+    {id:'recruitment',n:'Recruitment',price:30,inc:'club',desc:'Trial management, player scouting, EOI tracking',feats:['Trial register','EOI form','Scouting reports','Recruitment pipeline','Trial sessions']},
+    {id:'multi',n:'Multi-Team / Club',price:40,inc:'club',desc:'Manage many teams under one club, cross-team analytics',feats:['Club overview','All teams view','Cross-team analytics','League management','Pathway tracking']},
+  ];
+  const [enabled,setEnabled]=useState(()=>({core:true,sessions:true,tactics:true,wellness:true,development:true,analysis:true,recruitment:false,multi:false}));
+  const total=modules.filter(m=>enabled[m.id]).reduce((s,m)=>s+m.price,0)+29; // base
+  return(<div>
+    <Section title="Choose Your Modules">
+      <div style={{fontSize:12.5,color:C.txt2,lineHeight:1.5,marginBottom:6}}>
+        Pick exactly what your club needs. Add and remove modules anytime — billing adjusts on the next cycle.
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))',gap:10}}>
+        {modules.map(m=>{
+          const on=enabled[m.id];
+          return(<div key={m.id} style={{padding:'14px',background:on?'rgba(182,255,43,0.05)':C.s2,border:`1.5px solid ${on?'rgba(182,255,43,0.35)':C.border}`,borderRadius:10,position:'relative'}}>
+            <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:6}}>
+              <div>
+                <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:16,color:on?C.lime:C.txt,letterSpacing:'0.03em'}}>{m.n.toUpperCase()}</div>
+                <div style={{fontSize:11.5,color:C.txt3,marginTop:2}}>{m.req?'Always included':`+ $${m.price}/mo`}</div>
+              </div>
+              {m.req?
+                <span style={{fontSize:10,fontWeight:700,color:C.goal,background:'rgba(46,212,122,0.12)',border:'1px solid rgba(46,212,122,0.3)',borderRadius:5,padding:'3px 8px',whiteSpace:'nowrap'}}>REQUIRED</span>
+                :<Toggle value={on} onChange={v=>setEnabled({...enabled,[m.id]:v})}/>}
+            </div>
+            <div style={{fontSize:12,color:C.txt2,lineHeight:1.4,marginBottom:10}}>{m.desc}</div>
+            <div style={{display:'flex',flexDirection:'column',gap:3}}>
+              {m.feats.map(f=>(
+                <div key={f} style={{display:'flex',gap:6,alignItems:'center',fontSize:11.5,color:on?C.txt:C.txt3}}>
+                  <Ic d={P.check} size={11} color={on?C.lime:C.txt3} stroke={2.5}/>{f}
+                </div>
+              ))}
+            </div>
+          </div>);
+        })}
+      </div>
+    </Section>
+    <div style={{position:'sticky',bottom:8,background:`linear-gradient(135deg,${C.greenDark},${C.green})`,border:'1px solid rgba(182,255,43,0.3)',borderRadius:12,padding:'14px 18px',display:'flex',alignItems:'center',justifyContent:'space-between',marginTop:8}}>
+      <div>
+        <div style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.55)',letterSpacing:'0.08em',textTransform:'uppercase'}}>Estimated total</div>
+        <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:26,color:'#fff'}}>${total}<span style={{fontSize:14,color:'rgba(255,255,255,0.5)',fontWeight:600}}> / month</span></div>
+        <div style={{fontSize:11,color:'rgba(255,255,255,0.5)',marginTop:2}}>$29 base + {modules.filter(m=>enabled[m.id]&&!m.req).length} module{modules.filter(m=>enabled[m.id]&&!m.req).length===1?'':'s'}</div>
+      </div>
+      <button style={{padding:'10px 22px',background:`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:9,fontSize:13,fontWeight:800,color:C.green,cursor:'pointer'}}>Update Subscription</button>
+    </div>
+  </div>);}
+
+// ────────────────────────────────────────────────────────────────────────────
+function ChildrenTab(){
+  const children=[
+    {n:'Oscar Petersen',i:'OP',age:17,team:'U18 Men',pos:'LW · #11',c:C.lime,wellness:'Good',att:92,nextEv:'Training · Tonight 6:30pm'},
+    {n:'Ella Petersen',i:'EP',age:14,team:'U14 Girls',pos:'CM · #8',c:'#FF6B9D',wellness:'OK',att:85,nextEv:'Match Sat 10am vs Box Hill'},
+  ];
+  return(<div>
+    <Section title="Linked Children">
+      {children.map(c=>(
+        <div key={c.n} style={{padding:'14px',background:C.s2,borderRadius:10,border:`1px solid ${C.border}`,display:'flex',gap:14,alignItems:'center'}}>
+          <div style={{width:54,height:54,borderRadius:12,background:`${c.c}20`,border:`1.5px solid ${c.c}40`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+            <span style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:18,color:c.c}}>{c.i}</span>
+          </div>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:14,fontWeight:700,color:C.txt}}>{c.n}</div>
+            <div style={{fontSize:11.5,color:C.txt3,marginBottom:5}}>{c.age} yrs · {c.team} · {c.pos}</div>
+            <div style={{display:'flex',gap:14,fontSize:11}}>
+              <div><span style={{color:C.txt3}}>Wellness:</span> <span style={{color:c.wellness==='Good'?C.goal:C.amber,fontWeight:700}}>{c.wellness}</span></div>
+              <div><span style={{color:C.txt3}}>Attendance:</span> <span style={{color:C.txt,fontWeight:700}}>{c.att}%</span></div>
+            </div>
+            <div style={{fontSize:11,color:C.lime,marginTop:4}}>📅 {c.nextEv}</div>
+          </div>
+          <div style={{display:'flex',flexDirection:'column',gap:6,flexShrink:0}}>
+            <button onClick={()=>{window.location.href='tfb-player.html'}} style={{padding:'7px 14px',background:'rgba(182,255,43,0.1)',border:'1px solid rgba(182,255,43,0.3)',borderRadius:7,fontSize:11.5,fontWeight:700,color:C.lime,cursor:'pointer'}}>View Profile</button>
+            <button style={{padding:'5px 12px',background:'transparent',border:`1px solid ${C.border2}`,borderRadius:7,fontSize:11,fontWeight:600,color:C.txt2,cursor:'pointer'}}>Unlink</button>
+          </div>
+        </div>
+      ))}
+      <button style={{display:'flex',alignItems:'center',gap:6,padding:'10px 14px',background:'rgba(182,255,43,0.05)',border:'1px dashed rgba(182,255,43,0.3)',borderRadius:9,fontSize:12.5,fontWeight:700,color:C.lime,cursor:'pointer',justifyContent:'center'}}>
+        <Ic d={P2.plus} size={13} color={C.lime} stroke={3}/> Link another child
+      </button>
+    </Section>
+    <Section title="Communications Preferences">
+      <Row label="Send messages from coaches to me" desc="If off, child receives them directly (age 13+)">
+        <Toggle value={true} onChange={()=>{}}/>
+      </Row>
+      <Row label="Wellness check-in reminders" desc="Help younger players remember to fill in their daily check">
+        <Toggle value={true} onChange={()=>{}}/>
+      </Row>
+      <Row label="Match-day SMS alerts" desc="Get a text 1 hour before kick-off">
+        <Toggle value={false} onChange={()=>{}}/>
+      </Row>
+    </Section>
+    <Section title="Verification & Consent">
+      <Row label="Photo & video consent" desc="Allow club to use my child's image in marketing">
+        <Toggle value={true} onChange={()=>{}}/>
+      </Row>
+      <Row label="Medical info sharing" desc="Share medical details with coaching staff and physio">
+        <Toggle value={true} onChange={()=>{}}/>
+      </Row>
+    </Section>
+  </div>);}
+
+function getTabContent(tab, user, role){
+  switch(tab){
+    case 'profile': return <ProfileTab user={user} role={role}/>;
+    case 'display': return <DisplayTab/>;
+    case 'club': return <ClubTab/>;
+    case 'users': return <UserManagementTab/>;
+    case 'permissions': return <PermissionsTab/>;
+    case 'features': return <FeaturesTab/>;
+    case 'children': return <ChildrenTab/>;
+    case 'notifications': return <NotificationsTab/>;
+    case 'privacy': return <PrivacyTab/>;
+    case 'branding': return <BrandingTab/>;
+    case 'subscription': return <SubscriptionTab/>;
+    case 'data': return <DataTab/>;
+    default: return <ProfileTab user={user} role={role}/>;
+  }
+}
+
+function App(){
+  React.useEffect(()=>{ document.body.dataset.tfbHasOwnMenu='1'; },[]);
+  const role = getCurrentRole();
+  const user = ROLE_USER[role] || ROLE_USER['Coach'];
+  const allowedTabs = ROLE_TABS[role] || ROLE_TABS['Coach'];
+  const visibleTabs = SETTINGS_TABS.filter(t => allowedTabs.includes(t.id));
+  const [tab,setTab]=useState(visibleTabs[0]?.id || 'profile');
+  const bp = window.useBreakpoint ? window.useBreakpoint() : 'desktop';
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const isMobile = bp === 'mobile';
+  const isTablet = bp === 'tablet';
+  
+  return(<div style={{minHeight:'100vh',height:isMobile?'auto':'100vh',display:'flex',flexDirection:'column',background:C.bg,overflow:isMobile?'visible':'hidden'}}>
+    {/* Header — desktop vs mobile */}
+    {isMobile ? (
+      window.MobileTopBar ? <window.MobileTopBar 
+        title="SETTINGS" 
+        subtitle="Account & Club Config" 
+        onMenu={()=>setDrawerOpen(true)} 
+      /> : <Header onBack={()=>{try{window.location.href='tfb-dashboard.html'}catch(e){}}}/>
+    ) : (
+      <Header onBack={()=>{try{window.location.href='tfb-dashboard.html'}catch(e){}}}/>
+    )}
+    
+    {/* Mobile drawer */}
+    {isMobile && window.MobileDrawer && <window.MobileDrawer open={drawerOpen} onClose={()=>setDrawerOpen(false)} currentPath="tfb-settings.html" role={role} user={user}/>}
+    
+    {/* Mobile: horizontal tab pills */}
+    {isMobile && (
+      <div style={{background:C.s1,borderBottom:`1px solid ${C.border}`,padding:'10px 12px 12px',position:'sticky',top:0,zIndex:30}}>
+        <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
+          <div style={{width:36,height:36,borderRadius:'50%',background:`linear-gradient(135deg,${C.lime},#68B42E)`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+            <span style={{fontSize:12,fontWeight:900,color:C.green,fontFamily:'var(--font-d)'}}>{user.initials}</span>
+          </div>
+          <div style={{minWidth:0,flex:1}}>
+            <div style={{fontSize:13,fontWeight:700,color:C.txt,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{user.full}</div>
+            <div style={{fontSize:10,color:C.lime,fontWeight:700,letterSpacing:'0.04em',textTransform:'uppercase'}}>{role}</div>
+          </div>
+        </div>
+        <div style={{display:'flex',gap:6,overflowX:'auto',paddingBottom:4,scrollbarWidth:'none',WebkitOverflowScrolling:'touch'}} className="hide-scrollbar">
+          {visibleTabs.map(t=>(
+            <button key={t.id} onClick={()=>setTab(t.id)} style={{display:'flex',alignItems:'center',gap:6,padding:'8px 13px',background:tab===t.id?`linear-gradient(135deg,${C.lime},#68B42E)`:C.s2,border:`1px solid ${tab===t.id?'transparent':C.border2}`,borderRadius:8,fontSize:12,fontWeight:700,color:tab===t.id?C.green:C.txt2,cursor:'pointer',whiteSpace:'nowrap',flexShrink:0,minHeight:36}}>
+              <Ic d={t.icon} size={13} color="currentColor"/>{t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    )}
+    
+    <div style={{flex:1,display:'flex',overflow:isMobile?'visible':'hidden'}}>
+      {/* Desktop/Tablet sidebar */}
+      {!isMobile && (
+        <div style={{width:isTablet?56:220,background:C.s1,borderRight:`1px solid ${C.border}`,padding:isTablet?'12px 6px':'12px 8px',flexShrink:0,overflowY:'auto',transition:'width .2s'}}>
+          {!isTablet && (
+            <div style={{padding:'4px 8px 12px',marginBottom:4,borderBottom:`1px solid ${C.border}`}}>
+              <div style={{display:'flex',alignItems:'center',gap:9,padding:'4px 0'}}>
+                <div style={{width:34,height:34,borderRadius:'50%',background:`linear-gradient(135deg,${C.lime},#68B42E)`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                  <span style={{fontSize:12,fontWeight:900,color:C.green,fontFamily:'var(--font-d)'}}>{user.initials}</span>
+                </div>
+                <div style={{minWidth:0}}>
+                  <div style={{fontSize:12.5,fontWeight:700,color:C.txt,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{user.full}</div>
+                  <div style={{fontSize:10,color:C.lime,fontWeight:700,letterSpacing:'0.04em',textTransform:'uppercase'}}>{role}</div>
+                </div>
+              </div>
+            </div>
+          )}
+          {!isTablet && <div style={{fontSize:10,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.1em',padding:'6px 8px 8px'}}>Settings</div>}
+          {visibleTabs.map(t=>(
+            <button key={t.id} onClick={()=>setTab(t.id)} title={isTablet?t.label:undefined} style={{width:'100%',display:'flex',alignItems:'center',gap:isTablet?0:10,justifyContent:isTablet?'center':'flex-start',padding:isTablet?'10px 0':'9px 12px',background:tab===t.id?'rgba(182,255,43,0.1)':'transparent',border:'none',borderLeft:`3px solid ${tab===t.id?C.lime:'transparent'}`,borderRadius:tab===t.id?'0 8px 8px 0':8,cursor:'pointer',color:tab===t.id?C.lime:'rgba(255,255,255,0.6)',fontSize:13,fontWeight:tab===t.id?700:500,marginBottom:2,textAlign:'left',transition:'all .12s'}}
+              onMouseEnter={e=>{if(tab!==t.id){e.currentTarget.style.background='rgba(255,255,255,0.05)';e.currentTarget.style.color='rgba(255,255,255,0.9)'}}}
+              onMouseLeave={e=>{if(tab!==t.id){e.currentTarget.style.background='transparent';e.currentTarget.style.color='rgba(255,255,255,0.6)'}}}>
+              <Ic d={t.icon} size={16} color="currentColor"/>{!isTablet && t.label}
+            </button>
+          ))}
+          <div style={{borderTop:`1px solid ${C.border}`,marginTop:12,paddingTop:12}}>
+            <button title={isTablet?'Sign Out':undefined} style={{width:'100%',display:'flex',alignItems:'center',gap:isTablet?0:10,justifyContent:isTablet?'center':'flex-start',padding:isTablet?'10px 0':'9px 12px',background:'transparent',border:'none',borderRadius:8,cursor:'pointer',color:C.red,fontSize:13,fontWeight:500,textAlign:'left',transition:'all .12s'}}
+              onMouseEnter={e=>e.currentTarget.style.background='rgba(229,83,61,0.1)'}
+              onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+              <Ic d={P.logout} size={16} color={C.red}/>{!isTablet && 'Sign Out'}
+            </button>
+          </div>
+        </div>
+      )}
+      {/* Content */}
+      <div style={{flex:1,overflowY:isMobile?'visible':'auto',padding:isMobile?'14px 12px 90px':'20px 24px',minWidth:0}}>
+        {getTabContent(tab, user, role)}
+        {/* Save button */}
+        <div style={{position:'sticky',bottom:0,padding:'12px 0',background:`linear-gradient(transparent,${C.bg})`,display:'flex',justifyContent:'flex-end'}}>
+          <button style={{padding:'10px 28px',background:`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:10,fontSize:14,fontWeight:800,color:C.green,cursor:'pointer',transition:'opacity .15s'}} onMouseEnter={e=>e.currentTarget.style.opacity='.88'} onMouseLeave={e=>e.currentTarget.style.opacity='1'}>Save Changes</button>
+        </div>
+      </div>
+    </div>
+  </div>);}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

@@ -4,6 +4,11 @@
 <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>TFB – Wellness</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="tfb-firebase.js"></script>
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
@@ -27,7 +32,7 @@ input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.15)}
 </head>
 <body><div id="root"></div>
 <script type="text/babel">
-const {useState,useRef,useCallback} = React;
+const {useState,useEffect,useRef,useCallback} = React;
 const C={lime:'#B6FF2B',green:'#0F3D2E',greenDark:'#0A2E20',bg:'#111418',s1:'#1C2128',s2:'#242B33',s3:'#2D3640',border:'rgba(255,255,255,0.07)',border2:'rgba(255,255,255,0.13)',txt:'#F0F2F4',txt2:'rgba(240,242,244,0.5)',txt3:'rgba(240,242,244,0.28)',goal:'#2ED47A',amber:'#FFB020',red:'#E5533D',sky:'#3FA9F5'};
 const Ic=({d,size=16,color='currentColor',stroke=2,fill='none'})=>(<svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>{Array.isArray(d)?d.map((p,i)=><path key={i} d={p}/>):<path d={d}/> }</svg>);
 const P={
@@ -324,6 +329,16 @@ function App(){
   const [showExport,setShowExport]=useState(false);
   const [mainTab,setMainTab]=useState('today');
   const [checkInSuccess,setCheckInSuccess]=useState(false);
+  const [fbCtx,setFbCtx]=useState(null);
+
+  useEffect(()=>{
+    if(!window.TFBApp)return;
+    return window.TFBApp.onAuthStateChanged(async user=>{
+      if(!user)return;
+      const ctx=await window.TFBApp.getActiveContext(user.uid);
+      if(ctx?.clubId)setFbCtx(ctx);
+    });
+  },[]);
 
   const needsAttention=players.filter(p=>p.status!=='good');
   const notSubmitted=players.filter(p=>!p.today&&p.status!=='injured');
@@ -333,6 +348,10 @@ function App(){
   const handleSubmit=(data)=>{
     if(checkinPlayer?.id>0){
       setPlayers(prev=>prev.map(p=>p.id===checkinPlayer.id?{...p,today:data.overall,breakdown:data,status:data.overall>=80?'good':data.overall>=65?'watch':'concern',notes:data.notes||p.notes,checkedIn:true}:p));
+      if(fbCtx?.clubId){
+        const today=new Date().toISOString().split('T')[0];
+        window.TFBApp?.saveWellnessEntry(fbCtx.clubId,fbCtx.teamId,today,String(checkinPlayer.id),data).catch(()=>{});
+      }
     }
     setShowCheckin(false);setCheckInSuccess(true);
     setTimeout(()=>setCheckInSuccess(false),3000);

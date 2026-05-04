@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>TFB – Sessions</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="tfb-firebase.js"></script>
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
@@ -22,7 +27,7 @@ button,input,select{font-family:var(--font-b);color:inherit}
 </head>
 <body><div id="root"></div>
 <script type="text/babel">
-const {useState} = React;
+const {useState, useEffect} = React;
 const C={lime:'#B6FF2B',green:'#0F3D2E',greenDark:'#0A2E20',bg:'#111418',s1:'#1C2128',s2:'#242B33',border:'rgba(255,255,255,0.07)',border2:'rgba(255,255,255,0.13)',txt:'#F0F2F4',txt2:'rgba(240,242,244,0.5)',txt3:'rgba(240,242,244,0.28)',goal:'#2ED47A',amber:'#FFB020',red:'#E5533D',sky:'#3FA9F5'};
 const PC={Technical:'#3FA9F5',Tactical:'#B6FF2B',Physical:'#FFB020',Psychological:'#2ED47A',Mixed:'#8A8F98'};
 
@@ -117,8 +122,23 @@ function App(){
   const [view,setView]=useState('list');
   const [search,setSearch]=useState('');
   const [pillarFilter,setPillarFilter]=useState('All');
+  const [sessions,setSessions]=useState(SESSIONS);
 
-  const filtered=SESSIONS.filter(s=>{
+  useEffect(()=>{
+    if(!window.TFBApp)return;
+    let listenerUnsub=null;
+    const authUnsub=window.TFBApp.onAuthStateChanged(async user=>{
+      if(!user)return;
+      const ctx=await window.TFBApp.getActiveContext(user.uid);
+      if(!ctx?.clubId)return;
+      listenerUnsub=window.TFBApp.listenSessions(ctx.clubId,ctx.teamId,docs=>{
+        if(docs.length>0)setSessions(docs);
+      });
+    });
+    return()=>{authUnsub();if(listenerUnsub)listenerUnsub();};
+  },[]);
+
+  const filtered=sessions.filter(s=>{
     const q=search.toLowerCase();
     return(!q||s.name.toLowerCase().includes(q))&&(pillarFilter==='All'||s.pillar===pillarFilter);
   });

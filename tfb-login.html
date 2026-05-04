@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>TFB – Login & Onboarding</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<!-- Firebase SDK (compat — works with inline Babel scripts) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="tfb-firebase.js"></script>
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
@@ -29,7 +34,7 @@ input:focus{border-color:var(--lime)!important}
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const {useState} = React;
+const {useState, useEffect} = React;
 const C={lime:'#B6FF2B',green:'#0F3D2E',greenDark:'#0A2E20',bg:'#0A0D11',s1:'#15191F',s2:'#1F252D',s3:'#2A3139',border:'rgba(255,255,255,0.07)',border2:'rgba(255,255,255,0.16)',txt:'#F0F2F4',txt2:'rgba(240,242,244,0.55)',txt3:'rgba(240,242,244,0.32)',goal:'#2ED47A',amber:'#FFB020',red:'#E5533D',sky:'#3FA9F5',purple:'#9B7FE8'};
 
 const STAGES = ['login','signup','role','context','club','solo','team','plan','payment','done'];
@@ -113,8 +118,74 @@ const Btn = ({onClick,children,variant='primary',disabled,style={}}) => (
   }} onMouseDown={e=>!disabled && (e.currentTarget.style.transform='scale(0.98)')} onMouseUp={e=>e.currentTarget.style.transform='scale(1)'}>{children}</button>
 );
 
+// ── Auth helpers ──────────────────────────────────────────────────────────
+function authErrMsg(code) {
+  const map = {
+    'auth/user-not-found':      'No account found with that email.',
+    'auth/wrong-password':      'Incorrect password.',
+    'auth/invalid-credential':  'Incorrect email or password.',
+    'auth/email-already-in-use':'An account with that email already exists.',
+    'auth/weak-password':       'Password must be at least 6 characters.',
+    'auth/invalid-email':       'Please enter a valid email address.',
+    'auth/too-many-requests':   'Too many attempts. Please try again later.',
+    'auth/popup-closed-by-user':'Sign-in popup was closed before completing.',
+    'auth/network-request-failed':'Network error — check your connection.',
+  };
+  return map[code] || 'Something went wrong. Please try again.';
+}
+
+function goNext() {
+  const params = new URLSearchParams(window.location.search);
+  const next = params.get('next') || 'tfb-dashboard.html';
+  try { window.location.href = decodeURIComponent(next); } catch(e) { window.location.href = 'tfb-dashboard.html'; }
+}
+
 // ── Stage components ──────────────────────────────────────────────────────
 function LoginStage({setStage}) {
+  const [email, setEmail]     = useState('');
+  const [password, setPass]   = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState('');
+  const [resetSent, setReset] = useState(false);
+
+  const handleSignIn = async () => {
+    if (!email || !password) return setError('Please enter your email and password.');
+    setError(''); setLoading(true);
+    try {
+      if (window.TFBApp) {
+        await window.TFBApp.signInEmail(email, password);
+        goNext();
+      } else {
+        // Firebase not configured — demo fallback
+        goNext();
+      }
+    } catch(e) { setError(authErrMsg(e.code)); setLoading(false); }
+  };
+
+  const handleGoogle = async () => {
+    setError(''); setLoading(true);
+    try {
+      if (window.TFBApp) {
+        const result = await window.TFBApp.signInGoogle();
+        const user = result.user;
+        // Create profile if new user
+        await window.TFBApp.setUserProfile(user.uid, {
+          name: user.displayName || '', email: user.email, photoURL: user.photoURL || '',
+        });
+        goNext();
+      }
+    } catch(e) { setError(authErrMsg(e.code)); setLoading(false); }
+  };
+
+  const handleForgot = async () => {
+    if (!email) return setError('Enter your email above then click Forgot password.');
+    setError(''); setLoading(true);
+    try {
+      if (window.TFBApp) await window.TFBApp.sendPasswordReset(email);
+      setReset(true); setLoading(false);
+    } catch(e) { setError(authErrMsg(e.code)); setLoading(false); }
+  };
+
   return (
     <Card>
       <div style={{textAlign:'center',marginBottom:28}}>
@@ -123,27 +194,29 @@ function LoginStage({setStage}) {
         <div style={{fontSize:14,color:C.txt2}}>The Football Blueprint — sign in to your account</div>
       </div>
 
-      <Field label="Email"><input type="email" placeholder="coach@malverncity.com" style={inp} defaultValue="alex@malverncity.com"/></Field>
-      <Field label="Password"><input type="password" placeholder="••••••••" style={inp} defaultValue="demopass"/></Field>
+      {error && <div style={{marginBottom:14,padding:'10px 14px',background:'rgba(229,83,61,0.1)',border:'1px solid rgba(229,83,61,0.3)',borderRadius:8,fontSize:13,color:'#E5533D'}}>{error}</div>}
+      {resetSent && <div style={{marginBottom:14,padding:'10px 14px',background:'rgba(46,212,122,0.1)',border:'1px solid rgba(46,212,122,0.3)',borderRadius:8,fontSize:13,color:'#2ED47A'}}>Password reset email sent — check your inbox.</div>}
+
+      <Field label="Email"><input type="email" placeholder="coach@malverncity.com" style={inp} value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleSignIn()}/></Field>
+      <Field label="Password"><input type="password" placeholder="••••••••" style={inp} value={password} onChange={e=>setPass(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleSignIn()}/></Field>
 
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:18,fontSize:12.5}}>
         <label style={{display:'flex',alignItems:'center',gap:7,color:C.txt2,cursor:'pointer'}}>
           <input type="checkbox" defaultChecked style={{accentColor:C.lime}}/> Remember me
         </label>
-        <a href="#" style={{color:C.lime,textDecoration:'none',fontWeight:600}}>Forgot password?</a>
+        <button onClick={handleForgot} style={{background:'none',border:'none',color:C.lime,fontWeight:600,cursor:'pointer',fontSize:12.5}}>Forgot password?</button>
       </div>
 
-      <Btn onClick={()=>{try{window.location.href='tfb-dashboard.html'}catch(e){}}} style={{width:'100%',marginBottom:14}}>Sign in →</Btn>
+      <Btn onClick={handleSignIn} disabled={loading} style={{width:'100%',marginBottom:14}}>{loading ? 'Signing in…' : 'Sign in →'}</Btn>
 
       <div style={{display:'flex',alignItems:'center',gap:10,margin:'18px 0',color:C.txt3,fontSize:11}}>
         <div style={{flex:1,height:1,background:C.border}}/> OR <div style={{flex:1,height:1,background:C.border}}/>
       </div>
 
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:18}}>
-        {[{n:'Google',c:'#fff'},{n:'Apple',c:'#fff'}].map(p=>(
-          <button key={p.n} style={{padding:'10px',background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border2}`,borderRadius:9,fontSize:13,fontWeight:600,color:C.txt}}>Continue with {p.n}</button>
-        ))}
-      </div>
+      <button onClick={handleGoogle} disabled={loading} style={{width:'100%',padding:'10px',background:'rgba(255,255,255,0.04)',border:`1px solid ${C.border2}`,borderRadius:9,fontSize:13,fontWeight:600,color:C.txt,cursor:'pointer',marginBottom:18,display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        Continue with Google
+      </button>
 
       <div style={{textAlign:'center',fontSize:13,color:C.txt2}}>
         New to TFB? <button onClick={()=>setStage('signup')} style={{background:'none',border:'none',color:C.lime,fontWeight:700,cursor:'pointer'}}>Create an account →</button>
@@ -153,11 +226,32 @@ function LoginStage({setStage}) {
 }
 
 function SignupStage({setStage,data,update}) {
-  const valid = data.fname && data.lname && data.email && data.password && data.password.length >=8;
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState('');
+  const valid = data.fname && data.lname && data.email && data.password && data.password.length >= 8;
+
+  const handleContinue = async () => {
+    if (!valid) return;
+    setError(''); setLoading(true);
+    try {
+      if (window.TFBApp) {
+        const result = await window.TFBApp.signUpEmail(data.email, data.password);
+        const uid = result.user.uid;
+        await window.TFBApp.setUserProfile(uid, {
+          name: `${data.fname} ${data.lname}`, firstName: data.fname, lastName: data.lname,
+          email: data.email, phone: data.phone || '', createdAt: window.TFBApp.serverTimestamp(),
+        });
+        update('uid', uid);
+      }
+      setStage('role');
+    } catch(e) { setError(authErrMsg(e.code)); setLoading(false); }
+  };
+
   return (
     <Card>
       <Stepper stage="signup" solo={data.context==='solo'}/>
       <Heading sub="Create your account" title="Let's get you set up" desc="Just a few quick details to get started — under 2 minutes."/>
+      {error && <div style={{marginBottom:14,padding:'10px 14px',background:'rgba(229,83,61,0.1)',border:'1px solid rgba(229,83,61,0.3)',borderRadius:8,fontSize:13,color:'#E5533D'}}>{error}</div>}
       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
         <Field label="First name"><input style={inp} value={data.fname} onChange={e=>update('fname',e.target.value)} placeholder="Alex"/></Field>
         <Field label="Last name"><input style={inp} value={data.lname} onChange={e=>update('lname',e.target.value)} placeholder="Mitchell"/></Field>
@@ -169,7 +263,7 @@ function SignupStage({setStage,data,update}) {
       <Field label="Mobile (optional)" hint="Used for SMS reminders"><input style={inp} value={data.phone} onChange={e=>update('phone',e.target.value)} placeholder="04XX XXX XXX"/></Field>
       <div style={{display:'flex',gap:10,justifyContent:'space-between',marginTop:18}}>
         <Btn variant="ghost" onClick={()=>setStage('login')}>← Back to sign in</Btn>
-        <Btn onClick={()=>setStage('role')} disabled={!valid}>Continue →</Btn>
+        <Btn onClick={handleContinue} disabled={!valid||loading}>{loading?'Creating account…':'Continue →'}</Btn>
       </div>
     </Card>
   );
@@ -409,6 +503,29 @@ function PaymentStage({setStage,data,update}) {
 
 function DoneStage({data}) {
   const tier = TIERS.find(t=>t.id===data.plan) || TIERS[0];
+  const [saved, setSaved]   = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (saved || saving) return;
+    setSaving(true);
+    const persist = async () => {
+      try {
+        if (window.TFBApp && data.uid) {
+          const clubData = data.context === 'solo'
+            ? { name: data.brandName || `${data.fname} ${data.lname}`, type: 'solo', country: data.country, city: data.city || '', subscriptionTier: data.plan }
+            : { name: data.clubName, country: data.country, region: data.region || '', federation: data.federation || '', subscriptionTier: data.plan };
+          const teamData = { name: data.teamName, ageGroup: data.ageGroup, level: data.level, season: data.season, playerCount: parseInt(data.playerCount) || 0 };
+          await window.TFBApp.createClubAndTeam(data.uid, clubData, teamData);
+          await window.TFBApp.setUserProfile(data.uid, { role: data.role, context: data.context, plan: data.plan });
+          if (window.TFBPlan) window.TFBPlan.setPlan(data.plan);
+        }
+      } catch(e) { console.warn('Profile save failed:', e); }
+      setSaved(true); setSaving(false);
+    };
+    persist();
+  }, []);
+
   return (
     <Card>
       <div style={{textAlign:'center',padding:'10px 0 4px'}}>
@@ -452,6 +569,14 @@ function DoneStage({data}) {
 
 // ── App ────────────────────────────────────────────────────────────────────
 function App() {
+  // Redirect already-authenticated users straight to dashboard
+  useEffect(() => {
+    if (!window.TFBApp) return;
+    return window.TFBApp.onAuthStateChanged(user => {
+      if (user) goNext();
+    });
+  }, []);
+
   const [stage,setStage] = useState('login');
   const [data,setData] = useState({
     fname:'Alex',lname:'Mitchell',email:'alex@malverncity.com',password:'demopass123',phone:'',

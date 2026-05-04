@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>TFB – Session Builder</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="tfb-firebase.js"></script>
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
@@ -715,6 +720,37 @@ function App() {
     return()=>window.removeEventListener('keydown',handler);
   },[selectedId,handleDeleteElement,undo,redo]);
 
+  // ── Firebase context ────────────────────────────────────────────────────────
+  const [fbCtx, setFbCtx] = useState(null);
+  const [saveStatus, setSaveStatus] = useState(null); // null|'saving'|'saved'|'error'
+
+  useEffect(() => {
+    if (!window.TFBApp) return;
+    return window.TFBApp.onAuthStateChanged(async user => {
+      if (user) {
+        const ctx = await window.TFBApp.getActiveContext(user.uid);
+        if (ctx?.clubId) setFbCtx(ctx);
+      }
+    });
+  }, []);
+
+  const handleSave = useCallback(async () => {
+    if (!fbCtx?.clubId || !fbCtx?.teamId) return;
+    setSaveStatus('saving');
+    try {
+      await window.TFBApp.saveSession(fbCtx.clubId, fbCtx.teamId, {
+        name: sessionName,
+        sections,
+        date: new Date().toISOString(),
+      });
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus(null), 2500);
+    } catch (e) {
+      console.error('Save failed:', e);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus(null), 3000);
+    }
+  }, [fbCtx, sessionName, sections]);
 
   // ── PDF Export ──────────────────────────────────────────────────────────────
   const exportPDF = () => {
@@ -846,8 +882,8 @@ function App() {
             <button onClick={exportPDF} style={{display:'flex',alignItems:'center',gap:6,padding:'7px 14px',background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.15)',borderRadius:8,fontSize:12,fontWeight:700,color:'rgba(255,255,255,0.8)',cursor:'pointer',transition:'all .15s'}} onMouseEnter={e=>{e.currentTarget.style.background='rgba(255,255,255,0.12)';e.currentTarget.style.color='#fff'}} onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,0.07)';e.currentTarget.style.color='rgba(255,255,255,0.8)'}}>
               📄 Export PDF
             </button>
-            <button style={{display:'flex',alignItems:'center',gap:6,padding:'7px 16px',background:`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:8,fontSize:13,fontWeight:800,color:C.green,cursor:'pointer'}} onMouseEnter={e=>e.currentTarget.style.opacity='.88'} onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
-              <Ic d={P.save} size={14} color={C.green}/> Save Session
+            <button onClick={handleSave} disabled={saveStatus==='saving'||!fbCtx} style={{display:'flex',alignItems:'center',gap:6,padding:'7px 16px',background:`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:8,fontSize:13,fontWeight:800,color:C.green,cursor:fbCtx?'pointer':'not-allowed',opacity:fbCtx?1:0.6}} onMouseEnter={e=>{if(fbCtx)e.currentTarget.style.opacity='.88'}} onMouseLeave={e=>{if(fbCtx)e.currentTarget.style.opacity='1'}}>
+              <Ic d={P.save} size={14} color={C.green}/> {saveStatus==='saving'?'Saving…':saveStatus==='saved'?'Saved ✓':saveStatus==='error'?'Error!':'Save Session'}
             </button>
           </div>
         </div>

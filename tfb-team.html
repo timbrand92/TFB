@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>TFB – Team Management</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="tfb-firebase.js"></script>
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
@@ -755,15 +760,39 @@ function App() {
   const [selected, setSelected] = useState(SQUAD[5]); // Beau Tremblay default
   const [showAdd, setShowAdd] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
+  const [fbCtx, setFbCtx] = useState(null);
 
   useEffect(()=>{
     document.body.classList.toggle('light', tweaks.colorMode==='light');
   },[tweaks.colorMode]);
 
-  const handleAdd = useCallback((p)=>{
-    setPlayers(prev=>[...prev,p]);
-    setSelected(p);
+  useEffect(()=>{
+    if(!window.TFBApp)return;
+    let listenerUnsub=null;
+    const authUnsub=window.TFBApp.onAuthStateChanged(async user=>{
+      if(!user)return;
+      const ctx=await window.TFBApp.getActiveContext(user.uid);
+      if(!ctx?.clubId)return;
+      setFbCtx(ctx);
+      listenerUnsub=window.TFBApp.listenPlayers(ctx.clubId,ctx.teamId,docs=>{
+        if(docs.length>0)setPlayers(docs);
+      });
+    });
+    return()=>{authUnsub();if(listenerUnsub)listenerUnsub();};
   },[]);
+
+  const handleAdd = useCallback(async (p)=>{
+    if(fbCtx?.clubId){
+      try{
+        const id=await window.TFBApp.savePlayer(fbCtx.clubId,fbCtx.teamId,p);
+        setSelected({...p,id});
+        return;
+      }catch(e){console.error('savePlayer failed:',e);}
+    }
+    const newP={...p,id:p.id||String(Date.now())};
+    setPlayers(prev=>[...prev,newP]);
+    setSelected(newP);
+  },[fbCtx]);
 
   return (
     <div style={{height:'100vh',display:'flex',flexDirection:'column',background:C.bg,overflow:'hidden'}}>

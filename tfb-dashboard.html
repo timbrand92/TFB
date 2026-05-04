@@ -7,6 +7,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="tfb-firebase.js"></script>
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
@@ -1736,6 +1741,29 @@ function Dashboard({ role, density }) {
   );
 }
 
+// ─── Firebase data hook ────────────────────────────────────────────────────
+function useFirebaseContext() {
+  const [ctx, setCtx]       = useState(null);
+  const [authUser, setAuth] = useState(undefined); // undefined = loading
+
+  useEffect(() => {
+    if (!window.TFBApp) { setAuth(null); return; }
+    return window.TFBApp.requireAuth(async user => {
+      setAuth(user);
+      try {
+        const context = await window.TFBApp.getActiveContext(user.uid);
+        if (context) setCtx(context);
+        // Sync plan to tfb-plan.js
+        if (context?.club?.subscriptionTier && window.TFBPlan) {
+          window.TFBPlan.setPlan(context.club.subscriptionTier);
+        }
+      } catch(e) { console.warn('Firestore load failed:', e); }
+    });
+  }, []);
+
+  return { ctx, authUser };
+}
+
 // ─── App ───────────────────────────────────────────────────────────────────
 function App() {
   const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
@@ -1749,6 +1777,16 @@ function App() {
   }/*EDITMODE-END*/;
 
   const [tweaks, setTweak] = window.useTweaks(TWEAK_DEFAULTS);
+  const { ctx, authUser }  = useFirebaseContext();
+
+  // Override team name from Firestore once loaded
+  useEffect(() => {
+    if (ctx?.team?.name) setTweak('teamName', ctx.team.name);
+    if (ctx?.profile?.role) {
+      const roleMap = { coach:'Coach', assistant:'Assistant Coach', tdir:'Technical Director', player:'Player', parent:'Parent' };
+      if (roleMap[ctx.profile.role]) setTweak('role', roleMap[ctx.profile.role]);
+    }
+  }, [ctx]);
 
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);

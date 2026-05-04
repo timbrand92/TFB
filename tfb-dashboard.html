@@ -193,7 +193,7 @@ const NAV_BY_ROLE = {
     { title: 'Club Admin', items: [{ name: 'Club Overview', icon: 'building' }, { name: 'Admin Panel', icon: 'shield' }] },
     { title: 'Team', items: [{ name: 'Team Management', icon: 'users' }, { name: 'Fixtures & Results', icon: 'calendar' }, { name: 'Gameday', icon: 'zap' }] },
     { title: 'Training', items: [{ name: 'Yearly Planner', icon: 'calRange' }, { name: 'Block Planner', icon: 'target' }, { name: 'Sessions', icon: 'clipboard' }, { name: 'Player Development', icon: 'trending' }] },
-    { title: 'Coaching Hub', items: [{ name: 'Coaching Hub', icon: 'clipboard' }, { name: 'Video Analysis', icon: 'video' }, { name: 'Coaches Award', icon: 'award' }, { name: 'League', icon: 'trophy' }] },
+    { title: 'Coaching Hub', items: [{ name: 'Coaching Hub', icon: 'clipboard' }, { name: 'Meetings', icon: 'message' }, { name: 'Video Analysis', icon: 'video' }, { name: 'Coaches Award', icon: 'award' }, { name: 'League', icon: 'trophy' }] },
     { title: 'Players', items: [{ name: 'Wellness', icon: 'heart' }] },
     { title: 'Communication', items: [{ name: 'Team Chat', icon: 'message' }] },
     { title: 'Settings', items: [{ name: 'Settings', icon: 'settings' }] },
@@ -210,7 +210,7 @@ const NAV_BY_ROLE = {
     { title: '', items: [{ name: 'Dashboard', icon: 'home' }] },
     { title: 'Team', items: [{ name: 'Team Management', icon: 'users' }, { name: 'Fixtures & Results', icon: 'calendar' }, { name: 'Gameday', icon: 'zap' }] },
     { title: 'Training', items: [{ name: 'Yearly Planner', icon: 'calRange' }, { name: 'Block Planner', icon: 'target' }, { name: 'Sessions', icon: 'clipboard' }, { name: 'Player Development', icon: 'trending' }] },
-    { title: 'Coaching Hub', items: [{ name: 'Coaching Hub', icon: 'clipboard' }, { name: 'Video Analysis', icon: 'video' }, { name: 'Coaches Award', icon: 'award' }, { name: 'League', icon: 'trophy' }] },
+    { title: 'Coaching Hub', items: [{ name: 'Coaching Hub', icon: 'clipboard' }, { name: 'Meetings', icon: 'message' }, { name: 'Video Analysis', icon: 'video' }, { name: 'Coaches Award', icon: 'award' }, { name: 'League', icon: 'trophy' }] },
     { title: 'Players', items: [{ name: 'Wellness', icon: 'heart' }] },
     { title: 'Communication', items: [{ name: 'Team Chat', icon: 'message' }] },
     { title: 'Settings', items: [{ name: 'Settings', icon: 'settings' }] },
@@ -577,7 +577,7 @@ function Sidebar({ collapsed, activeNav, setActiveNav, teamName, role }) {
               return (
                 <div key={item.name} style={{ position: 'relative', marginBottom: 1 }}>
                   <button
-                    onClick={() => { setActiveNav(item.name); const navMap = {'Gameday':'tfb-gameday.html','Team Management':'tfb-team.html','Block Planner':'tfb-planner.html','Yearly Planner':'tfb-planner.html','Player Development':'tfb-development.html','Club Overview':'tfb-overview.html','Yearly Planner':'tfb-yearly.html','Coaching Hub':'tfb-coaching.html','Video Analysis':'tfb-coaching.html','Coaches Award':'tfb-coaching.html','Sessions':'tfb-sessions.html','League':'tfb-league.html','Fixtures & Results':'tfb-fixtures.html','Wellness':'tfb-wellness.html','My Availability':'tfb-availability.html','My Development':'tfb-development.html','Team Chat':'tfb-chat.html','Settings':'tfb-settings.html'}; if(navMap[item.name]) try{window.location.href=navMap[item.name]}catch(e){}; }}
+                    onClick={() => { setActiveNav(item.name); const navMap = {'Gameday':'tfb-gameday.html','Team Management':'tfb-team.html','Block Planner':'tfb-planner.html','Yearly Planner':'tfb-yearly.html','Player Development':'tfb-development.html','Club Overview':'tfb-overview.html','Coaching Hub':'tfb-coaching.html','Meetings':'tfb-meetings.html','Video Analysis':'tfb-coaching.html','Coaches Award':'tfb-award.html','Sessions':'tfb-sessions.html','League':'tfb-league.html','Fixtures & Results':'tfb-fixtures.html','Wellness':'tfb-wellness.html','My Availability':'tfb-availability.html','My Development':'tfb-development.html','Team Chat':'tfb-chat.html','Settings':'tfb-settings.html'}; if(navMap[item.name]) try{window.location.href=navMap[item.name]}catch(e){}; }}
                     title={collapsed ? item.name : undefined}
                     style={{
                       width: '100%', display: 'flex', alignItems: 'center',

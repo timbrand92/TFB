@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TFB – Meetings</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="tfb-responsive.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--lime:#B6FF2B;--green:#0F3D2E;--green-dark:#0A2E20;--bg:#111418;--s1:#1C2128;--s2:#242B33;--s3:#2D3640;--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);--txt:#F0F2F4;--txt2:rgba(240,242,244,0.5);--txt3:rgba(240,242,244,0.28);--goal:#2ED47A;--amber:#FFB020;--red:#E5533D;--sky:#3FA9F5;--font-d:'Barlow Condensed',sans-serif;--font-b:'Barlow',sans-serif;--hh:54px;}
+html,body,#root{height:100%;overflow:hidden}
+body{font-family:var(--font-b);background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font-family:var(--font-b);color:inherit}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:3px}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn .18s ease forwards}
+input[type=checkbox]{accent-color:#B6FF2B;width:15px;height:15px;cursor:pointer}
+</style>
+</head>
+<body><div id="root"></div>
+<script type="text/babel">
+const {useState,useRef,useCallback,useEffect} = React;
+const C={lime:'#B6FF2B',green:'#0F3D2E',greenDark:'#0A2E20',bg:'#111418',s1:'#1C2128',s2:'#242B33',s3:'#2D3640',border:'rgba(255,255,255,0.07)',border2:'rgba(255,255,255,0.13)',txt:'#F0F2F4',txt2:'rgba(240,242,244,0.5)',txt3:'rgba(240,242,244,0.28)',goal:'#2ED47A',amber:'#FFB020',red:'#E5533D',sky:'#3FA9F5'};
+
+const Ic=({d,size=16,color='currentColor',stroke=2,fill='none'})=>(<svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>{Array.isArray(d)?d.map((p,i)=><path key={i} d={p}/>):<path d={d}/> }</svg>);
+const P={
+  back:'M15 18l-6-6 6-6',plus:'M12 5v14M5 12h14',x:'M18 6L6 18M6 6l12 12',check:'M20 6L9 17l-5-5',
+  calendar:'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z',
+  users:'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm8 4a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zm3 8v-2a4 4 0 0 0-3-3.87',
+  edit:'M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z',
+  download:'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3',
+  clock:'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zm0-14v4l3 3',
+  flag:'M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7',
+  trash:'M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6',
+  chevD:'M6 9l6 6 6-6',chevR:'M9 18l6-6-6-6',
+  alert:'M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01',
+  copy:'M8 17.929H6c-1.105 0-2-.912-2-2.036V5.036C4 3.91 4.895 3 6 3h8c1.105 0 2 .911 2 2.036v1.866M18 21H10c-1.105 0-2-.911-2-2.036V9.107c0-1.125.895-2.036 2-2.036h8c1.105 0 2 .911 2 2.036v9.857c0 1.125-.895 2.036-2 2.036z',
+};
+
+const MEETING_TYPES={
+  'pre-match':{label:'Pre-Match',color:'#E5533D',icon:'⚡'},
+  'post-match':{label:'Post-Match',color:'#3FA9F5',icon:'📊'},
+  'training':{label:'Training Debrief',color:'#B6FF2B',icon:'🏃'},
+  'staff':{label:'Staff Meeting',color:'#FFB020',icon:'👥'},
+  'one-on-one':{label:'1-on-1',color:'#2ED47A',icon:'💬'},
+  'parent':{label:'Parent Meeting',color:'#A78BFA',icon:'👨‍👩‍👦'},
+};
+
+const INIT_MEETINGS=[
+  {id:1,type:'pre-match',title:'Pre-Match: vs Bulleen Lions',date:'2026-05-10',time:'09:00',location:'Malvern City FC Clubrooms',status:'upcoming',attendees:['Head Coach','Assistant Coach','Team Manager'],
+    agenda:[
+      {id:1,text:'Team selection & formation (4-3-3)',owner:'Coach Tim',done:false,duration:10},
+      {id:2,text:'Opposition analysis — Bulleen pressing shape',owner:'Marco',done:false,duration:8},
+      {id:3,text:'Set pieces (attacking corners)',owner:'Coach Tim',done:false,duration:5},
+      {id:4,text:'Injured player updates (L. Santos)',owner:'Lisa',done:false,duration:3},
+      {id:5,text:'Logistics & transport',owner:'Lisa',done:false,duration:2},
+    ],
+    notes:'Focus on our press triggers in the first 15 minutes. Kovacs to be managed for 75 mins max.',
+    actions:[],keyMessages:[]},
+
+  {id:2,type:'post-match',title:'Post-Match Review: vs Avondale FC',date:'2026-05-03',time:'18:30',location:'Malvern City FC Clubrooms',status:'completed',attendees:['Head Coach','Assistant Coach','Team Manager'],
+    agenda:[
+      {id:1,text:'Match stats & GPS data review',owner:'Coach Tim',done:true,duration:10},
+      {id:2,text:'Defensive shape — 2nd half issues',owner:'Marco',done:true,duration:12},
+      {id:3,text:'Set piece conceded (78\')',owner:'Coach Tim',done:true,duration:6},
+      {id:4,text:'Individual feedback — selected players',owner:'Coach Tim',done:true,duration:10},
+    ],
+    notes:'Strong first half but dropped off badly after half time. Defensive structure collapsed when pressing high. Walsh needs individual session.',
+    actions:[
+      {id:1,text:'Book extra defensive shape session for Tue',owner:'Coach Tim',due:'2026-05-06',done:true},
+      {id:2,text:'Send post-match clips to group chat',owner:'Marco',due:'2026-05-05',done:true},
+      {id:3,text:'Schedule 1-on-1 with C. Walsh',owner:'Coach Tim',due:'2026-05-07',done:false},
+    ],
+    keyMessages:['Our press triggers need more clarity','Set pieces remain a vulnerability']},
+
+  {id:3,type:'one-on-one',title:'1-on-1: Cian Walsh',date:'2026-05-07',time:'16:00',location:'Coaches Office',status:'upcoming',attendees:['Head Coach','C. Walsh'],
+    agenda:[
+      {id:1,text:'Recent form & availability check',owner:'Coach Tim',done:false,duration:5},
+      {id:2,text:'Training attitude conversation',owner:'Coach Tim',done:false,duration:10},
+      {id:3,text:'IDP goals review',owner:'Coach Tim',done:false,duration:8},
+      {id:4,text:'Set expectations for Round 10',owner:'Coach Tim',done:false,duration:5},
+    ],
+    notes:'Sensitive conversation. Focus on positives first. Refer to IDP goals.',
+    actions:[],keyMessages:[]},
+
+  {id:4,type:'staff',title:'Season Review Planning',date:'2026-05-14',time:'10:00',location:'Boardroom',status:'upcoming',attendees:['Head Coach','Assistant Coach','Team Manager','TD'],
+    agenda:[
+      {id:1,text:'Mid-season squad assessment',owner:'Coach Tim',done:false,duration:15},
+      {id:2,text:'Budget allocation — equipment needs',owner:'Lisa',done:false,duration:10},
+      {id:3,text:'Player recruitment pipeline',owner:'Tim Brand (TD)',done:false,duration:12},
+      {id:4,text:'End-of-season presentation planning',owner:'Lisa',done:false,duration:8},
+    ],
+    notes:'Bring NPL standings + squad comparison vs last year.',
+    actions:[],keyMessages:[]},
+];
+
+// ── New Meeting Modal ─────────────────────────────────────────────────────────
+function NewMeetingModal({onClose,onSave}){
+  const [form,setForm]=useState({type:'pre-match',title:'',date:'',time:'10:00',location:'Malvern City FC Clubrooms',attendees:'',notes:''});
+  const set=(k,v)=>setForm(f=>({...f,[k]:v}));
+  const valid=form.title&&form.date;
+
+  return(
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.8)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:200,padding:16,backdropFilter:'blur(4px)'}} onClick={onClose}>
+      <div className="fade-in" style={{background:C.s1,border:`1px solid ${C.border2}`,borderRadius:16,width:'100%',maxWidth:500,maxHeight:'90vh',display:'flex',flexDirection:'column',boxShadow:'0 24px 64px rgba(0,0,0,0.7)',overflow:'hidden'}} onClick={e=>e.stopPropagation()}>
+        <div style={{padding:'16px 20px',borderBottom:`1px solid ${C.border}`,display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
+          <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:18,color:C.lime}}>New Meeting</div>
+          <button onClick={onClose} style={{background:'transparent',border:'none',cursor:'pointer',color:C.txt2,display:'flex'}}><Ic d={P.x} size={18} color="currentColor"/></button>
+        </div>
+        <div style={{flex:1,overflowY:'auto',padding:'16px 20px',display:'flex',flexDirection:'column',gap:12}}>
+          {/* Type */}
+          <div>
+            <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:6}}>Meeting Type</div>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6}}>
+              {Object.entries(MEETING_TYPES).map(([k,v])=>(
+                <button key={k} onClick={()=>set('type',k)} style={{padding:'8px',background:form.type===k?`${v.color}15`:'transparent',border:`1px solid ${form.type===k?v.color+'50':C.border2}`,borderRadius:8,cursor:'pointer',textAlign:'center',transition:'all .12s'}}>
+                  <div style={{fontSize:16,marginBottom:2}}>{v.icon}</div>
+                  <div style={{fontSize:10,fontWeight:700,color:form.type===k?v.color:C.txt3}}>{v.label}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+          {[
+            {label:'Title',k:'title',type:'text',placeholder:'e.g. Pre-Match Briefing vs Bulleen'},
+            {label:'Date',k:'date',type:'date'},
+            {label:'Time',k:'time',type:'time'},
+            {label:'Location',k:'location',type:'text'},
+            {label:'Attendees',k:'attendees',type:'text',placeholder:'Coach Tim, Marco, Lisa…'},
+          ].map(({label,k,type,placeholder})=>(
+            <div key={k}>
+              <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:5}}>{label}</div>
+              <input type={type} value={form[k]} onChange={e=>set(k,e.target.value)} placeholder={placeholder||''}
+                style={{width:'100%',padding:'9px 10px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:8,color:C.txt,fontSize:13,outline:'none'}}/>
+            </div>
+          ))}
+          <div>
+            <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:5}}>Notes</div>
+            <textarea value={form.notes} onChange={e=>set('notes',e.target.value)} rows={3}
+              style={{width:'100%',padding:'9px 10px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:8,color:C.txt,fontSize:13,outline:'none',resize:'none',lineHeight:1.6}}/>
+          </div>
+        </div>
+        <div style={{padding:'12px 20px',borderTop:`1px solid ${C.border}`,flexShrink:0}}>
+          <button onClick={()=>{if(valid)onSave({...form,id:Date.now(),status:'upcoming',agenda:[],actions:[],keyMessages:[],attendees:form.attendees.split(',').map(s=>s.trim()).filter(Boolean)})}} disabled={!valid}
+            style={{width:'100%',padding:'11px',background:valid?`linear-gradient(135deg,${C.lime},#68B42E)`:'rgba(255,255,255,0.07)',border:'none',borderRadius:10,fontSize:14,fontWeight:800,color:valid?C.green:C.txt3,cursor:valid?'pointer':'not-allowed'}}>
+            Create Meeting
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Meeting Detail ────────────────────────────────────────────────────────────
+function MeetingDetail({meeting,onUpdate,onClose}){
+  const [activeSection,setActiveSection]=useState('agenda');
+  const [newItem,setNewItem]=useState('');
+  const [newOwner,setNewOwner]=useState('Coach Tim');
+  const [newDuration,setNewDuration]=useState(5);
+  const [newAction,setNewAction]=useState('');
+  const [newActionOwner,setNewActionOwner]=useState('Coach Tim');
+  const [newActionDue,setNewActionDue]=useState('');
+  const [newKey,setNewKey]=useState('');
+  const [editingNotes,setEditingNotes]=useState(false);
+  const [notes,setNotes]=useState(meeting.notes||'');
+  const mt=MEETING_TYPES[meeting.type]||MEETING_TYPES['staff'];
+  const totalDuration=meeting.agenda.reduce((s,a)=>s+a.duration,0);
+
+  const addAgendaItem=()=>{
+    if(!newItem.trim()) return;
+    onUpdate({...meeting,agenda:[...meeting.agenda,{id:Date.now(),text:newItem,owner:newOwner,done:false,duration:newDuration}]});
+    setNewItem('');
+  };
+  const toggleAgenda=(id)=>onUpdate({...meeting,agenda:meeting.agenda.map(a=>a.id===id?{...a,done:!a.done}:a)});
+  const removeAgenda=(id)=>onUpdate({...meeting,agenda:meeting.agenda.filter(a=>a.id!==id)});
+
+  const addAction=()=>{
+    if(!newAction.trim()) return;
+    onUpdate({...meeting,actions:[...(meeting.actions||[]),{id:Date.now(),text:newAction,owner:newActionOwner,due:newActionDue,done:false}]});
+    setNewAction('');
+  };
+  const toggleAction=(id)=>onUpdate({...meeting,actions:(meeting.actions||[]).map(a=>a.id===id?{...a,done:!a.done}:a)});
+
+  const addKeyMsg=()=>{
+    if(!newKey.trim()) return;
+    onUpdate({...meeting,keyMessages:[...(meeting.keyMessages||[]),newKey]});
+    setNewKey('');
+  };
+  const removeKey=(i)=>onUpdate({...meeting,keyMessages:(meeting.keyMessages||[]).filter((_,idx)=>idx!==i)});
+
+  const OWNERS=['Coach Tim','Marco (Asst.)','Lisa (Manager)','Tim Brand (TD)'];
+
+  const exportMinutes=()=>{
+    const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>Meeting Minutes — ${meeting.title}</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Barlow:wght@400;600;700&display=swap" rel="stylesheet"/>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Barlow',sans-serif;background:#fff;color:#111;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}@page{margin:16mm}
+.page{max-width:760px;margin:0 auto;padding:24px}.hdr{background:linear-gradient(135deg,#0A2E20,#0F3D2E);color:#fff;border-radius:10px;padding:20px 24px;margin-bottom:20px}
+.ht{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:26px;letter-spacing:.03em}.hs{font-size:10px;color:rgba(182,255,43,.7);font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-top:3px}
+.section{margin-bottom:20px}.section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#8A8F98;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid ${mt.color}}
+.item{display:flex;gap:10px;padding:7px 0;border-bottom:1px solid #f0f2f4;align-items:flex-start}
+.done{text-decoration:line-through;color:#8A8F98}.owner{font-size:10px;color:#8A8F98;margin-top:2px}
+.dur{font-family:'Barlow Condensed',sans-serif;font-weight:700;color:#8A8F98;font-size:12px;min-width:30px}
+.key{background:rgba(182,255,43,0.1);border-left:3px solid #B6FF2B;padding:8px 12px;border-radius:4px;margin-bottom:6px;font-size:12px}
+.footer{margin-top:20px;padding-top:12px;border-top:2px solid #B6FF2B;display:flex;justify-content:space-between;font-size:10px;color:#8A8F98}
+.fb{font-family:'Barlow Condensed',sans-serif;font-weight:800;color:#0F3D2E;font-size:13px;letter-spacing:.05em}
+</style></head><body><div class="page">
+<div class="hdr"><div class="ht">${meeting.title}</div><div class="hs">${mt.label} · ${meeting.date} ${meeting.time} · ${meeting.location}</div>
+<div style="margin-top:8px;font-size:11px;color:rgba(255,255,255,.5)">Attendees: ${meeting.attendees.join(', ')}</div></div>
+${meeting.keyMessages?.length?`<div class="section"><div class="section-title">Key Messages</div>${meeting.keyMessages.map(k=>`<div class="key">${k}</div>`).join('')}</div>`:''}
+<div class="section"><div class="section-title">Agenda (${totalDuration}min)</div>${meeting.agenda.map(a=>`<div class="item"><div class="dur">${a.duration}'</div><div><div class="${a.done?'done':''}">${a.text}</div><div class="owner">${a.owner}</div></div></div>`).join('')}</div>
+${notes?`<div class="section"><div class="section-title">Notes</div><p style="font-size:13px;line-height:1.7;color:#333">${notes.replace(/\n/g,'<br/>')}</p></div>`:''}
+${meeting.actions?.length?`<div class="section"><div class="section-title">Action Items</div>${meeting.actions.map(a=>`<div class="item"><div style="min-width:18px;font-size:14px">${a.done?'✅':'⬜'}</div><div><div class="${a.done?'done':''}">${a.text}</div><div class="owner">${a.owner}${a.due?` · Due: ${a.due}`:''}</div></div></div>`).join('')}</div>`:''}
+<div class="footer"><div><div class="fb">The Football Blueprint</div><div>Meeting minutes · Generated ${new Date().toLocaleDateString('en-AU')}</div></div><div style="text-align:right">Malvern City FC</div></div>
+</div></body></html>`;
+    const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();setTimeout(()=>w.print(),600);}
+  };
+
+  const SECTIONS=[
+    {id:'agenda',label:'Agenda'},
+    {id:'notes',label:'Notes'},
+    {id:'actions',label:'Actions'},
+    {id:'key',label:'Key Messages'},
+  ];
+
+  const doneCount=meeting.agenda.filter(a=>a.done).length;
+
+  return(
+    <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',background:C.bg}}>
+      {/* Meeting hero */}
+      <div style={{background:`linear-gradient(135deg,${C.greenDark},${C.green})`,borderBottom:'1px solid rgba(182,255,43,0.15)',padding:'18px 24px',flexShrink:0}}>
+        <div style={{display:'flex',alignItems:'flex-start',gap:14}}>
+          <div style={{width:44,height:44,borderRadius:10,background:`${mt.color}20`,border:`2px solid ${mt.color}40`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,flexShrink:0}}>{mt.icon}</div>
+          <div style={{flex:1}}>
+            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
+              <span style={{fontSize:10,fontWeight:700,color:mt.color,background:`${mt.color}15`,border:`1px solid ${mt.color}30`,borderRadius:4,padding:'2px 7px',textTransform:'uppercase',letterSpacing:'0.06em'}}>{mt.label}</span>
+              <span style={{fontSize:10,fontWeight:700,color:meeting.status==='completed'?C.goal:C.amber,background:meeting.status==='completed'?'rgba(46,212,122,0.12)':'rgba(255,176,32,0.12)',border:`1px solid ${meeting.status==='completed'?C.goal:C.amber}30`,borderRadius:4,padding:'2px 7px',textTransform:'uppercase'}}>{meeting.status}</span>
+            </div>
+            <h1 style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:22,color:'#fff',letterSpacing:'0.02em',lineHeight:1.2,marginBottom:6}}>{meeting.title}</h1>
+            <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>
+              {[
+                {icon:P.calendar,text:`${meeting.date} · ${meeting.time}`},
+                {icon:P.flag,text:meeting.location},
+                {icon:P.users,text:meeting.attendees.join(', ')},
+              ].map(({icon,text},i)=>(
+                <div key={i} style={{display:'flex',alignItems:'center',gap:5,fontSize:11,color:'rgba(255,255,255,0.55)'}}>
+                  <Ic d={icon} size={12} color="currentColor"/>{text}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div style={{display:'flex',gap:7}}>
+            <button onClick={exportMinutes} style={{display:'flex',alignItems:'center',gap:5,padding:'7px 12px',background:'rgba(255,255,255,0.08)',border:'1px solid rgba(255,255,255,0.15)',borderRadius:8,color:'rgba(255,255,255,0.7)',fontSize:12,fontWeight:600,cursor:'pointer',transition:'all .15s'}} onMouseEnter={e=>{e.currentTarget.style.background='rgba(255,255,255,0.14)'}} onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,0.08)'}}>
+              <Ic d={P.download} size={13} color="currentColor"/> Minutes
+            </button>
+          </div>
+        </div>
+        {/* Progress bar */}
+        {meeting.agenda.length>0&&(
+          <div style={{marginTop:12}}>
+            <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
+              <span style={{fontSize:10,color:'rgba(255,255,255,0.4)'}}>Agenda progress</span>
+              <span style={{fontSize:10,color:C.lime,fontWeight:700}}>{doneCount}/{meeting.agenda.length} items · {totalDuration}min</span>
+            </div>
+            <div style={{height:3,background:'rgba(255,255,255,0.12)',borderRadius:2,overflow:'hidden'}}>
+              <div style={{height:'100%',width:meeting.agenda.length?`${(doneCount/meeting.agenda.length)*100}%`:'0%',background:C.lime,borderRadius:2,transition:'width .4s ease'}}/>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Tabs */}
+      <div style={{display:'flex',borderBottom:`1px solid ${C.border}`,background:C.s1,flexShrink:0}}>
+        {SECTIONS.map(s=>(
+          <button key={s.id} onClick={()=>setActiveSection(s.id)} style={{padding:'10px 18px',background:'transparent',border:'none',borderBottom:`2px solid ${activeSection===s.id?C.lime:'transparent'}`,color:activeSection===s.id?C.lime:C.txt2,fontSize:13,fontWeight:700,cursor:'pointer',transition:'all .15s'}}>
+            {s.label}
+            {s.id==='actions'&&meeting.actions?.length>0&&<span style={{marginLeft:6,fontSize:10,background:meeting.actions.filter(a=>!a.done).length>0?'rgba(255,176,32,0.2)':'rgba(46,212,122,0.2)',color:meeting.actions.filter(a=>!a.done).length>0?C.amber:C.goal,borderRadius:10,padding:'1px 6px',fontWeight:700}}>{meeting.actions.filter(a=>!a.done).length||'✓'}</span>}
+          </button>
+        ))}
+      </div>
+
+      <div style={{flex:1,overflowY:'auto',padding:'20px 24px'}}>
+
+        {/* AGENDA */}
+        {activeSection==='agenda'&&(
+          <div style={{display:'flex',flexDirection:'column',gap:14}}>
+            {/* Existing items */}
+            {meeting.agenda.map((item,i)=>(
+              <div key={item.id} style={{display:'flex',alignItems:'flex-start',gap:12,padding:'12px 14px',background:item.done?'rgba(46,212,122,0.04)':C.s1,borderRadius:10,border:`1px solid ${item.done?'rgba(46,212,122,0.2)':C.border}`,transition:'all .15s'}}>
+                <div style={{display:'flex',alignItems:'center',gap:8,flexShrink:0,marginTop:1}}>
+                  <input type="checkbox" checked={item.done} onChange={()=>toggleAgenda(item.id)}/>
+                  <div style={{width:32,height:18,borderRadius:4,background:`${C.lime}15`,border:`1px solid ${C.lime}30`,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                    <span style={{fontFamily:'var(--font-d)',fontWeight:700,fontSize:10,color:C.lime}}>{item.duration}'</span>
+                  </div>
+                </div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:13,fontWeight:600,color:item.done?C.txt3:C.txt,textDecoration:item.done?'line-through':'none',lineHeight:1.4}}>{item.text}</div>
+                  <div style={{fontSize:11,color:C.txt3,marginTop:2}}>{item.owner}</div>
+                </div>
+                <button onClick={()=>removeAgenda(item.id)} style={{background:'transparent',border:'none',cursor:'pointer',color:C.txt3,display:'flex',padding:3,borderRadius:4,transition:'color .12s'}} onMouseEnter={e=>e.currentTarget.style.color=C.red} onMouseLeave={e=>e.currentTarget.style.color=C.txt3}>
+                  <Ic d={P.x} size={12} color="currentColor"/>
+                </button>
+              </div>
+            ))}
+            {/* Add item */}
+            <div style={{background:C.s1,borderRadius:10,border:`1px dashed ${C.border2}`,padding:'12px 14px'}}>
+              <div style={{fontSize:10,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8}}>Add Agenda Item</div>
+              <input value={newItem} onChange={e=>setNewItem(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addAgendaItem()} placeholder="Agenda item description…"
+                style={{width:'100%',padding:'8px 10px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:7,color:C.txt,fontSize:13,outline:'none',marginBottom:8}}/>
+              <div style={{display:'flex',gap:8}}>
+                <select value={newOwner} onChange={e=>setNewOwner(e.target.value)} style={{flex:2,padding:'7px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:7,color:C.txt,fontSize:12,outline:'none'}}>
+                  {OWNERS.map(o=><option key={o} value={o}>{o}</option>)}
+                </select>
+                <div style={{display:'flex',alignItems:'center',gap:5,flex:1}}>
+                  <Ic d={P.clock} size={13} color={C.txt3}/>
+                  <input type="number" min={1} max={60} value={newDuration} onChange={e=>setNewDuration(+e.target.value)}
+                    style={{width:50,padding:'7px 8px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:7,color:C.txt,fontSize:12,outline:'none',textAlign:'center'}}/>
+                  <span style={{fontSize:11,color:C.txt3}}>min</span>
+                </div>
+                <button onClick={addAgendaItem} style={{display:'flex',alignItems:'center',gap:5,padding:'7px 14px',background:`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:7,fontSize:12,fontWeight:800,color:C.green,cursor:'pointer'}}>
+                  <Ic d={P.plus} size={13} color={C.green}/> Add
+                </button>
+              </div>
+            </div>
+            {meeting.agenda.length===0&&<div style={{padding:'24px',textAlign:'center',color:C.txt3,fontSize:13}}>No agenda items yet — add some above</div>}
+          </div>
+        )}
+
+        {/* NOTES */}
+        {activeSection==='notes'&&(
+          <div style={{display:'flex',flexDirection:'column',gap:12}}>
+            <textarea value={notes} onChange={e=>setNotes(e.target.value)} onBlur={()=>onUpdate({...meeting,notes})} rows={12}
+              placeholder="Meeting notes, observations, decisions made…"
+              style={{width:'100%',background:C.s1,border:`1px solid ${C.border2}`,borderRadius:12,color:C.txt,fontSize:13,padding:'14px 16px',resize:'vertical',outline:'none',lineHeight:1.7,minHeight:200}}/>
+            {/* Quick templates */}
+            <div>
+              <div style={{fontSize:10,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:8}}>Quick Templates</div>
+              <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+                {[
+                  '## Pre-Match Focus\n- Formation: 4-3-3\n- Key trigger: Press on GK ball\n- Set piece: Near-post run on corners\n\n## Player Messages\n- ',
+                  '## Post-Match Summary\n### Positives\n- \n\n### Areas to Address\n- \n\n### Individual Notes\n- ',
+                  '## 1-on-1 Notes\nContext: \nKey Points Discussed:\n- \nPlayer Response: \nAgreed Actions:\n- ',
+                ].map((t,i)=>(
+                  <button key={i} onClick={()=>setNotes(n=>n?n+'\n\n'+t:t)}
+                    style={{padding:'5px 11px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:6,fontSize:11,fontWeight:600,color:C.txt2,cursor:'pointer',transition:'all .12s'}}
+                    onMouseEnter={e=>{e.currentTarget.style.borderColor='rgba(182,255,43,0.35)';e.currentTarget.style.color=C.lime}}
+                    onMouseLeave={e=>{e.currentTarget.style.borderColor=C.border2;e.currentTarget.style.color=C.txt2}}>
+                    {['Pre-Match Template','Post-Match Template','1-on-1 Template'][i]}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ACTIONS */}
+        {activeSection==='actions'&&(
+          <div style={{display:'flex',flexDirection:'column',gap:10}}>
+            {(meeting.actions||[]).map(a=>(
+              <div key={a.id} style={{display:'flex',alignItems:'flex-start',gap:12,padding:'12px 14px',background:a.done?'rgba(46,212,122,0.04)':C.s1,borderRadius:10,border:`1px solid ${a.done?'rgba(46,212,122,0.2)':C.border}`,transition:'all .15s'}}>
+                <input type="checkbox" checked={a.done} onChange={()=>toggleAction(a.id)} style={{marginTop:3,flexShrink:0}}/>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:13,fontWeight:600,color:a.done?C.txt3:C.txt,textDecoration:a.done?'line-through':'none',lineHeight:1.4}}>{a.text}</div>
+                  <div style={{display:'flex',gap:10,marginTop:3,flexWrap:'wrap'}}>
+                    <span style={{fontSize:11,color:C.txt3}}>👤 {a.owner}</span>
+                    {a.due&&<span style={{fontSize:11,color:a.done?C.txt3:C.amber}}>📅 Due {a.due}</span>}
+                  </div>
+                </div>
+              </div>
+            ))}
+            {/* Add action */}
+            <div style={{background:C.s1,borderRadius:10,border:`1px dashed ${C.border2}`,padding:'12px 14px'}}>
+              <div style={{fontSize:10,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8}}>Add Action Item</div>
+              <input value={newAction} onChange={e=>setNewAction(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addAction()} placeholder="Action description…"
+                style={{width:'100%',padding:'8px 10px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:7,color:C.txt,fontSize:13,outline:'none',marginBottom:8}}/>
+              <div style={{display:'flex',gap:8}}>
+                <select value={newActionOwner} onChange={e=>setNewActionOwner(e.target.value)} style={{flex:2,padding:'7px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:7,color:C.txt,fontSize:12,outline:'none'}}>
+                  {OWNERS.map(o=><option key={o} value={o}>{o}</option>)}
+                </select>
+                <input type="date" value={newActionDue} onChange={e=>setNewActionDue(e.target.value)}
+                  style={{flex:2,padding:'7px',background:C.s2,border:`1px solid ${C.border2}`,borderRadius:7,color:C.txt,fontSize:12,outline:'none'}}/>
+                <button onClick={addAction} style={{display:'flex',alignItems:'center',gap:5,padding:'7px 14px',background:`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:7,fontSize:12,fontWeight:800,color:C.green,cursor:'pointer'}}>
+                  <Ic d={P.plus} size={13} color={C.green}/> Add
+                </button>
+              </div>
+            </div>
+            {!(meeting.actions?.length)&&<div style={{padding:'24px',textAlign:'center',color:C.txt3,fontSize:13}}>No action items yet</div>}
+          </div>
+        )}
+
+        {/* KEY MESSAGES */}
+        {activeSection==='key'&&(
+          <div style={{display:'flex',flexDirection:'column',gap:10}}>
+            <div style={{fontSize:13,color:C.txt2,lineHeight:1.6,marginBottom:4}}>Key messages to share with players or staff after this meeting.</div>
+            {(meeting.keyMessages||[]).map((msg,i)=>(
+              <div key={i} style={{display:'flex',alignItems:'center',gap:12,padding:'12px 16px',background:`${C.lime}07`,border:`1px solid ${C.lime}25`,borderRadius:10}}>
+                <div style={{width:6,height:6,borderRadius:'50%',background:C.lime,flexShrink:0}}/>
+                <span style={{flex:1,fontSize:13,color:C.txt,lineHeight:1.5}}>{msg}</span>
+                <button onClick={()=>removeKey(i)} style={{background:'transparent',border:'none',cursor:'pointer',color:C.txt3,display:'flex',padding:3,transition:'color .12s'}} onMouseEnter={e=>e.currentTarget.style.color=C.red} onMouseLeave={e=>e.currentTarget.style.color=C.txt3}>
+                  <Ic d={P.x} size={13} color="currentColor"/>
+                </button>
+              </div>
+            ))}
+            <div style={{display:'flex',gap:8}}>
+              <input value={newKey} onChange={e=>setNewKey(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addKeyMsg()} placeholder="Add key message…"
+                style={{flex:1,padding:'9px 12px',background:C.s1,border:`1px solid ${C.border2}`,borderRadius:8,color:C.txt,fontSize:13,outline:'none'}}/>
+              <button onClick={addKeyMsg} style={{padding:'9px 16px',background:`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:8,fontSize:12,fontWeight:800,color:C.green,cursor:'pointer'}}>Add</button>
+            </div>
+            {!(meeting.keyMessages?.length)&&<div style={{padding:'24px',textAlign:'center',color:C.txt3,fontSize:13}}>No key messages yet</div>}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── App ────────────────────────────────────────────────────────────────────────
+function App(){
+  const TWEAK_DEFAULTS=/*EDITMODE-BEGIN*/{"filter":"all"}/*EDITMODE-END*/;
+  const [tweaks,setTweak]=window.useTweaks(TWEAK_DEFAULTS);
+
+  const [meetings,setMeetings]=useState(INIT_MEETINGS);
+  const [selected,setSelected]=useState(INIT_MEETINGS[0]);
+  const [showNew,setShowNew]=useState(false);
+
+  const filter=tweaks.filter;
+  const updateMeeting=useCallback((updated)=>{
+    setMeetings(prev=>prev.map(m=>m.id===updated.id?updated:m));
+    setSelected(updated);
+  },[]);
+
+  const filtered=meetings.filter(m=>filter==='all'||m.type===filter||m.status===filter);
+  const upcoming=meetings.filter(m=>m.status==='upcoming');
+  const pending=meetings.reduce((s,m)=>s+(m.actions||[]).filter(a=>!a.done).length,0);
+
+  return(
+    <div style={{height:'100vh',display:'flex',flexDirection:'column',background:C.bg,overflow:'hidden'}}>
+      {/* Header */}
+      <header style={{height:'var(--hh)',background:`linear-gradient(90deg,${C.greenDark},${C.green})`,borderBottom:'1px solid rgba(182,255,43,0.18)',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 20px',flexShrink:0,zIndex:50}}>
+        <div style={{display:'flex',alignItems:'center',gap:12}}>
+          <button onClick={()=>{try{window.location.href='tfb-dashboard.html'}catch(e){}}} style={{display:'flex',alignItems:'center',gap:6,padding:'6px 10px',background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,color:'rgba(255,255,255,0.7)',fontSize:12,fontWeight:600,cursor:'pointer'}} onMouseEnter={e=>{e.currentTarget.style.background='rgba(182,255,43,0.12)';e.currentTarget.style.color='#B6FF2B'}} onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,0.07)';e.currentTarget.style.color='rgba(255,255,255,0.7)'}}>
+            <Ic d={P.back} size={14} color="currentColor"/> Dashboard
+          </button>
+          <div style={{width:1,height:24,background:'rgba(255,255,255,0.12)'}}/>
+          <svg width="28" height="28" viewBox="0 0 40 40" fill="none"><polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="#0F3D2E" stroke="#B6FF2B" strokeWidth="1.5"/><text x="20" y="26" textAnchor="middle" fill="#B6FF2B" fontFamily="Barlow Condensed" fontWeight="900" fontSize="13">TFB</text></svg>
+          <div>
+            <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:17,color:'#fff',letterSpacing:'0.04em',lineHeight:1}}>MEETINGS</div>
+            <div style={{fontSize:9.5,color:'rgba(182,255,43,0.65)',fontWeight:700,letterSpacing:'0.1em'}}>Agendas, Minutes & Actions</div>
+          </div>
+        </div>
+        <div style={{display:'flex',alignItems:'center',gap:10}}>
+          {pending>0&&<div style={{display:'flex',alignItems:'center',gap:5,padding:'5px 10px',background:'rgba(255,176,32,0.12)',border:'1px solid rgba(255,176,32,0.3)',borderRadius:7,fontSize:11,fontWeight:700,color:C.amber}}>
+            <Ic d={P.alert} size={12} color={C.amber}/> {pending} open action{pending!==1?'s':''}
+          </div>}
+          <button onClick={()=>setShowNew(true)} style={{display:'flex',alignItems:'center',gap:6,padding:'7px 14px',background:`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:8,fontSize:12,fontWeight:800,color:C.green,cursor:'pointer'}}>
+            <Ic d={P.plus} size={14} color={C.green}/> New Meeting
+          </button>
+        </div>
+      </header>
+
+      <div style={{flex:1,display:'flex',overflow:'hidden'}}>
+        {/* Left panel — meeting list */}
+        <div style={{width:300,background:C.s1,borderRight:`1px solid ${C.border}`,display:'flex',flexDirection:'column',flexShrink:0,overflow:'hidden'}}>
+          {/* Filter */}
+          <div style={{padding:'10px 12px',borderBottom:`1px solid ${C.border}`,flexShrink:0}}>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:8}}>
+              <div style={{background:C.s2,borderRadius:8,padding:'8px 12px',border:`1px solid ${C.border}`}}>
+                <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:22,color:C.lime,lineHeight:1}}>{upcoming.length}</div>
+                <div style={{fontSize:9,color:C.txt3,fontWeight:700,marginTop:2,textTransform:'uppercase',letterSpacing:'0.06em'}}>Upcoming</div>
+              </div>
+              <div style={{background:C.s2,borderRadius:8,padding:'8px 12px',border:`1px solid ${C.border}`}}>
+                <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:22,color:pending>0?C.amber:C.goal,lineHeight:1}}>{pending}</div>
+                <div style={{fontSize:9,color:C.txt3,fontWeight:700,marginTop:2,textTransform:'uppercase',letterSpacing:'0.06em'}}>Open Actions</div>
+              </div>
+            </div>
+            {/* Type filter pills */}
+            <div style={{display:'flex',flexWrap:'wrap',gap:4}}>
+              <button onClick={()=>setTweak('filter','all')} style={{padding:'3px 9px',background:filter==='all'?'rgba(182,255,43,0.15)':'transparent',border:`1px solid ${filter==='all'?'rgba(182,255,43,0.4)':C.border2}`,borderRadius:5,fontSize:10,fontWeight:700,color:filter==='all'?C.lime:C.txt3,cursor:'pointer'}}>All</button>
+              {Object.entries(MEETING_TYPES).map(([k,v])=>(
+                <button key={k} onClick={()=>setTweak('filter',filter===k?'all':k)} style={{padding:'3px 9px',background:filter===k?`${v.color}18`:'transparent',border:`1px solid ${filter===k?v.color+'50':C.border2}`,borderRadius:5,fontSize:10,fontWeight:700,color:filter===k?v.color:C.txt3,cursor:'pointer',transition:'all .12s'}}>{v.label}</button>
+              ))}
+            </div>
+          </div>
+
+          {/* Meeting list */}
+          <div style={{flex:1,overflowY:'auto',padding:'6px 8px'}}>
+            {filtered.map(m=>{
+              const mt=MEETING_TYPES[m.type]||MEETING_TYPES['staff'];
+              const isSel=selected?.id===m.id;
+              const pendAct=(m.actions||[]).filter(a=>!a.done).length;
+              return(
+                <button key={m.id} onClick={()=>setSelected(m)}
+                  style={{width:'100%',display:'flex',alignItems:'flex-start',gap:10,padding:'10px',background:isSel?'rgba(182,255,43,0.07)':'transparent',border:`1px solid ${isSel?'rgba(182,255,43,0.25)':C.border}`,borderRadius:10,marginBottom:4,cursor:'pointer',textAlign:'left',transition:'all .12s'}}
+                  onMouseEnter={e=>{if(!isSel){e.currentTarget.style.background='rgba(255,255,255,0.03)';e.currentTarget.style.borderColor=C.border2}}}
+                  onMouseLeave={e=>{if(!isSel){e.currentTarget.style.background='transparent';e.currentTarget.style.borderColor=C.border}}}>
+                  <div style={{width:36,height:36,borderRadius:8,background:`${mt.color}18`,border:`1.5px solid ${mt.color}35`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0}}>{mt.icon}</div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:12.5,fontWeight:700,color:isSel?C.lime:C.txt,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',lineHeight:1.3}}>{m.title}</div>
+                    <div style={{fontSize:10,color:C.txt3,marginTop:2}}>{m.date} · {m.time}</div>
+                    <div style={{display:'flex',gap:5,marginTop:4,flexWrap:'wrap'}}>
+                      <span style={{fontSize:9,fontWeight:700,color:mt.color,background:`${mt.color}12`,border:`1px solid ${mt.color}25`,borderRadius:3,padding:'1px 5px'}}>{mt.label}</span>
+                      <span style={{fontSize:9,fontWeight:700,color:m.status==='completed'?C.goal:C.amber,background:m.status==='completed'?'rgba(46,212,122,0.1)':'rgba(255,176,32,0.1)',border:`1px solid ${m.status==='completed'?C.goal:C.amber}25`,borderRadius:3,padding:'1px 5px',textTransform:'uppercase'}}>{m.status}</span>
+                      {pendAct>0&&<span style={{fontSize:9,fontWeight:700,color:C.amber,background:'rgba(255,176,32,0.1)',borderRadius:3,padding:'1px 5px'}}>{pendAct} action{pendAct!==1?'s':''}</span>}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+            {filtered.length===0&&<div style={{padding:'32px 16px',textAlign:'center',color:C.txt3,fontSize:13}}>No meetings match filter</div>}
+          </div>
+        </div>
+
+        {/* Right — detail */}
+        {selected?(
+          <MeetingDetail key={selected.id} meeting={selected} onUpdate={updateMeeting} onClose={()=>setSelected(null)}/>
+        ):(
+          <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:C.txt3,fontSize:14,flexDirection:'column',gap:12}}>
+            <Ic d={P.calendar} size={48} color="rgba(255,255,255,0.08)"/>
+            <span>Select a meeting to view</span>
+          </div>
+        )}
+      </div>
+
+      {showNew&&<NewMeetingModal onClose={()=>setShowNew(false)} onSave={(m)=>{setMeetings(prev=>[m,...prev]);setSelected(m);setShowNew(false);}}/>}
+
+      <TweaksPanel>
+        <TweakSection label="Filters"/>
+        <TweakSelect label="Type Filter" value={tweaks.filter} options={['all','pre-match','post-match','training','staff','one-on-one','parent']} onChange={v=>setTweak('filter',v)}/>
+      </TweaksPanel>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script></body></html>

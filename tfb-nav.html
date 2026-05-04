@@ -50,6 +50,11 @@ const ALL_SCREENS = [
   {id:'player',       label:'Player Dashboard',   desc:'Player/parent view — wellness, goals, RSVPs',file:'tfb-player.html',      icon:'👟', color:'#8A8F98', roles:['player','parent']},
   {id:'settings',     label:'Settings',           desc:'Profile, club, notifications, subscription', file:'tfb-settings.html',    icon:'⚙️', color:'#8A8F98', roles:['all']},
   // Design assets
+  // New pages
+  {id:'meetings',     label:'Meetings',           desc:'Agendas, minutes, actions & key messages',   file:'tfb-meetings.html',    icon:'📋', color:C.sky,    roles:['coach','td','admin','manager']},
+  {id:'award',        label:'Coaches Award',      desc:'3-2-1 Brownlow voting & season leaderboard', file:'tfb-award.html',       icon:'🏆', color:'#FFD700', roles:['coach','td','manager']},
+  {id:'parent-dev',   label:'Parent Dev View',    desc:'Child development, IDP & messages for parents',file:'tfb-parent-dev.html', icon:'👨‍👩‍👦', color:'#A78BFA', roles:['parent']},
+  // Design assets
   {id:'comparison',   label:'Role × Device Guide',desc:'How each role sees the app across devices',  file:'tfb-comparison.html',  icon:'📱', color:C.txt3,   roles:['design']},
   {id:'logo',         label:'Logo System',        desc:'Brand logo exploration and usage guide',     file:'tfb-logo.html',        icon:'🎨', color:C.txt3,   roles:['design']},
 ];
@@ -59,8 +64,9 @@ const ROLE_FILTERS = [
   {id:'coach',  label:'Coach',        color:C.goal},
   {id:'td',     label:'Tech. Director',color:C.lime},
   {id:'admin',  label:'Club Admin',   color:C.sky},
+  {id:'manager',label:'Team Manager', color:C.amber},
   {id:'player', label:'Player',       color:'#8A8F98'},
-  {id:'parent', label:'Parent',       color:'#8A8F98'},
+  {id:'parent', label:'Parent',       color:'#A78BFA'},
   {id:'design', label:'Design Assets',color:C.txt3},
 ];
 
@@ -84,7 +90,7 @@ function App(){
           <svg width="44" height="44" viewBox="0 0 40 40" fill="none"><polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="#0F3D2E" stroke="#B6FF2B" strokeWidth="1.5"/><polygon points="20,9 30,15 30,25 20,31 10,25 10,15" fill="none" stroke="#B6FF2B" strokeWidth="0.8" opacity="0.4"/><text x="20" y="26" textAnchor="middle" fill="#B6FF2B" fontFamily="Barlow Condensed" fontWeight="900" fontSize="13">TFB</text></svg>
           <div>
             <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:28,color:'#fff',letterSpacing:'0.04em',textTransform:'uppercase',lineHeight:1}}>The Football Blueprint</div>
-            <div style={{fontSize:11,color:'rgba(182,255,43,0.7)',fontWeight:700,letterSpacing:'0.12em',textTransform:'uppercase',marginTop:3}}>Coaching Platform · Navigation Hub · {ALL_SCREENS.length} Screens</div>
+            <div style={{fontSize:11,color:'rgba(182,255,43,0.7)',fontWeight:700,letterSpacing:'0.12em',textTransform:'uppercase',marginTop:3}}>Coaching Platform · Navigation Hub · {ALL_SCREENS.length} Screens · v2.1</div>
           </div>
           <div style={{marginLeft:'auto',display:'flex',gap:8}}>
             <button onClick={()=>nav('tfb-dashboard.html')} style={{padding:'8px 18px',background:`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:9,fontSize:13,fontWeight:800,color:C.green,transition:'opacity .15s'}} onMouseEnter={e=>e.currentTarget.style.opacity='.88'} onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
@@ -153,7 +159,7 @@ function App(){
             <b style={{color:C.txt2}}>TFB Design System</b> · {ALL_SCREENS.length} screens · Built with React + Babel
           </div>
           <div style={{display:'flex',gap:8}}>
-            {[['tfb-dashboard.html','Coach Dashboard'],['tfb-gameday.html','Gameday'],['tfb-session-builder.html','Session Builder']].map(([f,l])=>(
+            {[['tfb-dashboard.html','Dashboard'],['tfb-gameday.html','Gameday'],['tfb-meetings.html','Meetings'],['tfb-award.html','Award'],['tfb-parent-dev.html','Parent Dev']].map(([f,l])=>(
               <button key={f} onClick={()=>nav(f)} style={{padding:'5px 12px',background:'rgba(182,255,43,0.08)',border:'1px solid rgba(182,255,43,0.2)',borderRadius:7,fontSize:11,fontWeight:700,color:C.lime,transition:'background .15s'}} onMouseEnter={e=>e.currentTarget.style.background='rgba(182,255,43,0.15)'} onMouseLeave={e=>e.currentTarget.style.background='rgba(182,255,43,0.08)'}>{l}</button>
             ))}
           </div>

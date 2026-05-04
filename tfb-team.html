@@ -312,8 +312,8 @@ function PlayerDetail({player,onEdit,onClose}) {
     </div>
   );
 
-  const TABS = ['overview','wellness','idp','info'];
-  const TLABELS = {overview:'Overview',wellness:'Wellness',idp:'Development',info:'Info'};
+  const TABS = ['overview','stats','wellness','idp','info'];
+  const TLABELS = {overview:'Overview',stats:'Stats & Mins',wellness:'Wellness',idp:'Development',info:'Info'};
 
   return (
     <div className="slide-right" style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',background:C.bg}}>
@@ -425,6 +425,120 @@ function PlayerDetail({player,onEdit,onClose}) {
                   <div key={label} style={{background:C.s2,borderRadius:8,padding:'10px 12px',border:`1px solid ${C.border}`}}>
                     <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:20,color:C.txt,lineHeight:1}}>{value}</div>
                     <div style={{fontSize:10,color:C.txt3,fontWeight:600,marginTop:3,textTransform:'uppercase',letterSpacing:'0.05em'}}>{label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* STATS & MINUTES */}
+        {tab==='stats' && (
+          <div style={{display:'flex',flexDirection:'column',gap:16}}>
+            {/* Season summary stats */}
+            <div style={{background:C.s1,borderRadius:12,padding:'16px',border:`1px solid ${C.border}`}}>
+              <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:12}}>Season Stats</div>
+              <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8}}>
+                {[
+                  {label:'Apps',value:player.form.filter(Boolean).length,color:C.lime},
+                  {label:'Goals',value:player.pos==='ST'?8:player.pos==='AM'||player.pos==='LW'||player.pos==='RW'?3:player.pos==='CM'||player.pos==='DM'?2:0,color:C.goal},
+                  {label:'Assists',value:player.pos==='AM'?5:player.pos==='LW'||player.pos==='RW'?4:player.pos==='CM'?3:1,color:C.sky},
+                  {label:'Avg Rating',value:(6.5+Math.random()*2.0).toFixed(1),color:C.amber},
+                ].map(({label,value,color})=>(
+                  <div key={label} style={{background:C.s2,borderRadius:8,padding:'12px',border:`1px solid ${C.border}`,textAlign:'center'}}>
+                    <div style={{fontFamily:'var(--font-d)',fontWeight:900,fontSize:28,color,lineHeight:1}}>{value}</div>
+                    <div style={{fontSize:10,color:C.txt3,fontWeight:600,marginTop:4,textTransform:'uppercase',letterSpacing:'0.06em'}}>{label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Minutes played */}
+            <div style={{background:C.s1,borderRadius:12,padding:'16px',border:`1px solid ${C.border}`}}>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
+                <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.1em'}}>Minutes Played</div>
+                <div style={{display:'flex',gap:6}}>
+                  {['This Month','Season'].map(p=>(
+                    <button key={p} style={{padding:'3px 9px',background:'transparent',border:`1px solid ${p==='Season'?'rgba(182,255,43,0.35)':C.border}`,borderRadius:5,fontSize:10,fontWeight:700,color:p==='Season'?C.lime:C.txt3,cursor:'pointer'}}>{p}</button>
+                  ))}
+                </div>
+              </div>
+              {/* Per-game minutes bar chart */}
+              <div style={{display:'flex',alignItems:'flex-end',gap:5,height:80,marginBottom:8}}>
+                {[90,90,72,90,45,90,83,90,60,90].map((mins,i)=>{
+                  const isLast=i===9;
+                  const color=mins>=80?C.lime:mins>=60?C.amber:C.red;
+                  return(
+                    <div key={i} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:3}}>
+                      <span style={{fontSize:8,color:isLast?color:C.txt3,fontWeight:isLast?700:400}}>{mins}'</span>
+                      <div style={{width:'100%',height:`${(mins/90)*70}px`,background:isLast?color:`${color}50`,borderRadius:'3px 3px 0 0',transition:'height .3s ease'}}/>
+                      <span style={{fontSize:8.5,color:isLast?C.lime:C.txt3}}>R{i+1}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{display:'flex',justifyContent:'space-between',fontSize:11,color:C.txt2,paddingTop:8,borderTop:`1px solid ${C.border}`}}>
+                <span>Total minutes: <b style={{color:C.txt}}>810'</b></span>
+                <span>Avg per game: <b style={{color:C.txt}}>81'</b></span>
+                <span>Full 90s: <b style={{color:C.txt}}>7</b></span>
+              </div>
+            </div>
+
+            {/* Position-specific stats */}
+            <div style={{background:C.s1,borderRadius:12,padding:'16px',border:`1px solid ${C.border}`}}>
+              <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:12}}>Performance Metrics</div>
+              <div style={{display:'flex',flexDirection:'column',gap:9}}>
+                {(player.pos==='GK'?[
+                  {label:'Saves',value:'34',max:50,bar:68,color:C.sky},
+                  {label:'Goals Conceded',value:'18',max:50,bar:36,color:C.red},
+                  {label:'Clean Sheets',value:'4',max:10,bar:40,color:C.goal},
+                  {label:'Distribution Acc.',value:'76%',max:100,bar:76,color:C.lime},
+                ]:player.pos==='ST'||player.pos==='AM'?[
+                  {label:'Shots on Target',value:'14',max:20,bar:70,color:C.goal},
+                  {label:'Shot Accuracy',value:'64%',max:100,bar:64,color:C.lime},
+                  {label:'Chances Created',value:'11',max:20,bar:55,color:C.sky},
+                  {label:'Dribble Success',value:'58%',max:100,bar:58,color:C.amber},
+                ]:player.pos==='CB'||player.pos==='LB'||player.pos==='RB'?[
+                  {label:'Tackles Won',value:'28',max:40,bar:70,color:C.goal},
+                  {label:'Interceptions',value:'19',max:30,bar:63,color:C.sky},
+                  {label:'Aerial Duels Won',value:'72%',max:100,bar:72,color:C.lime},
+                  {label:'Pass Completion',value:'81%',max:100,bar:81,color:C.amber},
+                ]:[
+                  {label:'Pass Completion',value:'84%',max:100,bar:84,color:C.lime},
+                  {label:'Chances Created',value:'9',max:15,bar:60,color:C.sky},
+                  {label:'Tackles Won',value:'22',max:35,bar:63,color:C.goal},
+                  {label:'Distance (km/g)',value:'10.8',max:14,bar:77,color:C.amber},
+                ]).map(({label,value,bar,color})=>(
+                  <div key={label} style={{display:'flex',alignItems:'center',gap:10}}>
+                    <span style={{fontSize:12,color:C.txt2,width:160,flexShrink:0}}>{label}</span>
+                    <div style={{flex:1,height:5,background:'rgba(255,255,255,0.07)',borderRadius:3,overflow:'hidden'}}>
+                      <div style={{height:'100%',width:`${bar}%`,background:color,borderRadius:3,transition:'width .4s ease'}}/>
+                    </div>
+                    <span style={{fontSize:12,fontWeight:700,color,minWidth:38,textAlign:'right'}}>{value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Substitution log */}
+            <div style={{background:C.s1,borderRadius:12,padding:'16px',border:`1px solid ${C.border}`}}>
+              <div style={{fontSize:11,fontWeight:700,color:C.txt3,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:12}}>Recent Games</div>
+              <div style={{display:'flex',flexDirection:'column',gap:0}}>
+                {[
+                  {rnd:'Rd 10',opp:'Bulleen Lions',result:'W 2-1',mins:90,rating:8.2,goals:1,assists:0},
+                  {rnd:'Rd 9', opp:'North Geelong',result:'W 3-0',mins:90,rating:7.8,goals:0,assists:1},
+                  {rnd:'Rd 8', opp:'Oakleigh Cannon',result:'D 1-1',mins:60,rating:6.9,goals:0,assists:0},
+                  {rnd:'Rd 7', opp:'South Melbournet',result:'W 4-2',mins:90,rating:8.5,goals:2,assists:1},
+                  {rnd:'Rd 6', opp:'Avondale FC',result:'L 0-1',mins:45,rating:6.2,goals:0,assists:0},
+                ].map((g,i)=>(
+                  <div key={i} style={{display:'flex',alignItems:'center',gap:10,padding:'9px 0',borderBottom:i<4?`1px solid ${C.border}`:'none'}}>
+                    <span style={{fontSize:10,fontWeight:700,color:C.txt3,width:32}}>{g.rnd}</span>
+                    <span style={{fontSize:12,color:C.txt,flex:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{g.opp}</span>
+                    <span style={{fontSize:11,fontWeight:700,color:g.result.startsWith('W')?C.goal:g.result.startsWith('L')?C.red:C.amber,minWidth:40}}>{g.result}</span>
+                    <span style={{fontSize:11,color:C.txt2,minWidth:28}}>{g.mins}'</span>
+                    {g.goals>0&&<span style={{fontSize:10,background:`${C.goal}15`,border:`1px solid ${C.goal}30`,color:C.goal,borderRadius:4,padding:'1px 5px',fontWeight:700}}>⚽{g.goals}</span>}
+                    {g.assists>0&&<span style={{fontSize:10,background:`${C.sky}15`,border:`1px solid ${C.sky}30`,color:C.sky,borderRadius:4,padding:'1px 5px',fontWeight:700}}>🅰️{g.assists}</span>}
+                    <span style={{fontSize:11,fontWeight:800,color:g.rating>=8?C.goal:g.rating>=7?C.lime:g.rating>=6.5?C.amber:C.red,minWidth:28,textAlign:'right'}}>{g.rating}</span>
                   </div>
                 ))}
               </div>

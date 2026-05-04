@@ -644,9 +644,9 @@ function Sidebar({ collapsed, activeNav, setActiveNav, teamName, role }) {
           const roleCTAs = {
             'Coach':              { label: '+ New Session',    icon: icons.plus,     href: 'tfb-planner.html' },
             'Technical Director': { label: 'Club Overview',    icon: icons.building, href: 'tfb-overview.html' },
-            'Club Admin':         { label: 'Registrations',    icon: icons.clipboard,href: null },
+            'Club Admin':         { label: 'Registrations',    icon: icons.clipboard,href: 'tfb-team.html' },
             'Player':             { label: '💚 Wellness',      icon: null,           href: 'tfb-player.html' },
-            'Parent':             { label: 'Child Profile',    icon: icons.user,     href: 'tfb-player.html' },
+            'Parent':             { label: 'Child Profile',    icon: icons.user,     href: 'tfb-parent-dev.html' },
           };
           const ct = roleCTAs[role] || roleCTAs['Coach'];
           return !collapsed ? (
@@ -1583,9 +1583,9 @@ function getRoleUser(role){ return ROLE_USER[role] || ROLE_USER['Coach']; }
 const ROLE_CTA = {
   'Coach':              { label: '+ New Session', href: 'tfb-planner.html' },
   'Technical Director': { label: 'Club Overview', href: 'tfb-overview.html' },
-  'Club Admin':         { label: 'Manage Registrations', href: null },
-  'Player':             { label: '💚 Wellness Check-in', href: null },
-  'Parent':             { label: 'View Child Profile', href: null },
+  'Club Admin':         { label: 'Manage Registrations', href: 'tfb-team.html' },
+  'Player':             { label: '💚 Wellness Check-in', href: 'tfb-player.html' },
+  'Parent':             { label: 'View Child Profile', href: 'tfb-parent-dev.html' },
 };
 
 
@@ -1600,6 +1600,7 @@ function Dashboard({ role, density }) {
   React.useEffect(() => {
     setWidgets(ROLE_WIDGET_DEFAULTS[role] || DEFAULT_WIDGETS);
   }, [role]);
+  const isSimple = density === 'simple';
   const gap = density === 'compact' ? 10 : density === 'spacious' ? 20 : 14;
   const greeting = (() => {
     const h = new Date().getHours();
@@ -1665,16 +1666,28 @@ function Dashboard({ role, density }) {
 
       {/* Role-aware Stat Cards */}
       <div className="stat-grid" style={{ marginBottom: gap }}>
-        {statCards.map((card, i) => (
-          <StatCard key={i} {...card} />
-        ))}
+        {statCards.map((card, i) => {
+          if (isSimple && i >= 2) return null; // Simple: show only first 2 stat cards
+          return <StatCard key={i} {...card} />;
+        })}
       </div>
+
+      {/* Simple mode banner */}
+      {isSimple && (
+        <div style={{ display:'flex', alignItems:'center', gap:8, padding:'7px 12px', background:'rgba(182,255,43,0.06)', border:'1px solid rgba(182,255,43,0.15)', borderRadius:9, marginBottom:14 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#B6FF2B" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <span style={{ fontSize:12, color:'rgba(182,255,43,0.8)', fontWeight:600 }}>Simple view — showing essential widgets only. Switch to Comfortable in Tweaks for the full dashboard.</span>
+        </div>
+      )}
 
       {/* Widget Grid */}
       <div className="widget-grid">
         {widgets.map((wid, i) => {
           const Comp = WIDGET_MAP[wid];
           if (!Comp) return null;
+          // Simple mode: only show core widgets
+          const SIMPLE_WIDGETS = ['nextMatch', 'quickActions', 'attendance', 'wellness'];
+          if (isSimple && !SIMPLE_WIDGETS.includes(wid)) return null;
           const isWide = ['nextMatch', 'attendance', 'seasonStats'].includes(wid);
           return (
             <div key={`${wid}-${i}`} style={{
@@ -1801,7 +1814,7 @@ function App() {
       <TweaksPanel>
         <TweakSection label="Theme" />
         <TweakRadio label="Mode" value={tweaks.colorMode} options={['dark','light']} onChange={v => setTweak('colorMode', v)} />
-        <TweakRadio label="Density" value={tweaks.density} options={['compact','comfortable','spacious']} onChange={v => setTweak('density', v)} />
+        <TweakRadio label="Density" value={tweaks.density} options={['simple','compact','comfortable','spacious']} onChange={v => setTweak('density', v)} />
         <TweakSlider label="Font Scale" value={tweaks.fontScale} min={80} max={120} step={5} unit="%" onChange={v => setTweak('fontScale', v)} />
         <TweakSection label="Branding" />
         <TweakColor label="Accent" value={tweaks.accentColor} onChange={v => setTweak('accentColor', v)} />

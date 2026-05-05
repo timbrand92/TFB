@@ -445,17 +445,26 @@ function PaymentStage({setStage,data}) {
   const startCheckout = async () => {
     setError(''); setLoading(true);
     try {
+      if (!data.uid) throw new Error('No user ID — please restart signup.');
+      if (!window.__fb) throw new Error('Firebase not loaded — please refresh.');
+
       await window.__fb.saveProfile(data.uid, {
         firstName: data.fname, lastName: data.lname, email: data.email,
         phone: data.phone || '', role: data.role, context: data.context,
         clubName: data.clubName || '', teamName: data.teamName || '',
         ageGroup: data.ageGroup || '', plan: data.plan, subscriptionStatus: 'pending',
       });
+
       const result = await window.__fb.createCheckoutSession(data.plan, data.uid, data.email);
-      if (result.url) { window.location.href = result.url; }
-      else { setError('Could not start checkout. Please try again.'); setLoading(false); }
+
+      if (result && result.url) {
+        window.location.href = result.url;
+      } else {
+        setError(result?.error ? `Stripe error: ${result.error}` : 'No checkout URL returned. Check function logs.');
+        setLoading(false);
+      }
     } catch(e) {
-      setError('Something went wrong. Please try again.');
+      setError(e.message || 'Unexpected error — check browser console for details.');
       setLoading(false);
     }
   };

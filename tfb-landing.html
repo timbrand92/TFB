@@ -46,7 +46,19 @@ a{color:inherit;text-decoration:none}
 const {useState,useEffect} = React;
 const C={lime:'#B6FF2B',green:'#0F3D2E',greenDark:'#0A2E20',bg:'#0A0D11',s1:'#15191F',s2:'#1F252D',border:'rgba(255,255,255,0.08)',border2:'rgba(255,255,255,0.16)',txt:'#F0F2F4',txt2:'rgba(240,242,244,0.55)',txt3:'rgba(240,242,244,0.32)',goal:'#2ED47A',amber:'#FFB020',red:'#E5533D',sky:'#3FA9F5',purple:'#9B7FE8'};
 
-const Logo=({size=40})=>(<div style={{width:size,height:size,borderRadius:size*0.22,background:`linear-gradient(135deg,${C.lime},#68B42E)`,display:'flex',alignItems:'center',justifyContent:'center',color:C.greenDark,fontFamily:'var(--font-d)',fontWeight:900,fontSize:size*0.5,boxShadow:'0 8px 24px rgba(182,255,43,0.3)'}}>TFB</div>);
+const Logo=({size=40})=>(
+  <svg width={size} height={size} viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="40" height="40" rx="9" fill="#0F3D2E"/>
+    <rect x="5" y="8" width="30" height="24" rx="1" stroke="white" strokeWidth="1.2" fill="none"/>
+    <line x1="20" y1="8" x2="20" y2="32" stroke="white" strokeWidth="0.8" opacity="0.7"/>
+    <circle cx="20" cy="20" r="5" stroke="white" strokeWidth="0.8" fill="none" opacity="0.7"/>
+    <circle cx="20" cy="20" r="1" fill="white" opacity="0.7"/>
+    <path d="M 9 27 Q 14 19 22 16 L 30 12" stroke="#B6FF2B" strokeWidth="1.4" strokeDasharray="2 1.5" fill="none"/>
+    <path d="M 27.5 10.5 L 31.5 12 L 29 15" stroke="#B6FF2B" strokeWidth="1.3" strokeLinejoin="round" fill="none"/>
+    <circle cx="9" cy="27" r="2" fill="#B6FF2B"/>
+    <circle cx="22" cy="16" r="1.5" fill="white"/>
+  </svg>
+);
 
 const FEATURES = [
   {icon:'📋',title:'Session Builder',desc:'Multi-section visual diagrams. Drag players, draw runs, save to cloud, export branded PDF.',color:C.lime,screen:'tfb-session-builder.html'},
@@ -111,7 +123,7 @@ function App(){
             </p>
             <div style={{display:'flex',gap:12,marginBottom:36,flexWrap:'wrap'}}>
               <button onClick={()=>nav('tfb-login.html')} style={{padding:'14px 28px',background:`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:11,fontSize:15,fontWeight:800,color:C.greenDark,letterSpacing:'0.04em',boxShadow:'0 12px 36px rgba(182,255,43,0.3)'}}>Start 14-day trial →</button>
-              <button onClick={()=>nav('tfb-dashboard.html')} style={{padding:'14px 24px',background:'rgba(255,255,255,0.06)',border:`1px solid ${C.border2}`,borderRadius:11,fontSize:15,fontWeight:700,color:C.txt}}>▸ Watch live demo</button>
+              <button onClick={()=>nav('tfb-login.html')} style={{padding:'14px 24px',background:'rgba(255,255,255,0.06)',border:`1px solid ${C.border2}`,borderRadius:11,fontSize:15,fontWeight:700,color:C.txt}}>Sign in →</button>
             </div>
             <div style={{display:'flex',gap:24,fontSize:12,color:C.txt3,flexWrap:'wrap'}}>
               <div style={{display:'flex',alignItems:'center',gap:6}}><span style={{color:C.goal}}>✓</span> No card needed</div>
@@ -204,13 +216,13 @@ function App(){
           </div>
           <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:18}}>
             {FEATURES.map(f=>(
-              <button key={f.title} onClick={()=>nav(f.screen)} className="tilt-card" style={{textAlign:'left',padding:24,background:C.s1,border:`1px solid ${C.border}`,borderRadius:14}}
+              <button key={f.title} onClick={()=>nav('tfb-login.html')} className="tilt-card" style={{textAlign:'left',padding:24,background:C.s1,border:`1px solid ${C.border}`,borderRadius:14}}
                 onMouseEnter={e=>e.currentTarget.style.borderColor=`${f.color}50`}
                 onMouseLeave={e=>e.currentTarget.style.borderColor=C.border}>
                 <div style={{width:48,height:48,borderRadius:11,background:`${f.color}15`,border:`1px solid ${f.color}35`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,marginBottom:14}}>{f.icon}</div>
                 <div style={{fontFamily:'var(--font-d)',fontSize:20,fontWeight:900,letterSpacing:'-0.01em',marginBottom:6,textTransform:'uppercase'}}>{f.title}</div>
                 <div style={{fontSize:13,color:C.txt2,lineHeight:1.55,marginBottom:14}}>{f.desc}</div>
-                <div style={{fontSize:11.5,color:f.color,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase'}}>See it live →</div>
+                <div style={{fontSize:11.5,color:f.color,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase'}}>Start free trial →</div>
               </button>
             ))}
           </div>
@@ -288,6 +300,57 @@ function App(){
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* For Clubs */}
+      <section id="for-clubs" style={{padding:'100px 24px'}}>
+        <div style={{maxWidth:1240,margin:'0 auto'}}>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:60,alignItems:'center'}}>
+            <div>
+              <div style={{fontSize:11,color:C.lime,letterSpacing:'0.18em',textTransform:'uppercase',fontWeight:800,marginBottom:12}}>Built for clubs</div>
+              <h2 style={{fontFamily:'var(--font-d)',fontSize:52,fontWeight:900,letterSpacing:'-0.02em',lineHeight:1.05,textTransform:'uppercase',marginBottom:18}}>One platform for your entire club</h2>
+              <p style={{fontSize:16,color:C.txt2,lineHeight:1.65,marginBottom:32}}>From technical directors to assistant coaches — TFB gives everyone the tools they need while keeping your whole club in sync. Multi-team management, SSO, and a dedicated success manager on the Elite plan.</p>
+              <div style={{display:'flex',flexDirection:'column',gap:14,marginBottom:36}}>
+                {[
+                  {icon:'🏟️',t:'Multi-team hierarchy',d:'Manage every age group and competition in one place with shared rosters and permissions.'},
+                  {icon:'👥',t:'Role-based access',d:'Coaches, assistants, technical directors, players and parents — each sees only what they need.'},
+                  {icon:'📊',t:'Club-wide reporting',d:'Aggregate wellness, attendance and performance data across all your teams at once.'},
+                  {icon:'🔒',t:'SSO & security',d:'Enterprise-grade sign-on, audit logs, and data controls for registered associations.'},
+                ].map((item,i)=>(
+                  <div key={i} style={{display:'flex',gap:14,padding:16,background:C.s1,border:`1px solid ${C.border}`,borderRadius:12}}>
+                    <div style={{width:40,height:40,borderRadius:10,background:'rgba(182,255,43,0.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,flexShrink:0}}>{item.icon}</div>
+                    <div>
+                      <div style={{fontSize:14,fontWeight:800,marginBottom:3}}>{item.t}</div>
+                      <div style={{fontSize:12.5,color:C.txt2,lineHeight:1.5}}>{item.d}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button onClick={()=>nav('tfb-login.html')} style={{padding:'14px 28px',background:`linear-gradient(135deg,${C.lime},#68B42E)`,border:'none',borderRadius:11,fontSize:15,fontWeight:800,color:C.greenDark,letterSpacing:'0.04em'}}>Set up your club →</button>
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
+              {[
+                {n:'200+',l:'Clubs worldwide'},
+                {n:'4.2M',l:'Sessions planned'},
+                {n:'98%',l:'Coach retention'},
+                {n:'14 day',l:'Free trial'},
+              ].map((s,i)=>(
+                <div key={i} style={{background:C.s1,border:`1px solid ${C.border}`,borderRadius:14,padding:24,textAlign:'center'}}>
+                  <div style={{fontFamily:'var(--font-d)',fontSize:42,fontWeight:900,color:C.lime,letterSpacing:'-0.02em',lineHeight:1}}>{s.n}</div>
+                  <div style={{fontSize:12,color:C.txt2,letterSpacing:'0.1em',textTransform:'uppercase',fontWeight:700,marginTop:6}}>{s.l}</div>
+                </div>
+              ))}
+              <div style={{gridColumn:'span 2',background:`linear-gradient(135deg,${C.lime}12,${C.s1})`,border:`1px solid ${C.lime}30`,borderRadius:14,padding:20}}>
+                <div style={{fontSize:11,color:C.lime,fontWeight:800,letterSpacing:'0.14em',textTransform:'uppercase',marginBottom:8}}>Elite plan includes</div>
+                {['Unlimited teams','Dedicated success manager','Custom integrations & API','Priority 24/7 support','Custom onboarding'].map((f,i)=>(
+                  <div key={i} style={{display:'flex',gap:8,padding:'5px 0',fontSize:13,color:C.txt}}>
+                    <span style={{color:C.lime,fontWeight:800}}>✓</span>{f}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </section>

@@ -19,7 +19,7 @@ const PRICES = {
 
 // ─── Create Stripe Checkout Session ───────────────────────────────────────────
 exports.createCheckoutSession = onRequest(
-  { secrets: [stripeSecretKey], cors: true },
+  { secrets: [stripeSecretKey], cors: ["https://tfb-the-football-blueprint.web.app", "http://localhost:5000"] },
   async (req, res) => {
     if (req.method !== "POST") return res.status(405).send("Method Not Allowed");
 
@@ -53,8 +53,10 @@ exports.createCheckoutSession = onRequest(
         payment_method_types: ["card"],
         line_items: [{ price: PRICES[priceKey], quantity: 1 }],
         mode: "subscription",
-        success_url: successUrl || "https://tfb-the-football-blueprint.web.app/billing?success=true",
-        cancel_url:  cancelUrl  || "https://tfb-the-football-blueprint.web.app/billing?canceled=true",
+        subscription_data: { trial_period_days: 14 },
+        allow_promotion_codes: true,
+        success_url: successUrl || "https://tfb-the-football-blueprint.web.app/tfb-dashboard.html?subscribed=true",
+        cancel_url:  cancelUrl  || "https://tfb-the-football-blueprint.web.app/tfb-login.html",
         metadata: { firebaseUserId: userId },
       });
 
@@ -68,7 +70,7 @@ exports.createCheckoutSession = onRequest(
 
 // ─── Create Customer Portal Session ───────────────────────────────────────────
 exports.createPortalSession = onRequest(
-  { secrets: [stripeSecretKey], cors: true },
+  { secrets: [stripeSecretKey], cors: ["https://tfb-the-football-blueprint.web.app", "http://localhost:5000"] },
   async (req, res) => {
     if (req.method !== "POST") return res.status(405).send("Method Not Allowed");
 
